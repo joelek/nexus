@@ -29,7 +29,7 @@ export function serve(root: string, port: number): libhttp.Server {
 			response.writeHead(405);
 			return response.end();
 		}
-		let path = libpath.join(root, url);
+		let path = libpath.join(root, decodeURI(url));
 		let type = getPathType(path);
 		if (type === "file") {
 			response.writeHead(200);
@@ -64,6 +64,6 @@ export function serve(root: string, port: number): libhttp.Server {
 			return response.end();
 		}
 	}).listen(port, () => {
-		process.stdout.write("Serving \"" + root + "\" at http://localhost:" + port + "\n");
+		process.stdout.write("Serving \"" + root + "\" at http://localhost:" + port + "/.\n");
 	});
 }
