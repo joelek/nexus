@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"lib": [
+			"es5",
+			"es6"
+		],
+		"outFile": "../../build/serveit-lib.js",
+		"types": [
+			"node"
+		]
+	},
+	"extends": "../../tsconfig.common.json",
+	"references": [
+	]
+}

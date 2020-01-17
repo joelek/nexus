@@ -1,0 +1,19 @@
+{
+	"bin": {
+		"serveit": "./serveit-bin.js"
+	},
+	"dependencies": {
+		"@joelek/ts-define": "github:joelek/ts-define",
+		"@types/node": "^13"
+	},
+	"license": "MIT",
+	"name": "@joelek/ts-serveit",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/joelek/ts-serveit.git"
+	},
+	"scripts": {
+		"install": "tsc --build"
+	},
+	"version": "1.0.0"
+}

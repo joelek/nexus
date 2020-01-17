@@ -1,0 +1,11 @@
+{
+	"include": [],
+	"references": [
+		{
+			"path": "./projects/serveit-cli/"
+		},
+		{
+			"path": "./projects/serveit-lib/"
+		}
+	]
+}
