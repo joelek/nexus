@@ -1,6 +1,7 @@
 import * as libfs from "fs";
 import * as libhttp from "http";
 import * as libpath from "path";
+import * as liburl from "url";
 
 function getPathType(path: string): "file" | "directory" | "neither" {
 	if (libfs.existsSync(path)) {
@@ -29,7 +30,7 @@ export function serve(root: string, port: number): libhttp.Server {
 			response.writeHead(405);
 			return response.end();
 		}
-		let path = libpath.join(root, decodeURI(url));
+		let path = libpath.join(root, decodeURI(liburl.parse(url).pathname || ""));
 		let type = getPathType(path);
 		if (type === "file") {
 			response.writeHead(200);
