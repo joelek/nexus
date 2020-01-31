@@ -1,4 +1,4 @@
-import { serve } from "serveit-lib/lib";
+import { serve } from "serveit-lib/index";
 
 let options = {
 	root: "./",
