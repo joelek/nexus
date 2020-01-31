@@ -2,9 +2,7 @@
 	"bin": {
 		"serveit": "./build/source/serveit-cli/index.js"
 	},
-	"dependencies": {
-		"@joelek/ts-define": "github:joelek/ts-define"
-	},
+	"dependencies": {},
 	"devDependencies": {
 		"@types/node": "^13",
 		"typescript": "^3"
