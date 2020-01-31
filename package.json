@@ -3,10 +3,10 @@
 		"serveit": "./serveit-bin.js"
 	},
 	"dependencies": {
-		"@joelek/ts-define": "github:joelek/ts-define",
-		"@types/node": "^13"
+		"@joelek/ts-define": "github:joelek/ts-define"
 	},
 	"devDependencies": {
+		"@types/node": "^13",
 		"typescript": "^3"
 	},
 	"license": "MIT",
