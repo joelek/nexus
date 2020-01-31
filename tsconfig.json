@@ -2,10 +2,10 @@
 	"include": [],
 	"references": [
 		{
-			"path": "./projects/serveit-cli/"
+			"path": "./source/serveit-cli/"
 		},
 		{
-			"path": "./projects/serveit-lib/"
+			"path": "./source/serveit-lib/"
 		}
 	]
 }

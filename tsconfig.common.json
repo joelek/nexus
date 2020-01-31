@@ -5,7 +5,7 @@
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
 		"noImplicitThis": true,
-		"rootDir": "./projects/",
+		"rootDir": "./source/",
 		"strictNullChecks":  true,
 		"target": "es6"
 	}
