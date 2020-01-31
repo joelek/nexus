@@ -1,6 +1,6 @@
 # @joelek/ts-serveit
 
-Bare-minimum static web server.
+Bare-minimum static web server written completely in TypeScript.
 
 ## Features
 
