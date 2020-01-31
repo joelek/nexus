@@ -1,6 +1,6 @@
 {
 	"bin": {
-		"serveit": "./serveit-bin.js"
+		"serveit": "./build/serveit-cli.js"
 	},
 	"dependencies": {
 		"@joelek/ts-define": "github:joelek/ts-define"
