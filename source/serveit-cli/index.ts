@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { serve } from "serveit-lib/index";
+import { serve } from "../serveit-lib";
 
 let options = {
 	root: "./",
