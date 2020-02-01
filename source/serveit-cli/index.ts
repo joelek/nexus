@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import { serve } from "../serveit-lib";
 
 let options = {
