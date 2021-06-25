@@ -23,7 +23,9 @@ function run(): void {
 	if (found_unrecognized_argument) {
 		process.stderr.write(`Arguments:\n`);
 		process.stderr.write(`	--root=string\n`);
+		process.stderr.write(`		Set root directory for server.\n`);
 		process.stderr.write(`	--port=number\n`);
+		process.stderr.write(`		Set server port.\n`);
 		process.exit(0);
 	} else {
 		lib.serve(options.root, options.port);
