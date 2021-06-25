@@ -7,7 +7,13 @@
 		"strict": true,
 		"target": "es6"
 	},
-	"include": [
-		"./source/"
+	"include": [],
+	"references": [
+		{
+			"path": "./source/cli/"
+		},
+		{
+			"path": "./source/lib/"
+		}
 	]
 }
