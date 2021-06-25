@@ -2,7 +2,9 @@
 	"bin": {
 		"serveit": "./dist/cli/index.js"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"@joelek/ts-autoguard": "github:joelek/ts-autoguard#semver:^5"
+	},
 	"devDependencies": {
 		"@types/node": "^14",
 		"typescript": "^4"
@@ -15,8 +17,9 @@
 		"url": "https://github.com/joelek/ts-serveit.git"
 	},
 	"scripts": {
-		"build": "npm run compile && npm run package",
+		"build": "npm run codegen && npm run compile && npm run package",
 		"clean": "rm -rf ./build/ ./node_modules/",
+		"codegen": "npx autoguard",
 		"compile": "rm -rf ./build/* && npx tsc --build",
 		"package": "rm -rf ./dist/* && cp -r ./build/* ./dist/",
 		"preversion": "npm run build && git add ./",

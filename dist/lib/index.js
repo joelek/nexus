@@ -1,74 +1,32 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.serve = void 0;
-const libfs = require("fs");
+const autoguard = require("@joelek/ts-autoguard");
 const libhttp = require("http");
-const libpath = require("path");
-const liburl = require("url");
-function getPathType(path) {
-    if (libfs.existsSync(path)) {
-        let stat = libfs.statSync(path);
-        if (stat.isDirectory()) {
-            return "directory";
-        }
-        if (stat.isFile()) {
-            return "file";
-        }
-    }
-    return "neither";
-}
-function serve(root, port) {
-    root = libpath.resolve(root);
-    if (getPathType(root) !== "directory") {
-        process.stderr.write("Path \"" + root + "\" is not a directory!\n");
-        process.exit(1);
-    }
-    return libhttp.createServer((request, response) => {
-        let method = request.method || "";
-        let url = request.url || "";
-        process.stdout.write(method + ":" + url + "\n");
-        if (method !== "GET") {
-            response.writeHead(405);
-            return response.end();
-        }
-        let path = libpath.join(root, decodeURI(liburl.parse(url).pathname || ""));
-        let type = getPathType(path);
-        if (type === "file") {
-            response.writeHead(200);
-            let stream = libfs.createReadStream(path);
-            stream.pipe(response);
-            return;
-        }
-        else if (type === "directory") {
-            response.writeHead(200);
-            let links = libfs.readdirSync(path, { withFileTypes: true })
-                .map((subpath) => {
-                if (subpath.isFile()) {
-                    return subpath.name;
-                }
-                if (subpath.isDirectory()) {
-                    return subpath.name + "/";
-                }
-                return null;
-            }).filter((subpath) => {
-                return subpath !== null;
-            }).map((subpath) => {
-                return "<p><a href=\"" + subpath + "\">" + subpath + "</a></p>";
-            });
-            return response.end([
-                "<html>",
-                "<body>",
-                ...links,
-                "</body>",
-                "</html>"
-            ].join("\n"));
-        }
-        else {
-            response.writeHead(500);
-            return response.end();
-        }
-    }).listen(port, () => {
-        process.stdout.write("Serving \"" + root + "\" at http://localhost:" + port + "/.\n");
+const libserver = require("./api/server");
+function serve(pathPrefix, port) {
+    let api = libserver.makeServer({
+        getStaticContent: (request) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            let options = request.options();
+            let pathSuffix = ((_a = options.filename) !== null && _a !== void 0 ? _a : []).join("/");
+            return autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+        })
     });
+    let server = libhttp.createServer({}, api);
+    server.listen(port, () => {
+        process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${port}/"\n`);
+    });
+    return server;
 }
 exports.serve = serve;
+;

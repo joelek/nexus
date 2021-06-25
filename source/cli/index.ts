@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { serve } from "../lib";
+import * as lib from "../lib";
 
 function run(): void {
 	let options = {
@@ -17,17 +17,17 @@ function run(): void {
 			options.port = Number.parseInt(parts[1]);
 		} else {
 			found_unrecognized_argument = true;
-			process.stderr.write("Argument \"" + arg + "\" was not recognized!\n");
+			process.stderr.write(`Unrecognized argument "${arg}"!\n`);
 		}
 	}
 	if (found_unrecognized_argument) {
-		process.stderr.write("Arguments:\n");
-		process.stderr.write("	--root=string\n");
-		process.stderr.write("	--port=number\n");
+		process.stderr.write(`Arguments:\n`);
+		process.stderr.write(`	--root=string\n`);
+		process.stderr.write(`	--port=number\n`);
 		process.exit(0);
 	} else {
-		serve(options.root, options.port);
+		lib.serve(options.root, options.port);
 	}
-}
+};
 
 run();

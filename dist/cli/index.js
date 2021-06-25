@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const lib_1 = require("../lib");
+const lib = require("../lib");
 function run() {
     let options = {
         root: "./",
@@ -20,17 +20,18 @@ function run() {
         }
         else {
             found_unrecognized_argument = true;
-            process.stderr.write("Argument \"" + arg + "\" was not recognized!\n");
+            process.stderr.write(`Unrecognized argument "${arg}"!\n`);
         }
     }
     if (found_unrecognized_argument) {
-        process.stderr.write("Arguments:\n");
-        process.stderr.write("	--root=string\n");
-        process.stderr.write("	--port=number\n");
+        process.stderr.write(`Arguments:\n`);
+        process.stderr.write(`	--root=string\n`);
+        process.stderr.write(`	--port=number\n`);
         process.exit(0);
     }
     else {
-        lib_1.serve(options.root, options.port);
+        lib.serve(options.root, options.port);
     }
 }
+;
 run();
