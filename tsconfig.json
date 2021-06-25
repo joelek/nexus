@@ -3,7 +3,7 @@
 		"composite": true,
 		"module": "commonjs",
 		"outDir": "./build/",
-		"rootDir": "./",
+		"rootDir": "./source/",
 		"strict": true,
 		"target": "es6"
 	},
