@@ -2,7 +2,8 @@
 	"bin": {
 		"serveit": "./dist/source/serveit-cli/index.js"
 	},
-	"dependencies": {
+	"dependencies": {},
+	"devDependencies": {
 		"@types/node": "^14",
 		"typescript": "^4"
 	},
