@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { serve } from "../serveit-lib";
 
 function run(): void {

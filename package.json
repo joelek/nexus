@@ -1,6 +1,6 @@
 {
 	"bin": {
-		"serveit": "./bin.js"
+		"serveit": "./dist/source/serveit-cli/index.js"
 	},
 	"dependencies": {
 		"@types/node": "^14",
