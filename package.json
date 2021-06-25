@@ -1,6 +1,6 @@
 {
 	"bin": {
-		"serveit": "./dist/serveit-cli/index.js"
+		"serveit": "./dist/cli/index.js"
 	},
 	"dependencies": {},
 	"devDependencies": {
@@ -8,7 +8,7 @@
 		"typescript": "^4"
 	},
 	"license": "MIT",
-	"main": "./dist/serveit-lib/index.js",
+	"main": "./dist/lib/index.js",
 	"name": "@joelek/ts-serveit",
 	"repository": {
 		"type": "git",

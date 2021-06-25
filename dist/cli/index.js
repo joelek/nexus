@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const serveit_lib_1 = require("../serveit-lib");
+const lib_1 = require("../lib");
 function run() {
     let options = {
         root: "./",
@@ -30,7 +30,7 @@ function run() {
         process.exit(0);
     }
     else {
-        serveit_lib_1.serve(options.root, options.port);
+        lib_1.serve(options.root, options.port);
     }
 }
 run();

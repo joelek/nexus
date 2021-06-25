@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { serve } from "../serveit-lib";
+import { serve } from "../lib";
 
 function run(): void {
 	let options = {
