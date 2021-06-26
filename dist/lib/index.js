@@ -44,7 +44,7 @@ function makeStylesheet() {
 		a {
 			color: rgb(191, 191, 191);
 			border-radius: 4px;
-			display: grid;
+			display: block;
 			font-family: sans-serif;
 			font-size: 1rem;
 			line-height: 1.0;
