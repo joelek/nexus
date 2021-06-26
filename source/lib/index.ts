@@ -50,7 +50,7 @@ export function makeStylesheet(): string {
 		a:hover {
 			color: rgb(255, 255, 255);
 		}
-	`.replace(/[\t\r\n]*/g, "");
+	`.replace(/\s+/g, " ");
 };
 
 export function renderDirectoryListing(directoryListing: autoguard.api.DirectoryListing): string {

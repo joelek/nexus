@@ -63,7 +63,7 @@ function makeStylesheet() {
 		a:hover {
 			color: rgb(255, 255, 255);
 		}
-	`.replace(/[\t\r\n]*/g, "");
+	`.replace(/\s+/g, " ");
 }
 exports.makeStylesheet = makeStylesheet;
 ;
