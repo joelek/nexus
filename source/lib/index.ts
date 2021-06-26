@@ -31,16 +31,12 @@ export function makeStylesheet(): string {
 		a {
 			color: rgb(191, 191, 191);
 			border-radius: 4px;
-			display: block;
-			font-family: sans-serif;
-			font-size: 1rem;
-			line-height: 1.0;
-			overflow: hidden;
+			display: grid;
+			gap: 1rem;
+			grid-template-columns: 1fr auto;
 			padding: 1rem;
 			text-decoration: none;
-			text-overflow: ellipsis;
 			transition: color 0.125s;
-			white-space: nowrap;
 		}
 
 		a:nth-child(2n+1) {
@@ -50,7 +46,27 @@ export function makeStylesheet(): string {
 		a:hover {
 			color: rgb(255, 255, 255);
 		}
+
+		p {
+			font-family: sans-serif;
+			font-size: 1rem;
+			line-height: 1.25;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
 	`.replace(/\s+/g, " ");
+};
+
+export function formatSize(size: number): string {
+	let prefixes = ["", "k", "M", "G", "T"];
+	for (let i = prefixes.length - 1; i >= 0; i--) {
+		let factor = 1024 ** i;
+		if (size > factor * 10) {
+			return `${Math.round(size / factor)} ${prefixes[i]}B`;
+		}
+	}
+	return "0 B";
 };
 
 export function renderDirectoryListing(directoryListing: autoguard.api.DirectoryListing): string {
@@ -67,10 +83,10 @@ export function renderDirectoryListing(directoryListing: autoguard.api.Directory
 		`</head>`,
 		`<body>`,
 		...directories.map((entry) => {
-			return `<a href="${encodeURIComponent(entry.name)}/">${encodeXMLText(entry.name)}/</a>`;
+			return `<a href="${encodeURIComponent(entry.name)}/"><p>${encodeXMLText(entry.name)}/</p><p></p></a>`;
 		}),
 		...files.map((entry) => {
-			return `<a href="${encodeURIComponent(entry.name)}">${encodeXMLText(entry.name)}</a>`;
+			return `<a href="${encodeURIComponent(entry.name)}"><p>${encodeXMLText(entry.name)}</p><p>${formatSize(entry.size)}</p></a>`;
 		}),
 		`</body>`,
 		`</html>`,
