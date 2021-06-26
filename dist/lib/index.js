@@ -72,7 +72,7 @@ function renderDirectoryListing(directoryListing) {
     return [
         `<!DOCTYPE html>`,
         `<html>`,
-        `<base href="/${components.join("/")}"/>`,
+        `<base href="/${components.map((component) => encodeURIComponent(component)).join("/")}"/>`,
         `<meta charset="utf-8"/>`,
         `<meta content="width=device-width,initial-scale=1.0" name="viewport"/>`,
         `<style>${makeStylesheet()}</style>`,
