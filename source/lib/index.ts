@@ -66,7 +66,7 @@ export function formatSize(size: number): string {
 			return `${Math.round(size / factor)} ${prefixes[i]}B`;
 		}
 	}
-	return "0 B";
+	return `${size} B`;
 };
 
 export function renderDirectoryListing(directoryListing: autoguard.api.DirectoryListing): string {

@@ -80,7 +80,7 @@ function formatSize(size) {
             return `${Math.round(size / factor)} ${prefixes[i]}B`;
         }
     }
-    return "0 B";
+    return `${size} B`;
 }
 exports.formatSize = formatSize;
 ;
