@@ -23,3 +23,9 @@ npm install -g joelek/ts-serveit#semver:^1
 ```
 
 This installs the command line utility "serveit".
+
+## Roadmap
+
+* Add support for custom CSS-files.
+* Add support for HTTPS server.
+* Add automatic generation of self-signed certificates.
