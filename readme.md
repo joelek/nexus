@@ -24,13 +24,17 @@ Thank you for your support!
 
 ## Installation
 
-Globally install this package from GitHub.
+Releases follow semantic versioning and release packages are published using the GitHub platform. Use the following command to install the latest release.
 
 ```
 npm install -g joelek/ts-serveit#semver:^1
 ```
 
-This installs the command line utility "serveit".
+Use the following command to install the very latest build. The very latest build may include breaking changes and should not be used in production environments.
+
+```
+npm install -g joelek/ts-serveit#master
+```
 
 ## Roadmap
 
