@@ -75,11 +75,11 @@ function makeStylesheet() {
 exports.makeStylesheet = makeStylesheet;
 ;
 function formatSize(size) {
-    let prefixes = ["", "k", "M", "G", "T"];
-    for (let i = prefixes.length - 1; i >= 0; i--) {
+    let units = ["B", "KiB", "MiB", "GiB", "TiB"];
+    for (let i = units.length - 1; i >= 0; i--) {
         let factor = Math.pow(1024, i);
         if (size > factor * 10) {
-            return `${Math.round(size / factor)} ${prefixes[i]}B`;
+            return `${Math.round(size / factor)} ${units[i]}`;
         }
     }
     return `${size} B`;
