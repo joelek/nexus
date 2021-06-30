@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import * as autoguard from "@joelek/ts-autoguard";
 import * as libhttp from "http";
+export declare function computeSimpleHash(string: string): number;
 export declare function encodeXMLText(string: string): string;
 export declare function makeStylesheet(): string;
 export declare function formatSize(size: number): string;

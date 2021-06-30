@@ -9,10 +9,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.serve = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = void 0;
+exports.serve = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = void 0;
 const autoguard = require("@joelek/ts-autoguard");
 const libhttp = require("http");
+const libpath = require("path");
 const libserver = require("./api/server");
+function computeSimpleHash(string) {
+    var _a;
+    let hash = string.length;
+    for (let char of string) {
+        let codePoint = (_a = char.codePointAt(0)) !== null && _a !== void 0 ? _a : 0;
+        hash *= 31;
+        hash += codePoint;
+    }
+    return hash;
+}
+exports.computeSimpleHash = computeSimpleHash;
+;
 function encodeXMLText(string) {
     return string.replace(/[&<>'"]/g, (match) => {
         var _a;
@@ -42,11 +55,12 @@ function makeStylesheet() {
 		}
 
 		a {
+			align-items: center;
 			color: rgb(191, 191, 191);
 			border-radius: 4px;
 			display: grid;
 			gap: 1rem;
-			grid-template-columns: 1fr auto;
+			grid-template-columns: auto 1fr auto;
 			margin: 0px auto;
 			max-width: 1280px;
 			padding: 1rem;
@@ -69,6 +83,13 @@ function makeStylesheet() {
 			overflow: hidden;
 			text-overflow: ellipsis;
 			white-space: nowrap;
+		}
+
+		p:nth-child(1) {
+			background-color: rgb(255, 255, 255);
+			border-radius: 1rem;
+			padding-bottom: 1rem;
+			width: 1rem;
 		}
 	`.replace(/\s+/g, " ");
 }
@@ -100,10 +121,11 @@ function renderDirectoryListing(directoryListing) {
         `</head>`,
         `<body>`,
         ...directories.map((entry) => {
-            return `<a href="${encodeURIComponent(entry.name)}/"><p>${encodeXMLText(entry.name)}/</p><p></p></a>`;
+            return `<a href="${encodeURIComponent(entry.name)}/"><p></p><p>${encodeXMLText(entry.name)}/</p><p></p></a>`;
         }),
         ...files.map((entry) => {
-            return `<a href="${encodeURIComponent(entry.name)}"><p>${encodeXMLText(entry.name)}</p><p>${formatSize(entry.size)}</p></a>`;
+            let hue = computeSimpleHash(libpath.extname(entry.name)) % 360;
+            return `<a href="${encodeURIComponent(entry.name)}"><p style="background-color: hsl(${hue}, 50%, 50%);"></p><p>${encodeXMLText(entry.name)}</p><p>${formatSize(entry.size)}</p></a>`;
         }),
         `</body>`,
         `</html>`,
