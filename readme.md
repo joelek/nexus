@@ -2,6 +2,8 @@
 
 Bare-minimum static web server written completely in TypeScript.
 
+![](./public/images/mobile.png)
+
 ## Features
 
 Serveit serves the contents of any directory over HTTP by launching a very simple server. Serveit only accepts GET requests and automatically generates and serves index documents for directory requests.
