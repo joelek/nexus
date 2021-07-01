@@ -124,7 +124,7 @@ function renderDirectoryListing(directoryListing) {
             return `<a href="${encodeURIComponent(entry.name)}/"><p></p><p>${encodeXMLText(entry.name)}/</p><p></p></a>`;
         }),
         ...files.map((entry) => {
-            let hue = computeSimpleHash(libpath.extname(entry.name)) % 360;
+            let hue = (computeSimpleHash(libpath.extname(entry.name)) % 12) * 30;
             return `<a href="${encodeURIComponent(entry.name)}"><p style="background-color: hsl(${hue}, 50%, 50%);"></p><p>${encodeXMLText(entry.name)}</p><p>${formatSize(entry.size)}</p></a>`;
         }),
         `</body>`,
