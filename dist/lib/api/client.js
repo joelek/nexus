@@ -38,5 +38,29 @@ const makeClient = (options) => ({
             return new autoguard.api.ServerResponse(response, true);
         }
     }),
+    "headStaticContent": (request) => __awaiter(void 0, void 0, void 0, function* () {
+        var _h, _j, _k, _l, _m, _o, _p;
+        let guard = shared.Autoguard.Requests["headStaticContent"];
+        guard.as(request, "request");
+        let method = "HEAD";
+        let components = new Array();
+        components.push(...autoguard.api.encodeComponents((_j = (_h = request.options) === null || _h === void 0 ? void 0 : _h["filename"]) !== null && _j !== void 0 ? _j : [], true));
+        let parameters = new Array();
+        parameters.push(...autoguard.api.encodeUndeclaredParameterPairs((_k = request.options) !== null && _k !== void 0 ? _k : {}, [...["filename"], ...parameters.map((parameter) => parameter[0])]));
+        let headers = new Array();
+        headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_l = request.headers) !== null && _l !== void 0 ? _l : {}, headers.map((header) => header[0])));
+        let payload = (_m = request.payload) !== null && _m !== void 0 ? _m : [];
+        let requestHandler = (_o = options === null || options === void 0 ? void 0 : options.requestHandler) !== null && _o !== void 0 ? _o : autoguard.api.xhr;
+        let raw = yield requestHandler({ method, components, parameters, headers, payload }, options === null || options === void 0 ? void 0 : options.urlPrefix);
+        {
+            let status = raw.status;
+            let headers = {};
+            headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_p = raw.headers) !== null && _p !== void 0 ? _p : {}, Object.keys(headers)));
+            let payload = raw.payload;
+            let guard = shared.Autoguard.Responses["headStaticContent"];
+            let response = guard.as({ status, headers, payload }, "response");
+            return new autoguard.api.ServerResponse(response, true);
+        }
+    }),
 });
 exports.makeClient = makeClient;

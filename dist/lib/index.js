@@ -155,6 +155,16 @@ function serve(pathPrefix, port) {
                 }
                 throw error;
             }
+        }),
+        headStaticContent: (request) => __awaiter(this, void 0, void 0, function* () {
+            var _b;
+            let options = request.options();
+            let pathSuffix = ((_b = options.filename) !== null && _b !== void 0 ? _b : []).join("/");
+            let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+            return {
+                status: response.status,
+                headers: response.headers
+            };
         })
     });
     let server = libhttp.createServer({}, api);

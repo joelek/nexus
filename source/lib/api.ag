@@ -1,1 +1,3 @@
 route getStaticContent(): GET:/<filename*> => binary;
+
+route headStaticContent(): HEAD:/<filename*> => binary;

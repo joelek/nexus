@@ -135,6 +135,15 @@ export function serve(pathPrefix: string, port: number): libhttp.Server {
 				}
 				throw error;
 			}
+		},
+		headStaticContent: async (request) => {
+			let options = request.options();
+			let pathSuffix = (options.filename ?? []).join("/");
+			let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+			return {
+				status: response.status,
+				headers: response.headers
+			};
 		}
 	});
 	let server = libhttp.createServer({}, api);
