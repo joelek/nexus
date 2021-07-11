@@ -51,7 +51,7 @@ function makeStylesheet() {
 
 		body {
 			background-color: rgb(31, 31, 31);
-			padding: 1rem;
+			padding: 16px;
 		}
 
 		a {
@@ -59,11 +59,11 @@ function makeStylesheet() {
 			color: rgb(191, 191, 191);
 			border-radius: 4px;
 			display: grid;
-			gap: 1rem;
+			gap: 16px;
 			grid-template-columns: auto 1fr auto;
 			margin: 0px auto;
 			max-width: 1080px;
-			padding: 1rem;
+			padding: 16px;
 			text-decoration: none;
 			transition: color 0.125s;
 		}
@@ -78,7 +78,7 @@ function makeStylesheet() {
 
 		p {
 			font-family: sans-serif;
-			font-size: 1rem;
+			font-size: 16px;
 			line-height: 1.25;
 			overflow: hidden;
 			text-overflow: ellipsis;
@@ -87,9 +87,9 @@ function makeStylesheet() {
 
 		p:nth-child(1) {
 			background-color: rgb(255, 255, 255);
-			border-radius: 1rem;
-			padding-bottom: 1rem;
-			width: 1rem;
+			border-radius: 16px;
+			padding-bottom: 16px;
+			width: 16px;
 		}
 	`.replace(/\s+/g, " ");
 }
