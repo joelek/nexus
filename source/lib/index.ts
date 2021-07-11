@@ -47,7 +47,7 @@ export function makeStylesheet(): string {
 			gap: 1rem;
 			grid-template-columns: auto 1fr auto;
 			margin: 0px auto;
-			max-width: 1280px;
+			max-width: 1080px;
 			padding: 1rem;
 			text-decoration: none;
 			transition: color 0.125s;
