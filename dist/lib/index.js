@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.serve = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = void 0;
-const autoguard = require("@joelek/ts-autoguard");
+const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
 const libhttp = require("http");
 const libpath = require("path");
 const libserver = require("./api/server");

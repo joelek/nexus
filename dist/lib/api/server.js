@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.makeServer = void 0;
-const autoguard = require("@joelek/ts-autoguard");
+const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
 const shared = require("./index");
 const makeServer = (routes, options) => {
     let endpoints = new Array();

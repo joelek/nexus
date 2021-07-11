@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.makeClient = void 0;
-const autoguard = require("@joelek/ts-autoguard");
+const autoguard = require("@joelek/ts-autoguard/dist/lib-client");
 const shared = require("./index");
 const makeClient = (options) => ({
     "getStaticContent": (request) => __awaiter(void 0, void 0, void 0, function* () {

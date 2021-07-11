@@ -1,4 +1,4 @@
-import * as autoguard from "@joelek/ts-autoguard";
+import * as autoguard from "@joelek/ts-autoguard/dist/lib-shared";
 export declare namespace Autoguard {
     const Guards: {};
     type Guards = {
@@ -6,22 +6,22 @@ export declare namespace Autoguard {
     };
     const Requests: {
         getStaticContent: autoguard.serialization.MessageGuard<{
+            headers?: {
+                [x: string]: autoguard.api.JSON;
+            } | undefined;
             options?: {
                 [x: string]: autoguard.api.JSON;
                 filename?: string[] | undefined;
-            } | undefined;
-            headers?: {
-                [x: string]: autoguard.api.JSON;
             } | undefined;
             payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
         }>;
         headStaticContent: autoguard.serialization.MessageGuard<{
+            headers?: {
+                [x: string]: autoguard.api.JSON;
+            } | undefined;
             options?: {
                 [x: string]: autoguard.api.JSON;
                 filename?: string[] | undefined;
-            } | undefined;
-            headers?: {
-                [x: string]: autoguard.api.JSON;
             } | undefined;
             payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
         }>;

@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import * as autoguard from "@joelek/ts-autoguard";
+import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
 import * as libhttp from "http";
 export declare function computeSimpleHash(string: string): number;
 export declare function encodeXMLText(string: string): string;
