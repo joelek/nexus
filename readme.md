@@ -1,6 +1,6 @@
 # @joelek/ts-serveit
 
-Bare-minimum static web server written completely in TypeScript.
+Static web server written completely in TypeScript.
 
 ![](./public/images/mobile.png)
 
