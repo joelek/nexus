@@ -6,6 +6,7 @@ import * as libserver from "./api/server";
 export type Options = {
 	pathPrefix: string;
 	port: number;
+	generateIndices?: boolean;
 };
 
 export function computeSimpleHash(string: string): number {
@@ -122,6 +123,7 @@ export function renderDirectoryListing(directoryListing: autoguard.api.Directory
 
 export function makeRequestListener(options: Options): libhttp.RequestListener {
 	let pathPrefix = options.pathPrefix;
+	let generateIndices = options.generateIndices ?? true;
 	return libserver.makeServer({
 		getStaticContent: async (request) => {
 			let options = request.options();
@@ -129,7 +131,7 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 			try {
 				return autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
 			} catch (error) {
-				if (error === 404) {
+				if (error === 404 && generateIndices) {
 					let directoryListing = autoguard.api.makeDirectoryListing(pathPrefix, pathSuffix, request);
 					return {
 						status: 200,
