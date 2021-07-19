@@ -140,7 +140,7 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 	let clientRouting = options.clientRouting ?? false;
 	let generateIndices = options.generateIndices ?? true;
 	return libserver.makeServer({
-		getStaticContent: async (request) => {
+		async getStaticContent(request) {
 			let options = request.options();
 			let pathSuffix = (options.filename ?? []).join("/");
 			try {
@@ -170,13 +170,11 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 			}
 			throw 404;
 		},
-		headStaticContent: async (request) => {
-			let options = request.options();
-			let pathSuffix = (options.filename ?? []).join("/");
-			let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+		async headStaticContent(request) {
+			let response = await this.getStaticContent(request);
 			return {
-				status: response.status,
-				headers: response.headers
+				...response,
+				payload: []
 			};
 		}
 	});
