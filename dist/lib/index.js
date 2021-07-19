@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.serve = exports.makeServer = exports.makeRequestListener = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = void 0;
+exports.serve = exports.makeServer = exports.makeRequestListener = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
 const libhttp = require("http");
 const libpath = require("path");
@@ -133,36 +133,62 @@ function renderDirectoryListing(directoryListing) {
 }
 exports.renderDirectoryListing = renderDirectoryListing;
 ;
+function makeDirectoryListingResponse(pathPrefix, pathSuffix, request) {
+    let directoryListing = autoguard.api.makeDirectoryListing(pathPrefix, pathSuffix, request);
+    return {
+        status: 200,
+        headers: {
+            "Content-Type": "text/html; charset=utf-8"
+        },
+        payload: autoguard.api.serializeStringPayload(renderDirectoryListing(directoryListing))
+    };
+}
+exports.makeDirectoryListingResponse = makeDirectoryListingResponse;
+;
 function makeRequestListener(options) {
-    var _a;
+    var _a, _b;
     let pathPrefix = options.pathPrefix;
-    let generateIndices = (_a = options.generateIndices) !== null && _a !== void 0 ? _a : true;
+    let clientRouting = (_a = options.clientRouting) !== null && _a !== void 0 ? _a : false;
+    let generateIndices = (_b = options.generateIndices) !== null && _b !== void 0 ? _b : true;
     return libserver.makeServer({
         getStaticContent: (request) => __awaiter(this, void 0, void 0, function* () {
-            var _b;
+            var _c;
             let options = request.options();
-            let pathSuffix = ((_b = options.filename) !== null && _b !== void 0 ? _b : []).join("/");
+            let pathSuffix = ((_c = options.filename) !== null && _c !== void 0 ? _c : []).join("/");
             try {
                 return autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
             }
             catch (error) {
-                if (error === 404 && generateIndices) {
-                    let directoryListing = autoguard.api.makeDirectoryListing(pathPrefix, pathSuffix, request);
-                    return {
-                        status: 200,
-                        headers: {
-                            "Content-Type": "text/html; charset=utf-8"
-                        },
-                        payload: autoguard.api.serializeStringPayload(renderDirectoryListing(directoryListing))
-                    };
+                if (error !== 404) {
+                    throw error;
                 }
-                throw error;
             }
+            if (clientRouting) {
+                try {
+                    return autoguard.api.makeReadStreamResponse(pathPrefix, "index.html", request);
+                }
+                catch (error) {
+                    if (error !== 404) {
+                        throw error;
+                    }
+                }
+            }
+            if (generateIndices) {
+                try {
+                    return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
+                }
+                catch (error) {
+                    if (error !== 404) {
+                        throw error;
+                    }
+                }
+            }
+            throw 404;
         }),
         headStaticContent: (request) => __awaiter(this, void 0, void 0, function* () {
-            var _c;
+            var _d;
             let options = request.options();
-            let pathSuffix = ((_c = options.filename) !== null && _c !== void 0 ? _c : []).join("/");
+            let pathSuffix = ((_d = options.filename) !== null && _d !== void 0 ? _d : []).join("/");
             let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
             return {
                 status: response.status,
@@ -184,6 +210,7 @@ function makeServer(options) {
 }
 exports.makeServer = makeServer;
 ;
+// TODO: Remove compatibility shim in v2.
 function serve(pathPrefix, port) {
     return makeServer({
         pathPrefix,

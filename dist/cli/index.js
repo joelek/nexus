@@ -21,6 +21,9 @@ function run() {
         else if ((parts = /^--indices=(true|false)$/.exec(arg)) !== null) {
             options.generateIndices = parts[1] === "true";
         }
+        else if ((parts = /^--routing=(true|false)$/.exec(arg)) !== null) {
+            options.clientRouting = parts[1] === "true";
+        }
         else {
             found_unrecognized_argument = true;
             process.stderr.write(`Unrecognized argument "${arg}"!\n`);
@@ -34,6 +37,8 @@ function run() {
         process.stderr.write(`		Set server port.\n`);
         process.stderr.write(`	--indices=boolean\n`);
         process.stderr.write(`		Configure automatic generation of index documents.\n`);
+        process.stderr.write(`	--routing=boolean\n`);
+        process.stderr.write(`		Configure support for client-side routing.\n`);
         process.exit(0);
     }
     else {
