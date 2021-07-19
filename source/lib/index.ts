@@ -3,6 +3,11 @@ import * as libhttp from "http";
 import * as libpath from "path";
 import * as libserver from "./api/server";
 
+export type Options = {
+	pathPrefix: string;
+	port: number;
+};
+
 export function computeSimpleHash(string: string): number {
 	let hash = string.length;
 	for (let char of string) {
@@ -115,9 +120,7 @@ export function renderDirectoryListing(directoryListing: autoguard.api.Directory
 	].join("");
 };
 
-export function makeRequestListener(options: {
-	pathPrefix: string
-}): libhttp.RequestListener {
+export function makeRequestListener(options: Options): libhttp.RequestListener {
 	let { pathPrefix } = { ...options };
 	return libserver.makeServer({
 		getStaticContent: async (request) => {
@@ -151,14 +154,9 @@ export function makeRequestListener(options: {
 	});
 };
 
-export function makeServer(options: {
-	pathPrefix: string,
-	port: number
-}): libhttp.Server {
+export function makeServer(options: Options): libhttp.Server {
 	let { pathPrefix, port } = { ...options };
-	let server = libhttp.createServer({}, makeRequestListener({
-		pathPrefix,
-	}));
+	let server = libhttp.createServer({}, makeRequestListener(options));
 	server.listen(port, () => {
 		process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${port}/"\n`);
 	});

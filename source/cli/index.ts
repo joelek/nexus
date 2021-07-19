@@ -3,8 +3,8 @@
 import * as lib from "../lib";
 
 function run(): void {
-	let options = {
-		root: "./",
+	let options: lib.Options = {
+		pathPrefix: "./",
 		port: 8000
 	};
 	let found_unrecognized_argument = false;
@@ -12,7 +12,7 @@ function run(): void {
 		let parts: RegExpExecArray | null = null;
 		if (false) {
 		} else if ((parts = /^--root=(.+)$/.exec(arg)) !== null) {
-			options.root = parts[1];
+			options.pathPrefix = parts[1];
 		} else if ((parts = /^--port=([0-9]+)$/.exec(arg)) !== null) {
 			options.port = Number.parseInt(parts[1]);
 		} else {
@@ -28,7 +28,7 @@ function run(): void {
 		process.stderr.write(`		Set server port.\n`);
 		process.exit(0);
 	} else {
-		lib.serve(options.root, options.port);
+		lib.makeServer(options);
 	}
 };
 
