@@ -151,50 +151,48 @@ function makeRequestListener(options) {
     let clientRouting = (_a = options.clientRouting) !== null && _a !== void 0 ? _a : false;
     let generateIndices = (_b = options.generateIndices) !== null && _b !== void 0 ? _b : true;
     return libserver.makeServer({
-        getStaticContent: (request) => __awaiter(this, void 0, void 0, function* () {
-            var _c;
-            let options = request.options();
-            let pathSuffix = ((_c = options.filename) !== null && _c !== void 0 ? _c : []).join("/");
-            try {
-                return autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
-            }
-            catch (error) {
-                if (error !== 404) {
-                    throw error;
-                }
-            }
-            if (clientRouting) {
+        getStaticContent(request) {
+            var _a;
+            return __awaiter(this, void 0, void 0, function* () {
+                let options = request.options();
+                let pathSuffix = ((_a = options.filename) !== null && _a !== void 0 ? _a : []).join("/");
                 try {
-                    return autoguard.api.makeReadStreamResponse(pathPrefix, "index.html", request);
+                    return autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
                 }
                 catch (error) {
                     if (error !== 404) {
                         throw error;
                     }
                 }
-            }
-            if (generateIndices) {
-                try {
-                    return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
-                }
-                catch (error) {
-                    if (error !== 404) {
-                        throw error;
+                if (clientRouting) {
+                    try {
+                        return autoguard.api.makeReadStreamResponse(pathPrefix, "index.html", request);
+                    }
+                    catch (error) {
+                        if (error !== 404) {
+                            throw error;
+                        }
                     }
                 }
-            }
-            throw 404;
-        }),
-        headStaticContent: (request) => __awaiter(this, void 0, void 0, function* () {
-            var _d;
-            let options = request.options();
-            let pathSuffix = ((_d = options.filename) !== null && _d !== void 0 ? _d : []).join("/");
-            let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
-            return {
-                status: response.status,
-                headers: response.headers
-            };
-        })
+                if (generateIndices) {
+                    try {
+                        return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
+                    }
+                    catch (error) {
+                        if (error !== 404) {
+                            throw error;
+                        }
+                    }
+                }
+                throw 404;
+            });
+        },
+        headStaticContent(request) {
+            return __awaiter(this, void 0, void 0, function* () {
+                let response = yield this.getStaticContent(request);
+                return Object.assign(Object.assign({}, response), { payload: [] });
+            });
+        }
     });
 }
 exports.makeRequestListener = makeRequestListener;
