@@ -7,6 +7,7 @@ export type Options = {
 	pathPrefix: string;
 	port: number;
 	generateIndices?: boolean;
+	clientRouting?: boolean;
 };
 
 export function computeSimpleHash(string: string): number {
@@ -136,6 +137,7 @@ export function makeDirectoryListingResponse(pathPrefix: string, pathSuffix: str
 
 export function makeRequestListener(options: Options): libhttp.RequestListener {
 	let pathPrefix = options.pathPrefix;
+	let clientRouting = options.clientRouting ?? false;
 	let generateIndices = options.generateIndices ?? true;
 	return libserver.makeServer({
 		getStaticContent: async (request) => {
@@ -146,6 +148,15 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 			} catch (error) {
 				if (error !== 404) {
 					throw error;
+				}
+			}
+			if (clientRouting) {
+				try {
+					return autoguard.api.makeReadStreamResponse(pathPrefix, "index.html", request);
+				} catch (error) {
+					if (error !== 404) {
+						throw error;
+					}
 				}
 			}
 			if (generateIndices) {
