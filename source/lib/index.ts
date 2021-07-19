@@ -181,6 +181,7 @@ export function makeServer(options: Options): libhttp.Server {
 	return server;
 };
 
+// TODO: Remove compatibility shim in v2.
 export function serve(pathPrefix: string, port: number): libhttp.Server {
 	return makeServer({
 		pathPrefix,
