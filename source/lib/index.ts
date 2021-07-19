@@ -121,6 +121,19 @@ export function renderDirectoryListing(directoryListing: autoguard.api.Directory
 	].join("");
 };
 
+export function makeDirectoryListingResponse(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>): autoguard.api.EndpointResponse & {
+	payload: autoguard.api.Binary;
+} {
+	let directoryListing = autoguard.api.makeDirectoryListing(pathPrefix, pathSuffix, request);
+	return {
+		status: 200,
+		headers: {
+			"Content-Type": "text/html; charset=utf-8"
+		},
+		payload: autoguard.api.serializeStringPayload(renderDirectoryListing(directoryListing))
+	};
+};
+
 export function makeRequestListener(options: Options): libhttp.RequestListener {
 	let pathPrefix = options.pathPrefix;
 	let generateIndices = options.generateIndices ?? true;
@@ -131,18 +144,20 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 			try {
 				return autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
 			} catch (error) {
-				if (error === 404 && generateIndices) {
-					let directoryListing = autoguard.api.makeDirectoryListing(pathPrefix, pathSuffix, request);
-					return {
-						status: 200,
-						headers: {
-							"Content-Type": "text/html; charset=utf-8"
-						},
-						payload: autoguard.api.serializeStringPayload(renderDirectoryListing(directoryListing))
+				if (error !== 404) {
+					throw error;
+				}
+			}
+			if (generateIndices) {
+				try {
+					return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
+				} catch (error) {
+					if (error !== 404) {
+						throw error;
 					}
 				}
-				throw error;
 			}
+			throw 404;
 		},
 		headStaticContent: async (request) => {
 			let options = request.options();
