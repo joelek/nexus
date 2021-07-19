@@ -121,7 +121,7 @@ export function renderDirectoryListing(directoryListing: autoguard.api.Directory
 };
 
 export function makeRequestListener(options: Options): libhttp.RequestListener {
-	let { pathPrefix } = { ...options };
+	let pathPrefix = options.pathPrefix;
 	return libserver.makeServer({
 		getStaticContent: async (request) => {
 			let options = request.options();
@@ -155,7 +155,8 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 };
 
 export function makeServer(options: Options): libhttp.Server {
-	let { pathPrefix, port } = { ...options };
+	let pathPrefix = options.pathPrefix;
+	let port = options.port;
 	let server = libhttp.createServer({}, makeRequestListener(options));
 	server.listen(port, () => {
 		process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${port}/"\n`);
