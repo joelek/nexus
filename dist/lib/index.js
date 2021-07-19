@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.serve = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = void 0;
+exports.serve = exports.makeServer = exports.makeRequestListener = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
 const libhttp = require("http");
 const libpath = require("path");
@@ -133,17 +133,20 @@ function renderDirectoryListing(directoryListing) {
 }
 exports.renderDirectoryListing = renderDirectoryListing;
 ;
-function serve(pathPrefix, port) {
-    let api = libserver.makeServer({
+function makeRequestListener(options) {
+    var _a;
+    let pathPrefix = options.pathPrefix;
+    let generateIndices = (_a = options.generateIndices) !== null && _a !== void 0 ? _a : true;
+    return libserver.makeServer({
         getStaticContent: (request) => __awaiter(this, void 0, void 0, function* () {
-            var _a;
+            var _b;
             let options = request.options();
-            let pathSuffix = ((_a = options.filename) !== null && _a !== void 0 ? _a : []).join("/");
+            let pathSuffix = ((_b = options.filename) !== null && _b !== void 0 ? _b : []).join("/");
             try {
                 return autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
             }
             catch (error) {
-                if (error === 404) {
+                if (error === 404 && generateIndices) {
                     let directoryListing = autoguard.api.makeDirectoryListing(pathPrefix, pathSuffix, request);
                     return {
                         status: 200,
@@ -157,9 +160,9 @@ function serve(pathPrefix, port) {
             }
         }),
         headStaticContent: (request) => __awaiter(this, void 0, void 0, function* () {
-            var _b;
+            var _c;
             let options = request.options();
-            let pathSuffix = ((_b = options.filename) !== null && _b !== void 0 ? _b : []).join("/");
+            let pathSuffix = ((_c = options.filename) !== null && _c !== void 0 ? _c : []).join("/");
             let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
             return {
                 status: response.status,
@@ -167,11 +170,25 @@ function serve(pathPrefix, port) {
             };
         })
     });
-    let server = libhttp.createServer({}, api);
+}
+exports.makeRequestListener = makeRequestListener;
+;
+function makeServer(options) {
+    let pathPrefix = options.pathPrefix;
+    let port = options.port;
+    let server = libhttp.createServer({}, makeRequestListener(options));
     server.listen(port, () => {
         process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${port}/"\n`);
     });
     return server;
+}
+exports.makeServer = makeServer;
+;
+function serve(pathPrefix, port) {
+    return makeServer({
+        pathPrefix,
+        port
+    });
 }
 exports.serve = serve;
 ;
