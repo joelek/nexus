@@ -115,8 +115,11 @@ export function renderDirectoryListing(directoryListing: autoguard.api.Directory
 	].join("");
 };
 
-export function serve(pathPrefix: string, port: number): libhttp.Server {
-	let api = libserver.makeServer({
+export function makeRequestListener(options: {
+	pathPrefix: string
+}): libhttp.RequestListener {
+	let { pathPrefix } = { ...options };
+	return libserver.makeServer({
 		getStaticContent: async (request) => {
 			let options = request.options();
 			let pathSuffix = (options.filename ?? []).join("/");
@@ -146,9 +149,25 @@ export function serve(pathPrefix: string, port: number): libhttp.Server {
 			};
 		}
 	});
-	let server = libhttp.createServer({}, api);
+};
+
+export function makeServer(options: {
+	pathPrefix: string,
+	port: number
+}): libhttp.Server {
+	let { pathPrefix, port } = { ...options };
+	let server = libhttp.createServer({}, makeRequestListener({
+		pathPrefix,
+	}));
 	server.listen(port, () => {
 		process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${port}/"\n`);
 	});
 	return server;
+};
+
+export function serve(pathPrefix: string, port: number): libhttp.Server {
+	return makeServer({
+		pathPrefix,
+		port
+	});
 };
