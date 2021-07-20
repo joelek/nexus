@@ -6,7 +6,9 @@ Static web server written completely in TypeScript.
 
 ## Features
 
-Serveit serves the contents of any directory over HTTP by launching a very simple server. Serveit only accepts GET and HEAD requests and automatically generates and serves index documents for directory requests.
+### Instant server
+
+Serveit serves the contents of any directory by launching a web server that accepts GET and HEAD requests.
 
 Use the command line utility to launch serveit.
 
@@ -14,7 +16,15 @@ Use the command line utility to launch serveit.
 serveit
 ```
 
-Serveit serves the contents of the current working direcory over port 8000 by default. You may specify a different root or port using the `--root=<root>` and `--port=<port>` arguments respectively.
+Serveit serves the contents of the current working direcory over port 8000 by default. You may specify a different root or port using the `--root=<root>` and `--port=<port>` arguments, respectively.
+
+### Index documents
+
+Serveit automatically generates and serves index documents for directory requests. The feature is turned _on_ by default and can be configued using the `--indices=<boolean>` argument.
+
+### Client-side routing
+
+Serveit includes support for applications utilizing client-side routing. The feature is turned _off_ by default and can be configured using the `--routing=<boolean>` argument.
 
 ## Sponsorship
 
