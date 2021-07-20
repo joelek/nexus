@@ -151,7 +151,7 @@ function makeRequestListener(options) {
     let clientRouting = (_a = options.clientRouting) !== null && _a !== void 0 ? _a : false;
     let generateIndices = (_b = options.generateIndices) !== null && _b !== void 0 ? _b : true;
     return libserver.makeServer({
-        getStaticContent(request) {
+        getRequest(request) {
             var _a;
             return __awaiter(this, void 0, void 0, function* () {
                 let options = request.options();
@@ -187,9 +187,9 @@ function makeRequestListener(options) {
                 throw 404;
             });
         },
-        headStaticContent(request) {
+        headRequest(request) {
             return __awaiter(this, void 0, void 0, function* () {
-                let response = yield this.getStaticContent(request);
+                let response = yield this.getRequest(request);
                 return Object.assign(Object.assign({}, response), { payload: [] });
             });
         }

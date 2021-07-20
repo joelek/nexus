@@ -14,9 +14,9 @@ exports.makeClient = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-client");
 const shared = require("./index");
 const makeClient = (options) => ({
-    "getStaticContent": (request) => __awaiter(void 0, void 0, void 0, function* () {
+    "getRequest": (request) => __awaiter(void 0, void 0, void 0, function* () {
         var _a, _b, _c, _d, _e, _f, _g;
-        let guard = shared.Autoguard.Requests["getStaticContent"];
+        let guard = shared.Autoguard.Requests["getRequest"];
         guard.as(request, "request");
         let method = "GET";
         let components = new Array();
@@ -33,14 +33,14 @@ const makeClient = (options) => ({
             let headers = {};
             headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_g = raw.headers) !== null && _g !== void 0 ? _g : {}, Object.keys(headers)));
             let payload = raw.payload;
-            let guard = shared.Autoguard.Responses["getStaticContent"];
+            let guard = shared.Autoguard.Responses["getRequest"];
             let response = guard.as({ status, headers, payload }, "response");
             return new autoguard.api.ServerResponse(response, true);
         }
     }),
-    "headStaticContent": (request) => __awaiter(void 0, void 0, void 0, function* () {
+    "headRequest": (request) => __awaiter(void 0, void 0, void 0, function* () {
         var _h, _j, _k, _l, _m, _o, _p;
-        let guard = shared.Autoguard.Requests["headStaticContent"];
+        let guard = shared.Autoguard.Requests["headRequest"];
         guard.as(request, "request");
         let method = "HEAD";
         let components = new Array();
@@ -57,7 +57,7 @@ const makeClient = (options) => ({
             let headers = {};
             headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_p = raw.headers) !== null && _p !== void 0 ? _p : {}, Object.keys(headers)));
             let payload = raw.payload;
-            let guard = shared.Autoguard.Responses["headStaticContent"];
+            let guard = shared.Autoguard.Responses["headRequest"];
             let response = guard.as({ status, headers, payload }, "response");
             return new autoguard.api.ServerResponse(response, true);
         }

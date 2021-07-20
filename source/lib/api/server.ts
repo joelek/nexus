@@ -19,14 +19,14 @@ export const makeServer = (routes: autoguard.api.Server<shared.Autoguard.Request
 				let headers: Record<string, autoguard.api.JSON> = {};
 				headers = { ...headers, ...autoguard.api.decodeUndeclaredHeaders(raw.headers ?? {}, Object.keys(headers)) };
 				let payload = raw.payload;
-				let guard = shared.Autoguard.Requests["getStaticContent"];
+				let guard = shared.Autoguard.Requests["getRequest"];
 				let request = guard.as({ options, headers, payload }, "request");
 				return {
 					handleRequest: async () => {
-						let response = await routes["getStaticContent"](new autoguard.api.ClientRequest(request, true, auxillary));
+						let response = await routes["getRequest"](new autoguard.api.ClientRequest(request, true, auxillary));
 						return {
 							validateResponse: async () => {
-								let guard = shared.Autoguard.Responses["getStaticContent"];
+								let guard = shared.Autoguard.Responses["getRequest"];
 								guard.as(response, "response");
 								let status = response.status ?? 200;
 								let headers = new Array<[string, string]>();
@@ -54,14 +54,14 @@ export const makeServer = (routes: autoguard.api.Server<shared.Autoguard.Request
 				let headers: Record<string, autoguard.api.JSON> = {};
 				headers = { ...headers, ...autoguard.api.decodeUndeclaredHeaders(raw.headers ?? {}, Object.keys(headers)) };
 				let payload = raw.payload;
-				let guard = shared.Autoguard.Requests["headStaticContent"];
+				let guard = shared.Autoguard.Requests["headRequest"];
 				let request = guard.as({ options, headers, payload }, "request");
 				return {
 					handleRequest: async () => {
-						let response = await routes["headStaticContent"](new autoguard.api.ClientRequest(request, true, auxillary));
+						let response = await routes["headRequest"](new autoguard.api.ClientRequest(request, true, auxillary));
 						return {
 							validateResponse: async () => {
-								let guard = shared.Autoguard.Responses["headStaticContent"];
+								let guard = shared.Autoguard.Responses["headRequest"];
 								guard.as(response, "response");
 								let status = response.status ?? 200;
 								let headers = new Array<[string, string]>();

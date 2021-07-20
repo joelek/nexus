@@ -140,7 +140,7 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 	let clientRouting = options.clientRouting ?? false;
 	let generateIndices = options.generateIndices ?? true;
 	return libserver.makeServer({
-		async getStaticContent(request) {
+		async getRequest(request) {
 			let options = request.options();
 			let pathSuffix = (options.filename ?? []).join("/");
 			try {
@@ -170,8 +170,8 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 			}
 			throw 404;
 		},
-		async headStaticContent(request) {
-			let response = await this.getStaticContent(request);
+		async headRequest(request) {
+			let response = await this.getRequest(request);
 			return {
 				...response,
 				payload: []

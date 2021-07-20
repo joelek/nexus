@@ -8,7 +8,7 @@ export namespace Autoguard {
 	export type Guards = { [A in keyof typeof Guards]: ReturnType<typeof Guards[A]["as"]>; };
 
 	export const Requests = {
-		"getStaticContent": autoguard.guards.Object.of({
+		"getRequest": autoguard.guards.Object.of({
 			"options": autoguard.guards.Union.of(
 				autoguard.guards.Intersection.of(
 					autoguard.guards.Object.of({
@@ -33,7 +33,7 @@ export namespace Autoguard {
 				autoguard.guards.Undefined
 			)
 		}),
-		"headStaticContent": autoguard.guards.Object.of({
+		"headRequest": autoguard.guards.Object.of({
 			"options": autoguard.guards.Union.of(
 				autoguard.guards.Intersection.of(
 					autoguard.guards.Object.of({
@@ -63,7 +63,7 @@ export namespace Autoguard {
 	export type Requests = { [A in keyof typeof Requests]: ReturnType<typeof Requests[A]["as"]>; };
 
 	export const Responses = {
-		"getStaticContent": autoguard.guards.Object.of({
+		"getRequest": autoguard.guards.Object.of({
 			"status": autoguard.guards.Union.of(
 				autoguard.guards.Number,
 				autoguard.guards.Undefined
@@ -80,7 +80,7 @@ export namespace Autoguard {
 				autoguard.guards.Undefined
 			)
 		}),
-		"headStaticContent": autoguard.guards.Object.of({
+		"headRequest": autoguard.guards.Object.of({
 			"status": autoguard.guards.Union.of(
 				autoguard.guards.Number,
 				autoguard.guards.Undefined

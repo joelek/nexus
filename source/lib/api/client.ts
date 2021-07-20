@@ -7,8 +7,8 @@ export const makeClient = (options?: Partial<{
 	urlPrefix: string,
 	requestHandler: autoguard.api.RequestHandler
 }>): autoguard.api.Client<shared.Autoguard.Requests, shared.Autoguard.Responses> => ({
-	"getStaticContent": async (request) => {
-		let guard = shared.Autoguard.Requests["getStaticContent"];
+	"getRequest": async (request) => {
+		let guard = shared.Autoguard.Requests["getRequest"];
 		guard.as(request, "request");
 		let method = "GET";
 		let components = new Array<string>();
@@ -25,13 +25,13 @@ export const makeClient = (options?: Partial<{
 			let headers: Record<string, autoguard.api.JSON> = {};
 			headers = { ...headers, ...autoguard.api.decodeUndeclaredHeaders(raw.headers ?? {}, Object.keys(headers)) };
 			let payload = raw.payload;
-			let guard = shared.Autoguard.Responses["getStaticContent"];
+			let guard = shared.Autoguard.Responses["getRequest"];
 			let response = guard.as({ status, headers, payload }, "response");
 			return new autoguard.api.ServerResponse(response, true);
 		}
 	},
-	"headStaticContent": async (request) => {
-		let guard = shared.Autoguard.Requests["headStaticContent"];
+	"headRequest": async (request) => {
+		let guard = shared.Autoguard.Requests["headRequest"];
 		guard.as(request, "request");
 		let method = "HEAD";
 		let components = new Array<string>();
@@ -48,7 +48,7 @@ export const makeClient = (options?: Partial<{
 			let headers: Record<string, autoguard.api.JSON> = {};
 			headers = { ...headers, ...autoguard.api.decodeUndeclaredHeaders(raw.headers ?? {}, Object.keys(headers)) };
 			let payload = raw.payload;
-			let guard = shared.Autoguard.Responses["headStaticContent"];
+			let guard = shared.Autoguard.Responses["headRequest"];
 			let response = guard.as({ status, headers, payload }, "response");
 			return new autoguard.api.ServerResponse(response, true);
 		}

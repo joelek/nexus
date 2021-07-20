@@ -30,15 +30,15 @@ const makeServer = (routes, options) => {
                 let headers = {};
                 headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_b = raw.headers) !== null && _b !== void 0 ? _b : {}, Object.keys(headers)));
                 let payload = raw.payload;
-                let guard = shared.Autoguard.Requests["getStaticContent"];
+                let guard = shared.Autoguard.Requests["getRequest"];
                 let request = guard.as({ options, headers, payload }, "request");
                 return {
                     handleRequest: () => __awaiter(void 0, void 0, void 0, function* () {
-                        let response = yield routes["getStaticContent"](new autoguard.api.ClientRequest(request, true, auxillary));
+                        let response = yield routes["getRequest"](new autoguard.api.ClientRequest(request, true, auxillary));
                         return {
                             validateResponse: () => __awaiter(void 0, void 0, void 0, function* () {
                                 var _c, _d, _e;
-                                let guard = shared.Autoguard.Responses["getStaticContent"];
+                                let guard = shared.Autoguard.Responses["getRequest"];
                                 guard.as(response, "response");
                                 let status = (_c = response.status) !== null && _c !== void 0 ? _c : 200;
                                 let headers = new Array();
@@ -67,15 +67,15 @@ const makeServer = (routes, options) => {
                 let headers = {};
                 headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_b = raw.headers) !== null && _b !== void 0 ? _b : {}, Object.keys(headers)));
                 let payload = raw.payload;
-                let guard = shared.Autoguard.Requests["headStaticContent"];
+                let guard = shared.Autoguard.Requests["headRequest"];
                 let request = guard.as({ options, headers, payload }, "request");
                 return {
                     handleRequest: () => __awaiter(void 0, void 0, void 0, function* () {
-                        let response = yield routes["headStaticContent"](new autoguard.api.ClientRequest(request, true, auxillary));
+                        let response = yield routes["headRequest"](new autoguard.api.ClientRequest(request, true, auxillary));
                         return {
                             validateResponse: () => __awaiter(void 0, void 0, void 0, function* () {
                                 var _c, _d, _e;
-                                let guard = shared.Autoguard.Responses["headStaticContent"];
+                                let guard = shared.Autoguard.Responses["headRequest"];
                                 guard.as(response, "response");
                                 let status = (_c = response.status) !== null && _c !== void 0 ? _c : 200;
                                 let headers = new Array();

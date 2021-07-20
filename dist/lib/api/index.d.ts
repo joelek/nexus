@@ -5,7 +5,7 @@ export declare namespace Autoguard {
         [A in keyof typeof Guards]: ReturnType<typeof Guards[A]["as"]>;
     };
     const Requests: {
-        getStaticContent: autoguard.serialization.MessageGuard<{
+        getRequest: autoguard.serialization.MessageGuard<{
             headers?: {
                 [x: string]: autoguard.api.JSON;
             } | undefined;
@@ -15,7 +15,7 @@ export declare namespace Autoguard {
             } | undefined;
             payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
         }>;
-        headStaticContent: autoguard.serialization.MessageGuard<{
+        headRequest: autoguard.serialization.MessageGuard<{
             headers?: {
                 [x: string]: autoguard.api.JSON;
             } | undefined;
@@ -30,14 +30,14 @@ export declare namespace Autoguard {
         [A in keyof typeof Requests]: ReturnType<typeof Requests[A]["as"]>;
     };
     const Responses: {
-        getStaticContent: autoguard.serialization.MessageGuard<{
+        getRequest: autoguard.serialization.MessageGuard<{
             headers?: {
                 [x: string]: autoguard.api.JSON;
             } | undefined;
             payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
             status?: number | undefined;
         }>;
-        headStaticContent: autoguard.serialization.MessageGuard<{
+        headRequest: autoguard.serialization.MessageGuard<{
             headers?: {
                 [x: string]: autoguard.api.JSON;
             } | undefined;
