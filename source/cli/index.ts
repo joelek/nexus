@@ -3,30 +3,34 @@
 import * as lib from "../lib";
 
 function run(): void {
-	let options: lib.Options = {};
+	let domain: lib.Domain = {};
+	let options: lib.Options = {
+		domains: []
+	};
 	let found_unrecognized_argument = false;
 	for (let arg of process.argv.slice(2)) {
 		let parts: RegExpExecArray | null = null;
 		if (false) {
 		} else if ((parts = /^--root=(.*)$/.exec(arg)) !== null) {
-			options.pathPrefix = parts[1] || undefined;
+			domain.root = parts[1] || undefined;
 		} else if ((parts = /^--port=([0-9]+)$/.exec(arg)) !== null) {
 			// TODO: Remove compatibility behaviour in v2.
-			options.httpPort = Number.parseInt(parts[1]);
+			options.http = Number.parseInt(parts[1]);
 		} else if ((parts = /^--http=([0-9]+)$/.exec(arg)) !== null) {
-			options.httpPort = Number.parseInt(parts[1]);
+			options.http = Number.parseInt(parts[1]);
 		} else if ((parts = /^--https=([0-9]+)$/.exec(arg)) !== null) {
-			options.httpsPort = Number.parseInt(parts[1]);
+			options.https = Number.parseInt(parts[1]);
 		} else if ((parts = /^--key=(.*)$/.exec(arg)) !== null) {
-			options.key = parts[1] || undefined;
+			domain.key = parts[1] || undefined;
 		} else if ((parts = /^--cert=(.*)$/.exec(arg)) !== null) {
-			options.cert = parts[1] || undefined;
+			domain.cert = parts[1] || undefined;
 		} else if ((parts = /^--host=(.*)$/.exec(arg)) !== null) {
-			options.host = parts[1] || undefined;
+			domain.host = parts[1] || undefined;
+			options.domains.push({ ...domain });
 		} else if ((parts = /^--indices=(true|false)$/.exec(arg)) !== null) {
-			options.generateIndices = parts[1] === "true";
+			domain.indices = parts[1] === "true";
 		} else if ((parts = /^--routing=(true|false)$/.exec(arg)) !== null) {
-			options.clientRouting = parts[1] === "true";
+			domain.routing = parts[1] === "true";
 		} else {
 			found_unrecognized_argument = true;
 			process.stderr.write(`Unrecognized argument "${arg}"!\n`);
@@ -45,13 +49,16 @@ function run(): void {
 		process.stderr.write(`	--cert=string\n`);
 		process.stderr.write(`		Set path for TLS certificate.\n`);
 		process.stderr.write(`	--host=string\n`);
-		process.stderr.write(`		Set host pattern for which to respond.\n`);
+		process.stderr.write(`		Set host for which to respond.\n`);
 		process.stderr.write(`	--indices=boolean\n`);
 		process.stderr.write(`		Configure automatic generation of index documents.\n`);
 		process.stderr.write(`	--routing=boolean\n`);
 		process.stderr.write(`		Configure support for client-side routing.\n`);
 		process.exit(0);
 	} else {
+		if (options.domains.length === 0) {
+			options.domains.push({ ...domain });
+		}
 		lib.makeServer(options);
 	}
 };

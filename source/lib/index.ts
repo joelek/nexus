@@ -7,15 +7,19 @@ import * as libpath from "path";
 import * as libtls from "tls";
 import * as libserver from "./api/server";
 
-export type Options = {
-	pathPrefix?: string;
-	httpPort?: number;
-	httpsPort?: number;
+export type Domain = {
+	root?: string;
 	key?: string;
 	cert?: string;
 	host?: string;
-	generateIndices?: boolean;
-	clientRouting?: boolean;
+	indices?: boolean;
+	routing?: boolean;
+};
+
+export type Options = {
+	domains: Domain[];
+	http?: number;
+	https?: number;
 };
 
 export function computeSimpleHash(string: string): number {
@@ -143,10 +147,7 @@ export function makeDirectoryListingResponse(pathPrefix: string, pathSuffix: str
 	};
 };
 
-export function makeRequestListener(options: Options): libhttp.RequestListener {
-	let pathPrefix = options.pathPrefix ?? "./";
-	let clientRouting = options.clientRouting ?? false;
-	let generateIndices = options.generateIndices ?? true;
+export function makeRequestListener(pathPrefix: string, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener {
 	return libserver.makeServer({
 		async getRequest(request) {
 			let options = request.options();
@@ -188,10 +189,22 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 	});
 };
 
+export function makeRedirectRequestListener(httpsPort?: number): libhttp.RequestListener {
+	return (request, response) => {
+		let host = (request.headers.host ?? "localhost").split(":")[0];
+		let path = request.url ?? "/";
+		let port = httpsPort != null ? `:${httpsPort}` : "";
+		response.writeHead(301, {
+			"Location": `https://${host}${port}${path}`
+		});
+		response.end();
+	};
+};
+
 export function matchesHostPattern(subject: string, pattern: string): boolean {
-	let subjectParts = subject.split(".").reverse();
-	let patternParts = pattern.split(".").reverse();
-	if (patternParts.length > subjectParts.length) {
+	let subjectParts = subject.split(".");
+	let patternParts = pattern.split(".");
+	if (patternParts.length !== subjectParts.length) {
 		return false;
 	}
 	for (let [index, patternPart] of patternParts.entries()) {
@@ -206,85 +219,74 @@ export function matchesHostPattern(subject: string, pattern: string): boolean {
 };
 
 export function makeServer(options: Options): libhttp.Server {
-	let pathPrefix = options.pathPrefix ?? "./";
-	let httpPort = options.httpPort ?? 8000;
-	let httpsPort = options.httpsPort ?? 8443;
-	let key = options.key;
-	let cert = options.cert;
-	let host = options.host ?? "*";
-	if (key || cert) {
-		process.stdout.write(`Configuring "${pathPrefix}" for access over https://${host}:${httpsPort}\n`);
-		let defaultSecureContext = libtls.createSecureContext();
-		let secureContext = libtls.createSecureContext({
-			key: key ? libfs.readFileSync(key) : undefined,
-			cert: cert ? libfs.readFileSync(cert) : undefined
-		});
-		let defaultRequestListener: libhttp.RequestListener = (request, response) => {
-			response.writeHead(404);
-			response.end();
-		};
-		let httpsRequestListener = makeRequestListener(options);
-		let httpRequestListener: libhttp.RequestListener = (request, response) => {
-			let host = (request.headers.host ?? "localhost").split(":")[0];
-			let path = request.url ?? "/";
-			response.writeHead(301, {
-				"Location": `https://${host}:${httpsPort}${path}`
+	let http = options.http ?? 8000;
+	let https = options.https ?? 8443;
+	let defaultSecureContext = libtls.createSecureContext();
+	let defaultRequestListener: libhttp.RequestListener = (request, response) => {
+		response.writeHead(404);
+		response.end();
+	};
+	let secureContexts = new Array<[string, libtls.SecureContext]>();
+	let httpRequestListeners = new Array<[string, libhttp.RequestListener]>();
+	let httpsRequestListeners = new Array<[string, libhttp.RequestListener]>();
+	for (let domain of options.domains) {
+		let root = domain.root ?? "./";
+		let key = domain.key;
+		let cert = domain.cert;
+		let host = domain.host ?? "*";
+		let routing = domain.routing ?? false;
+		let indices = domain.indices ?? true;
+		if (key || cert) {
+			process.stdout.write(`Configuring https://${host}:${https} for "${root}"...\n`);
+			let secureContext = libtls.createSecureContext({
+				key: key ? libfs.readFileSync(key) : undefined,
+				cert: cert ? libfs.readFileSync(cert) : undefined
 			});
-			response.end();
-		};
-		let httpsServer = libhttps.createServer({
-			SNICallback: (sni, callback) => {
-				if (matchesHostPattern(sni, host)) {
-					return callback(null, secureContext);
-				}
-				return callback(null, defaultSecureContext);
-			}
-		}, (request, response) => {
-			if (matchesHostPattern((request.headers.host ?? "localhost").split(":")[0], host)) {
-				return httpsRequestListener(request, response);
-			}
-			return defaultRequestListener(request, response);
-		});
-		httpsServer.listen(httpsPort, () => {
-			let address = httpsServer.address() as libnet.AddressInfo;
-			process.stdout.write(`Listening for HTTPS traffic over port ${address.port}.\n`);
-		});
-		let httpServer = libhttp.createServer({}, (request, response) => {
-			if (matchesHostPattern((request.headers.host ?? "localhost").split(":")[0], host)) {
-				return httpRequestListener(request, response);
-			}
-			return defaultRequestListener(request, response);
-		});
-		httpServer.listen(httpPort, () => {
-			let address = httpServer.address() as libnet.AddressInfo;
-			process.stdout.write(`Listening for HTTP traffic over port ${address.port}.\n`);
-		});
-		return httpServer;
-	} else {
-		process.stdout.write(`Configuring "${pathPrefix}" for access over http://${host}:${httpPort}\n`);
-		let defaultRequestListener: libhttp.RequestListener = (request, response) => {
-			response.writeHead(404);
-			response.end();
-		};
-		let httpRequestListener = makeRequestListener(options);
-		let httpServer = libhttp.createServer({}, (request, response) => {
-			if (matchesHostPattern((request.headers.host ?? "localhost").split(":")[0], host)) {
-				return httpRequestListener(request, response);
-			}
-			return defaultRequestListener(request, response);
-		});
-		httpServer.listen(httpPort, () => {
-			let address = httpServer.address() as libnet.AddressInfo;
-			process.stdout.write(`Listening for HTTP traffic over port ${address.port}.\n`);
-		});
-		return httpServer;
+			secureContexts.push([host, secureContext]);
+			let httpRequestListener = makeRedirectRequestListener(https);
+			httpRequestListeners.push([host, httpRequestListener]);
+			let httpsRequestListener = makeRequestListener(root, routing, indices);
+			httpsRequestListeners.push([host, httpsRequestListener]);
+		} else {
+			process.stdout.write(`Configuring http://${host}:${http} for "${root}"...\n`);
+			let httpRequestListener = makeRequestListener(root, routing, indices);
+			httpRequestListeners.push([host, httpRequestListener]);
+		}
 	}
+	let httpsServer = libhttps.createServer({
+		SNICallback: (sni, callback) => {
+			let secureContext = secureContexts.find((pair) => matchesHostPattern(sni, pair[0]))?.[1] ?? defaultSecureContext;
+			return callback(null, secureContext);
+		}
+	}, (request, response) => {
+		let host = (request.headers.host ?? "localhost").split(":")[0];
+		let requestListener = httpsRequestListeners.find((pair) => matchesHostPattern(host, pair[0]))?.[1] ?? defaultRequestListener;
+		return requestListener(request, response);
+	});
+	httpsServer.listen(https, () => {
+		let address = httpsServer.address() as libnet.AddressInfo;
+		process.stdout.write(`Listening on port ${address.port} (HTTPS).\n`);
+	});
+	let httpServer = libhttp.createServer({}, (request, response) => {
+		let host = (request.headers.host ?? "localhost").split(":")[0];
+		let requestListener = httpRequestListeners.find((pair) => matchesHostPattern(host, pair[0]))?.[1] ?? defaultRequestListener;
+		return requestListener(request, response);
+	});
+	httpServer.listen(http, () => {
+		let address = httpServer.address() as libnet.AddressInfo;
+		process.stdout.write(`Listening on port ${address.port} (HTTP).\n`);
+	});
+	return httpServer;
 };
 
 // TODO: Remove compatibility shim in v2.
-export function serve(pathPrefix: string, httpPort: number): libhttp.Server {
+export function serve(root: string, http: number): libhttp.Server {
 	return makeServer({
-		pathPrefix,
-		httpPort
+		domains: [
+			{
+				root
+			}
+		],
+		http
 	});
 };
