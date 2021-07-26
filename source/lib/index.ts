@@ -1,5 +1,7 @@
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
+import * as libfs from "fs";
 import * as libhttp from "http";
+import * as libhttps from "https";
 import * as libpath from "path";
 import * as libserver from "./api/server";
 
@@ -186,11 +188,34 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 export function makeServer(options: Options): libhttp.Server {
 	let pathPrefix = options.pathPrefix ?? "./";
 	let httpPort = options.httpPort ?? 8000;
-	let server = libhttp.createServer({}, makeRequestListener(options));
-	server.listen(httpPort, () => {
-		process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${httpPort}/"\n`);
-	});
-	return server;
+	let httpsPort = options.httpsPort ?? 8443;
+	let key = options.key;
+	let cert = options.cert;
+	if (key || cert) {
+		let httpsServer = libhttps.createServer({
+			key: key ? libfs.readFileSync(key) : undefined,
+			cert: cert ? libfs.readFileSync(cert) : undefined
+		}, makeRequestListener(options));
+		httpsServer.listen(httpsPort, () => {
+			process.stdout.write(`Serving "${pathPrefix}" at https://localhost:${httpsPort}/\n`);
+		});
+		let httpServer = libhttp.createServer({}, (request, response) => {
+			let host = (request.headers.host ?? "localhost").split(":")[0];
+			let path = request.url ?? "/";
+			response.writeHead(301, {
+				"Location": `https://${host}:${httpsPort}${path}`
+			});
+			response.end();
+		});
+		httpServer.listen(httpPort);
+		return httpServer;
+	} else {
+		let httpServer = libhttp.createServer({}, makeRequestListener(options));
+		httpServer.listen(httpPort, () => {
+			process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${httpPort}/\n`);
+		});
+		return httpServer;
+	}
 };
 
 // TODO: Remove compatibility shim in v2.
