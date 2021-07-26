@@ -3,6 +3,7 @@ import * as libfs from "fs";
 import * as libhttp from "http";
 import * as libhttps from "https";
 import * as libpath from "path";
+import * as libtls from "tls";
 import * as libserver from "./api/server";
 
 export type Options = {
@@ -192,9 +193,14 @@ export function makeServer(options: Options): libhttp.Server {
 	let key = options.key;
 	let cert = options.cert;
 	if (key || cert) {
-		let httpsServer = libhttps.createServer({
+		let secureContext = libtls.createSecureContext({
 			key: key ? libfs.readFileSync(key) : undefined,
 			cert: cert ? libfs.readFileSync(cert) : undefined
+		});
+		let httpsServer = libhttps.createServer({
+			SNICallback: (sni, callback) => {
+				return callback(null, secureContext);
+			}
 		}, makeRequestListener(options));
 		httpsServer.listen(httpsPort, () => {
 			process.stdout.write(`Serving "${pathPrefix}" at https://localhost:${httpsPort}/\n`);
