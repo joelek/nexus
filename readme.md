@@ -53,5 +53,3 @@ npm install -g joelek/ts-serveit#master
 ## Roadmap
 
 * Add support for custom CSS-files.
-* Add support for HTTPS server.
-* Add automatic generation of self-signed certificates.
