@@ -42,6 +42,52 @@ Host filtering may be specified using the `--host=<string>` argument where singl
 
 It is important to understand that serveit will stop accepting requests directed to `localhost` and through IPs when host filtering is used unless the hosts are explicitly allowed. Local DNS can be modified to direct the desired host to the local machine in order to access a locally running server. This is the recommended solution for use in conjunction with transport layer security during development.
 
+### Multiple hosts
+
+Serveit can be configured with multiple hosts and each host may have its distinct configuration. Every time the `--host=<string>` argument is passed, a domain configuration is created using the previously configured settings.
+
+This allows for serving a single root using multiple hosts covering for example the apex domain and the `www` subdomain.
+
+```
+serveit \
+	--root=./domain1/ \
+	--key=./domain1.key \
+	--cert=./domain1.cer \
+	--host=domain1.com \
+	--host=www.domain1.com
+```
+
+It also allows for serving multiple roots using multiple hosts with multiple certificates.
+
+```
+serveit \
+	--root=./domain1/ \
+	--key=./domain1.key \
+	--cert=./domain1.cer \
+	--host=domain1.com \
+	--host=www.domain1.com \
+	--root=./domain2/ \
+	--key=./domain2.key \
+	--cert=./domain2.cer \
+	--host=domain2.com \
+	--host=www.domain2.com
+```
+
+It even allows for serving a single root using multiple hosts with multiple certificates.
+
+```
+serveit \
+	--root=./domain1and2/ \
+	--key=./domain1.key \
+	--cert=./domain1.cer \
+	--host=domain1.com \
+	--host=www.domain1.com \
+	--key=./domain2.key \
+	--cert=./domain2.cer \
+	--host=domain2.com \
+	--host=www.domain2.com
+```
+
 ## Sponsorship
 
 The continued development of this software depends on your sponsorship. Please consider sponsoring this project if you find that the software creates value for you and your organization.
