@@ -40,7 +40,7 @@ Serveit includes support for host filtering which prevents the server from being
 
 Host filtering may be specified using the `--host=<string>` argument where single asterisk labels are treated as wildcards.
 
-It is important to understand that serveit will stop accepting requests to `localhost` when host filtering is used. Local DNS needs be modified to direct the desired host to the local machine in order to access a locally running server.
+It is important to understand that serveit will stop accepting requests directed to `localhost` and through IPs when host filtering is used unless the hosts are explicitly allowed. Local DNS can be modified to direct the desired host to the local machine in order to access a locally running server. This is the recommended solution for use in conjunction with transport layer security during development.
 
 ## Sponsorship
 
