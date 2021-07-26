@@ -3,10 +3,7 @@
 import * as lib from "../lib";
 
 function run(): void {
-	let options: lib.Options = {
-		pathPrefix: "./",
-		httpPort: 8000
-	};
+	let options: lib.Options = {};
 	let found_unrecognized_argument = false;
 	for (let arg of process.argv.slice(2)) {
 		let parts: RegExpExecArray | null = null;

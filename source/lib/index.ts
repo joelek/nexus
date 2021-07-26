@@ -4,8 +4,8 @@ import * as libpath from "path";
 import * as libserver from "./api/server";
 
 export type Options = {
-	pathPrefix: string;
-	httpPort: number;
+	pathPrefix?: string;
+	httpPort?: number;
 	httpsPort?: number;
 	key?: string;
 	cert?: string;
@@ -139,7 +139,7 @@ export function makeDirectoryListingResponse(pathPrefix: string, pathSuffix: str
 };
 
 export function makeRequestListener(options: Options): libhttp.RequestListener {
-	let pathPrefix = options.pathPrefix;
+	let pathPrefix = options.pathPrefix ?? "./";
 	let clientRouting = options.clientRouting ?? false;
 	let generateIndices = options.generateIndices ?? true;
 	return libserver.makeServer({
@@ -184,8 +184,8 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 };
 
 export function makeServer(options: Options): libhttp.Server {
-	let pathPrefix = options.pathPrefix;
-	let httpPort = options.httpPort;
+	let pathPrefix = options.pathPrefix ?? "./";
+	let httpPort = options.httpPort ?? 8000;
 	let server = libhttp.createServer({}, makeRequestListener(options));
 	server.listen(httpPort, () => {
 		process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${httpPort}/"\n`);
