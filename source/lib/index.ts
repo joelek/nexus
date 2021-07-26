@@ -7,6 +7,8 @@ export type Options = {
 	pathPrefix: string;
 	httpPort: number;
 	httpsPort?: number;
+	key?: string;
+	cert?: string;
 	generateIndices?: boolean;
 	clientRouting?: boolean;
 };
