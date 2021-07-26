@@ -254,7 +254,7 @@ export function makeServer(options: Options): libhttp.Server {
 		let routing = domain.routing ?? false;
 		let indices = domain.indices ?? true;
 		if (key || cert) {
-			process.stdout.write(`Configuring https://${host}:${https} for serving "${root}"\n`);
+			process.stdout.write(`Configuring https://${host}:${https}\n`);
 			let secureContext = libtls.createSecureContext({
 				key: key ? libfs.readFileSync(key) : undefined,
 				cert: cert ? libfs.readFileSync(cert) : undefined
@@ -265,7 +265,7 @@ export function makeServer(options: Options): libhttp.Server {
 			let httpsRequestListener = makeRequestListener(root, routing, indices);
 			httpsRequestListeners.push([host, httpsRequestListener]);
 		} else {
-			process.stdout.write(`Configuring http://${host}:${http} for serving "${root}"\n`);
+			process.stdout.write(`Configuring http://${host}:${http}\n`);
 			let httpRequestListener = makeRequestListener(root, routing, indices);
 			httpRequestListeners.push([host, httpRequestListener]);
 		}
