@@ -112,4 +112,5 @@ npm install -g joelek/ts-serveit#master
 
 ## Roadmap
 
+* Add file watchers for certificate updates.
 * Add support for custom CSS-files.
