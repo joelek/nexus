@@ -112,6 +112,7 @@ npm install -g joelek/ts-serveit#master
 
 ## Roadmap
 
+* Add support for config loading.
 * Add file watchers for certificate updates.
 * Add support for custom CSS-files.
 * Write unit tests.
