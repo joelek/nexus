@@ -2,7 +2,7 @@
 
 import * as lib from "../lib";
 
-function run(): void {
+async function run(): Promise<void> {
 	let domain: lib.Domain = {};
 	let options: lib.Options = {
 		domains: []
@@ -68,4 +68,4 @@ function run(): void {
 	}
 };
 
-run();
+run().catch((error) => console.log(String(error)));
