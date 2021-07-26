@@ -187,37 +187,85 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 	});
 };
 
+export function matchesHostPattern(subject: string, pattern: string): boolean {
+	let subjectParts = subject.split(".").reverse();
+	let patternParts = pattern.split(".").reverse();
+	if (patternParts.length > subjectParts.length) {
+		return false;
+	}
+	for (let [index, patternPart] of patternParts.entries()) {
+		if (patternPart === "*") {
+			continue;
+		}
+		if (subjectParts[index] !== patternPart) {
+			return false;
+		}
+	}
+	return true;
+};
+
 export function makeServer(options: Options): libhttp.Server {
 	let pathPrefix = options.pathPrefix ?? "./";
 	let httpPort = options.httpPort ?? 8000;
 	let httpsPort = options.httpsPort ?? 8443;
 	let key = options.key;
 	let cert = options.cert;
+	let host = options.host ?? "*";
 	if (key || cert) {
+		let defaultSecureContext = libtls.createSecureContext();
 		let secureContext = libtls.createSecureContext({
 			key: key ? libfs.readFileSync(key) : undefined,
 			cert: cert ? libfs.readFileSync(cert) : undefined
 		});
-		let httpsServer = libhttps.createServer({
-			SNICallback: (sni, callback) => {
-				return callback(null, secureContext);
-			}
-		}, makeRequestListener(options));
-		httpsServer.listen(httpsPort, () => {
-			process.stdout.write(`Serving "${pathPrefix}" at https://localhost:${httpsPort}/\n`);
-		});
-		let httpServer = libhttp.createServer({}, (request, response) => {
+		let defaultRequestListener: libhttp.RequestListener = (request, response) => {
+			response.writeHead(404);
+			response.end();
+		};
+		let httpsRequestListener = makeRequestListener(options);
+		let httpRequestListener: libhttp.RequestListener = (request, response) => {
 			let host = (request.headers.host ?? "localhost").split(":")[0];
 			let path = request.url ?? "/";
 			response.writeHead(301, {
 				"Location": `https://${host}:${httpsPort}${path}`
 			});
 			response.end();
+		};
+		let httpsServer = libhttps.createServer({
+			SNICallback: (sni, callback) => {
+				if (matchesHostPattern(sni, host)) {
+					return callback(null, secureContext);
+				}
+				return callback(null, defaultSecureContext);
+			}
+		}, (request, response) => {
+			if (matchesHostPattern((request.headers.host ?? "localhost").split(":")[0], host)) {
+				return httpsRequestListener(request, response);
+			}
+			return defaultRequestListener(request, response);
+		});
+		httpsServer.listen(httpsPort, () => {
+			process.stdout.write(`Serving "${pathPrefix}" at https://localhost:${httpsPort}/\n`);
+		});
+		let httpServer = libhttp.createServer({}, (request, response) => {
+			if (matchesHostPattern((request.headers.host ?? "localhost").split(":")[0], host)) {
+				return httpRequestListener(request, response);
+			}
+			return defaultRequestListener(request, response);
 		});
 		httpServer.listen(httpPort);
 		return httpServer;
 	} else {
-		let httpServer = libhttp.createServer({}, makeRequestListener(options));
+		let defaultRequestListener: libhttp.RequestListener = (request, response) => {
+			response.writeHead(404);
+			response.end();
+		};
+		let httpRequestListener = makeRequestListener(options);
+		let httpServer = libhttp.createServer({}, (request, response) => {
+			if (matchesHostPattern((request.headers.host ?? "localhost").split(":")[0], host)) {
+				return httpRequestListener(request, response);
+			}
+			return defaultRequestListener(request, response);
+		});
 		httpServer.listen(httpPort, () => {
 			process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${httpPort}/\n`);
 		});
