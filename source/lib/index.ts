@@ -12,6 +12,7 @@ export type Options = {
 	httpsPort?: number;
 	key?: string;
 	cert?: string;
+	host?: string;
 	generateIndices?: boolean;
 	clientRouting?: boolean;
 };

@@ -21,6 +21,8 @@ function run(): void {
 			options.key = parts[1] || undefined;
 		} else if ((parts = /^--cert=(.*)$/.exec(arg)) !== null) {
 			options.cert = parts[1] || undefined;
+		} else if ((parts = /^--host=(.*)$/.exec(arg)) !== null) {
+			options.host = parts[1] || undefined;
 		} else if ((parts = /^--indices=(true|false)$/.exec(arg)) !== null) {
 			options.generateIndices = parts[1] === "true";
 		} else if ((parts = /^--routing=(true|false)$/.exec(arg)) !== null) {
@@ -42,6 +44,8 @@ function run(): void {
 		process.stderr.write(`		Set path for TLS private key.\n`);
 		process.stderr.write(`	--cert=string\n`);
 		process.stderr.write(`		Set path for TLS certificate.\n`);
+		process.stderr.write(`	--host=string\n`);
+		process.stderr.write(`		Set host pattern for which to respond.\n`);
 		process.stderr.write(`	--indices=boolean\n`);
 		process.stderr.write(`		Configure automatic generation of index documents.\n`);
 		process.stderr.write(`	--routing=boolean\n`);
