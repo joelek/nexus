@@ -2,6 +2,7 @@ import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
 import * as libfs from "fs";
 import * as libhttp from "http";
 import * as libhttps from "https";
+import * as libnet from "net";
 import * as libpath from "path";
 import * as libtls from "tls";
 import * as libserver from "./api/server";
@@ -212,6 +213,7 @@ export function makeServer(options: Options): libhttp.Server {
 	let cert = options.cert;
 	let host = options.host ?? "*";
 	if (key || cert) {
+		process.stdout.write(`Configuring "${pathPrefix}" for access over https://${host}:${httpsPort}\n`);
 		let defaultSecureContext = libtls.createSecureContext();
 		let secureContext = libtls.createSecureContext({
 			key: key ? libfs.readFileSync(key) : undefined,
@@ -244,7 +246,8 @@ export function makeServer(options: Options): libhttp.Server {
 			return defaultRequestListener(request, response);
 		});
 		httpsServer.listen(httpsPort, () => {
-			process.stdout.write(`Serving "${pathPrefix}" at https://localhost:${httpsPort}/\n`);
+			let address = httpsServer.address() as libnet.AddressInfo;
+			process.stdout.write(`Listening for HTTPS traffic over port ${address.port}.\n`);
 		});
 		let httpServer = libhttp.createServer({}, (request, response) => {
 			if (matchesHostPattern((request.headers.host ?? "localhost").split(":")[0], host)) {
@@ -252,9 +255,13 @@ export function makeServer(options: Options): libhttp.Server {
 			}
 			return defaultRequestListener(request, response);
 		});
-		httpServer.listen(httpPort);
+		httpServer.listen(httpPort, () => {
+			let address = httpServer.address() as libnet.AddressInfo;
+			process.stdout.write(`Listening for HTTP traffic over port ${address.port}.\n`);
+		});
 		return httpServer;
 	} else {
+		process.stdout.write(`Configuring "${pathPrefix}" for access over http://${host}:${httpPort}\n`);
 		let defaultRequestListener: libhttp.RequestListener = (request, response) => {
 			response.writeHead(404);
 			response.end();
@@ -267,7 +274,8 @@ export function makeServer(options: Options): libhttp.Server {
 			return defaultRequestListener(request, response);
 		});
 		httpServer.listen(httpPort, () => {
-			process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${httpPort}/\n`);
+			let address = httpServer.address() as libnet.AddressInfo;
+			process.stdout.write(`Listening for HTTP traffic over port ${address.port}.\n`);
 		});
 		return httpServer;
 	}
