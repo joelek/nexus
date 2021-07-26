@@ -6,20 +6,13 @@ import * as libnet from "net";
 import * as libpath from "path";
 import * as libtls from "tls";
 import * as libserver from "./api/server";
+import { Domain, Options } from "./config";
+export { Domain, Options } from "./config";
 
-export type Domain = {
-	root?: string;
-	key?: string;
-	cert?: string;
-	host?: string;
-	indices?: boolean;
-	routing?: boolean;
-};
-
-export type Options = {
-	domains: Domain[];
-	http?: number;
-	https?: number;
+export function loadConfig(config: string): Options {
+	let string = libfs.readFileSync(config, "utf-8");
+	let json = JSON.parse(string);
+	return Options.as(json);
 };
 
 export function computeSimpleHash(string: string): number {

@@ -11,6 +11,9 @@ function run(): void {
 	for (let arg of process.argv.slice(2)) {
 		let parts: RegExpExecArray | null = null;
 		if (false) {
+		} else if ((parts = /^--config=(.*)$/.exec(arg)) !== null) {
+			options = lib.loadConfig(parts[1]);
+			break;
 		} else if ((parts = /^--root=(.*)$/.exec(arg)) !== null) {
 			domain.root = parts[1] || undefined;
 		} else if ((parts = /^--port=([0-9]+)$/.exec(arg)) !== null) {
@@ -38,6 +41,8 @@ function run(): void {
 	}
 	if (found_unrecognized_argument) {
 		process.stderr.write(`Arguments:\n`);
+		process.stderr.write(`	--config=string\n`);
+		process.stderr.write(`		Load specified config.\n`);
 		process.stderr.write(`	--root=string\n`);
 		process.stderr.write(`		Set root directory for server.\n`);
 		process.stderr.write(`	--http=number\n`);

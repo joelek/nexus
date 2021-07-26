@@ -1,0 +1,14 @@
+guard Domain: {
+	root?: string,
+	key?: string,
+	cert?: string,
+	host?: string,
+	indices?: boolean,
+	routing?: boolean
+};
+
+guard Options: {
+	domains: Domain[],
+	http?: number,
+	https?: number
+};
