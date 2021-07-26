@@ -16,7 +16,7 @@ Use the command line utility to launch serveit.
 serveit
 ```
 
-Serveit serves the contents of the current working direcory over port 8000 by default. You may specify a different root or port using the `--root=<string>` and `--port=<number>` arguments, respectively.
+Serveit serves the contents of the current working direcory over port 8000 by default. You may specify a different root or port using the `--root=<string>` and `--http=<number>` arguments, respectively.
 
 ### Index documents
 
