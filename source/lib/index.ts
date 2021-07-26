@@ -236,7 +236,7 @@ export function makeServer(options: Options): libhttp.Server {
 		response.writeHead(404);
 		response.end();
 	};
-	let secureContexts = new Array<[string, libtls.SecureContext]>();
+	let secureContexts = new Array<{ host: string, secureContext: libtls.SecureContext, dirty: boolean, load: () => void }>();
 	let httpRequestListeners = new Array<[string, libhttp.RequestListener]>();
 	let httpsRequestListeners = new Array<[string, libhttp.RequestListener]>();
 	for (let domain of options.domains) {
@@ -248,11 +248,32 @@ export function makeServer(options: Options): libhttp.Server {
 		let indices = domain.indices ?? true;
 		if (key || cert) {
 			process.stdout.write(`Configuring https://${host}:${https}\n`);
-			let secureContext = libtls.createSecureContext({
-				key: key ? libfs.readFileSync(key) : undefined,
-				cert: cert ? libfs.readFileSync(cert) : undefined
-			});
-			secureContexts.push([host, secureContext]);
+			let secureContext = {
+				host,
+				secureContext: defaultSecureContext,
+				dirty: true,
+				load() {
+					if (this.dirty) {
+						process.stdout.write(`Loading certificates for ${host}\n`);
+						this.secureContext = libtls.createSecureContext({
+							key: key ? libfs.readFileSync(key) : undefined,
+							cert: cert ? libfs.readFileSync(cert) : undefined
+						});
+						this.dirty = false;
+					}
+				}
+			};
+			if (key) {
+				libfs.watch(key, (next, last) => {
+					secureContext.dirty = true;
+				});
+			}
+			if (cert) {
+				libfs.watch(cert, (next, last) => {
+					secureContext.dirty = true;
+				});
+			}
+			secureContexts.push(secureContext);
 			let httpRequestListener = makeRedirectRequestListener(https);
 			httpRequestListeners.push([host, httpRequestListener]);
 			let httpsRequestListener = makeRequestListener(root, routing, indices);
@@ -265,8 +286,9 @@ export function makeServer(options: Options): libhttp.Server {
 	}
 	let httpsServer = libhttps.createServer({
 		SNICallback: (sni, callback) => {
-			let secureContext = secureContexts.find((pair) => matchesHostPattern(sni, pair[0]))?.[1] ?? defaultSecureContext;
-			return callback(null, secureContext);
+			let secureContext = secureContexts.find((pair) => matchesHostPattern(sni, pair.host));
+			secureContext?.load();
+			return callback(null, secureContext?.secureContext ?? defaultSecureContext);
 		}
 	}, (request, response) => {
 		let host = (request.headers.host ?? "localhost").split(":")[0];
