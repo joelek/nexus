@@ -148,7 +148,7 @@ export function makeDirectoryListingResponse(pathPrefix: string, pathSuffix: str
 };
 
 export function makeRequestListener(pathPrefix: string, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener {
-	return libserver.makeServer({
+	let requestListener = libserver.makeServer({
 		async getRequest(request) {
 			let options = request.options();
 			let pathSuffix = (options.filename ?? []).join("/");
@@ -187,6 +187,18 @@ export function makeRequestListener(pathPrefix: string, clientRouting: boolean, 
 			};
 		}
 	});
+	return (request, response) => {
+		let host = (request.headers.host ?? "localhost").split(":")[0];
+		let path = request.url ?? "/";
+		let method = request.method ?? "GET";
+		let protocol = request.socket instanceof libtls.TLSSocket ? "https" : "http";
+		let start = Date.now();
+		response.on("finish", () => {
+			let duration = Date.now() - start;
+			process.stdout.write(`${response.statusCode} ${method} ${protocol}://${host}${path} (${duration} ms)\n`);
+		});
+		requestListener(request, response);
+	};
 };
 
 export function makeRedirectRequestListener(httpsPort?: number): libhttp.RequestListener {
