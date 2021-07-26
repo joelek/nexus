@@ -8,8 +8,8 @@ function run(): void {
 	for (let arg of process.argv.slice(2)) {
 		let parts: RegExpExecArray | null = null;
 		if (false) {
-		} else if ((parts = /^--root=(.+)$/.exec(arg)) !== null) {
-			options.pathPrefix = parts[1];
+		} else if ((parts = /^--root=(.*)$/.exec(arg)) !== null) {
+			options.pathPrefix = parts[1] || undefined;
 		} else if ((parts = /^--port=([0-9]+)$/.exec(arg)) !== null) {
 			// TODO: Remove compatibility behaviour in v2.
 			options.httpPort = Number.parseInt(parts[1]);
