@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.serve = exports.makeServer = exports.matchesHostPattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = void 0;
+exports.serve = exports.makeServer = exports.matchesHostPattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
 const libfs = require("fs");
 const libhttp = require("http");
@@ -17,6 +17,17 @@ const libhttps = require("https");
 const libpath = require("path");
 const libtls = require("tls");
 const libserver = require("./api/server");
+const config_1 = require("./config");
+var config_2 = require("./config");
+Object.defineProperty(exports, "Domain", { enumerable: true, get: function () { return config_2.Domain; } });
+Object.defineProperty(exports, "Options", { enumerable: true, get: function () { return config_2.Options; } });
+function loadConfig(config) {
+    let string = libfs.readFileSync(config, "utf-8");
+    let json = JSON.parse(string);
+    return config_1.Options.as(json);
+}
+exports.loadConfig = loadConfig;
+;
 function computeSimpleHash(string) {
     var _a;
     let hash = string.length;
@@ -267,11 +278,32 @@ function makeServer(options) {
         let indices = (_f = domain.indices) !== null && _f !== void 0 ? _f : true;
         if (key || cert) {
             process.stdout.write(`Configuring https://${host}:${https}\n`);
-            let secureContext = libtls.createSecureContext({
-                key: key ? libfs.readFileSync(key) : undefined,
-                cert: cert ? libfs.readFileSync(cert) : undefined
-            });
-            secureContexts.push([host, secureContext]);
+            let secureContext = {
+                host,
+                secureContext: defaultSecureContext,
+                dirty: true,
+                load() {
+                    if (this.dirty) {
+                        process.stdout.write(`Loading certificates for ${host}\n`);
+                        this.secureContext = libtls.createSecureContext({
+                            key: key ? libfs.readFileSync(key) : undefined,
+                            cert: cert ? libfs.readFileSync(cert) : undefined
+                        });
+                        this.dirty = false;
+                    }
+                }
+            };
+            if (key) {
+                libfs.watch(key, (next, last) => {
+                    secureContext.dirty = true;
+                });
+            }
+            if (cert) {
+                libfs.watch(cert, (next, last) => {
+                    secureContext.dirty = true;
+                });
+            }
+            secureContexts.push(secureContext);
             let httpRequestListener = makeRedirectRequestListener(https);
             httpRequestListeners.push([host, httpRequestListener]);
             let httpsRequestListener = makeRequestListener(root, routing, indices);
@@ -285,9 +317,10 @@ function makeServer(options) {
     }
     let httpsServer = libhttps.createServer({
         SNICallback: (sni, callback) => {
-            var _a, _b;
-            let secureContext = (_b = (_a = secureContexts.find((pair) => matchesHostPattern(sni, pair[0]))) === null || _a === void 0 ? void 0 : _a[1]) !== null && _b !== void 0 ? _b : defaultSecureContext;
-            return callback(null, secureContext);
+            var _a;
+            let secureContext = secureContexts.find((pair) => matchesHostPattern(sni, pair.host));
+            secureContext === null || secureContext === void 0 ? void 0 : secureContext.load();
+            return callback(null, (_a = secureContext === null || secureContext === void 0 ? void 0 : secureContext.secureContext) !== null && _a !== void 0 ? _a : defaultSecureContext);
         }
     }, (request, response) => {
         var _a, _b, _c;

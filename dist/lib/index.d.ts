@@ -1,19 +1,9 @@
 /// <reference types="node" />
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
 import * as libhttp from "http";
-export declare type Domain = {
-    root?: string;
-    key?: string;
-    cert?: string;
-    host?: string;
-    indices?: boolean;
-    routing?: boolean;
-};
-export declare type Options = {
-    domains: Domain[];
-    http?: number;
-    https?: number;
-};
+import { Options } from "./config";
+export { Domain, Options } from "./config";
+export declare function loadConfig(config: string): Options;
 export declare function computeSimpleHash(string: string): number;
 export declare function encodeXMLText(string: string): string;
 export declare function makeStylesheet(): string;
