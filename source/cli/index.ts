@@ -18,6 +18,8 @@ function run(): void {
 			options.httpPort = Number.parseInt(parts[1]);
 		} else if ((parts = /^--http=([0-9]+)$/.exec(arg)) !== null) {
 			options.httpPort = Number.parseInt(parts[1]);
+		} else if ((parts = /^--https=([0-9]+)$/.exec(arg)) !== null) {
+			options.httpsPort = Number.parseInt(parts[1]);
 		} else if ((parts = /^--indices=(true|false)$/.exec(arg)) !== null) {
 			options.generateIndices = parts[1] === "true";
 		} else if ((parts = /^--routing=(true|false)$/.exec(arg)) !== null) {
@@ -33,6 +35,8 @@ function run(): void {
 		process.stderr.write(`		Set root directory for server.\n`);
 		process.stderr.write(`	--http=number\n`);
 		process.stderr.write(`		Set HTTP server port.\n`);
+		process.stderr.write(`	--https=number\n`);
+		process.stderr.write(`		Set HTTPS server port.\n`);
 		process.stderr.write(`	--indices=boolean\n`);
 		process.stderr.write(`		Configure automatic generation of index documents.\n`);
 		process.stderr.write(`	--routing=boolean\n`);

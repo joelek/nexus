@@ -6,6 +6,7 @@ import * as libserver from "./api/server";
 export type Options = {
 	pathPrefix: string;
 	httpPort: number;
+	httpsPort?: number;
 	generateIndices?: boolean;
 	clientRouting?: boolean;
 };
