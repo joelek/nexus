@@ -65,12 +65,10 @@ serveit \
 	--key=./domain1.key \
 	--cert=./domain1.cer \
 	--host=domain1.com \
-	--host=www.domain1.com \
 	--root=./domain2/ \
 	--key=./domain2.key \
 	--cert=./domain2.cer \
-	--host=domain2.com \
-	--host=www.domain2.com
+	--host=domain2.com
 ```
 
 It even allows for serving a single root using multiple hosts with multiple certificates.
@@ -81,11 +79,9 @@ serveit \
 	--key=./domain1.key \
 	--cert=./domain1.cer \
 	--host=domain1.com \
-	--host=www.domain1.com \
 	--key=./domain2.key \
 	--cert=./domain2.cer \
-	--host=domain2.com \
-	--host=www.domain2.com
+	--host=domain2.com
 ```
 
 ## Sponsorship
