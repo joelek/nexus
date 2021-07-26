@@ -5,7 +5,7 @@ import * as libserver from "./api/server";
 
 export type Options = {
 	pathPrefix: string;
-	port: number;
+	httpPort: number;
 	generateIndices?: boolean;
 	clientRouting?: boolean;
 };
@@ -182,18 +182,18 @@ export function makeRequestListener(options: Options): libhttp.RequestListener {
 
 export function makeServer(options: Options): libhttp.Server {
 	let pathPrefix = options.pathPrefix;
-	let port = options.port;
+	let httpPort = options.httpPort;
 	let server = libhttp.createServer({}, makeRequestListener(options));
-	server.listen(port, () => {
-		process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${port}/"\n`);
+	server.listen(httpPort, () => {
+		process.stdout.write(`Serving "${pathPrefix}" at http://localhost:${httpPort}/"\n`);
 	});
 	return server;
 };
 
 // TODO: Remove compatibility shim in v2.
-export function serve(pathPrefix: string, port: number): libhttp.Server {
+export function serve(pathPrefix: string, httpPort: number): libhttp.Server {
 	return makeServer({
 		pathPrefix,
-		port
+		httpPort
 	});
 };
