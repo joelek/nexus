@@ -239,7 +239,7 @@ export function makeServer(options: Options): libhttp.Server {
 	let secureContexts = new Array<{ host: string, secureContext: libtls.SecureContext, dirty: boolean, load: () => void }>();
 	let httpRequestListeners = new Array<[string, libhttp.RequestListener]>();
 	let httpsRequestListeners = new Array<[string, libhttp.RequestListener]>();
-	for (let domain of options.domains) {
+	for (let domain of options.domains ?? []) {
 		let root = domain.root ?? "./";
 		let key = domain.key;
 		let cert = domain.cert;

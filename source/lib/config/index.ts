@@ -32,7 +32,10 @@ export const Domain = autoguard.guards.Object.of({
 export type Domain = ReturnType<typeof Domain["as"]>;
 
 export const Options = autoguard.guards.Object.of({
-	"domains": autoguard.guards.Array.of(autoguard.guards.Reference.of(() => Domain)),
+	"domains": autoguard.guards.Union.of(
+		autoguard.guards.Array.of(autoguard.guards.Reference.of(() => Domain)),
+		autoguard.guards.Undefined
+	),
 	"http": autoguard.guards.Union.of(
 		autoguard.guards.Number,
 		autoguard.guards.Undefined

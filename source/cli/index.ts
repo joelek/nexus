@@ -4,8 +4,9 @@ import * as lib from "../lib";
 
 async function run(): Promise<void> {
 	let domain: lib.Domain = {};
+	let domains = new Array<lib.Domain>();
 	let options: lib.Options = {
-		domains: []
+		domains
 	};
 	let found_unrecognized_argument = false;
 	for (let arg of process.argv.slice(2)) {
@@ -29,7 +30,7 @@ async function run(): Promise<void> {
 			domain.cert = parts[1] || undefined;
 		} else if ((parts = /^--host=(.*)$/.exec(arg)) !== null) {
 			domain.host = parts[1] || undefined;
-			options.domains.push({ ...domain });
+			domains.push({ ...domain });
 		} else if ((parts = /^--indices=(true|false)$/.exec(arg)) !== null) {
 			domain.indices = parts[1] === "true";
 		} else if ((parts = /^--routing=(true|false)$/.exec(arg)) !== null) {
@@ -61,8 +62,8 @@ async function run(): Promise<void> {
 		process.stderr.write(`		Configure support for client-side routing.\n`);
 		process.exit(0);
 	} else {
-		if (options.domains.length === 0) {
-			options.domains.push({ ...domain });
+		if (domains.length === 0) {
+			domains.push({ ...domain });
 		}
 		lib.makeServer(options);
 	}

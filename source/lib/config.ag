@@ -8,7 +8,7 @@ guard Domain: {
 };
 
 guard Options: {
-	domains: Domain[],
+	domains?: Domain[],
 	http?: number,
 	https?: number
 };
