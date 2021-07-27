@@ -194,11 +194,12 @@ export function makeRequestListener(pathPrefix: string, clientRouting: boolean, 
 	};
 };
 
-export function makeRedirectRequestListener(httpsPort?: number): libhttp.RequestListener {
+export function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener {
 	return (request, response) => {
 		let host = (request.headers.host ?? "localhost").split(":")[0];
+		let port = (request.headers.host ?? "localhost").split(":")[1] as string | undefined;
 		let path = request.url ?? "/";
-		let port = httpsPort != null ? `:${httpsPort}` : "";
+		port = port != null ? `:${httpsPort}` : "";
 		response.writeHead(301, {
 			"Location": `https://${host}${port}${path}`
 		});
