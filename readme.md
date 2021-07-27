@@ -20,7 +20,7 @@ Nexus serves the contents of the current working direcory over port 8000 by defa
 
 ### Index documents
 
-Nexus automatically generates and serves index documents for directory requests. The feature is turned _on_ by default and can be configued using the `--indices=<boolean>` argument.
+Nexus automatically generates and serves index documents for directory requests. The feature is turned _off_ by default and can be configued using the `--indices=<boolean>` argument.
 
 ### Client-side routing
 
