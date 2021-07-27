@@ -1,6 +1,6 @@
-# @joelek/ts-serveit
+# @joelek/ts-nexus
 
-Static web server written completely in TypeScript.
+Static web server for NodeJS written completely in TypeScript.
 
 ![](./public/images/mobile.png)
 
@@ -8,50 +8,50 @@ Static web server written completely in TypeScript.
 
 ### Instant server
 
-Serveit serves the contents of any directory by launching a web server that accepts GET and HEAD requests.
+Nexus serves the contents of any directory by launching a web server that accepts GET and HEAD requests.
 
-Use the command line utility to launch serveit.
+Use the command line utility to launch nexus.
 
 ```
-serveit
+nexus
 ```
 
-Serveit serves the contents of the current working direcory over port 8000 by default. You may specify a different root or port using the `--root=<string>` and `--http=<number>` arguments, respectively.
+Nexus serves the contents of the current working direcory over port 8000 by default. You may specify a different root or port using the `--root=<string>` and `--http=<number>` arguments, respectively.
 
 ### Index documents
 
-Serveit automatically generates and serves index documents for directory requests. The feature is turned _on_ by default and can be configued using the `--indices=<boolean>` argument.
+Nexus automatically generates and serves index documents for directory requests. The feature is turned _on_ by default and can be configued using the `--indices=<boolean>` argument.
 
 ### Client-side routing
 
-Serveit includes support for applications utilizing client-side routing. The feature is turned _off_ by default and can be configured using the `--routing=<boolean>` argument.
+Nexus includes support for applications utilizing client-side routing. The feature is turned _off_ by default and can be configured using the `--routing=<boolean>` argument.
 
 Client-side routing is implemented as a redirect to the index document for all requests that would normally result in a 404 response. This allows an application to properly handle deep-linking using the history API but will alter to which resource relative URIs resolve. Placing a `<base href="/"/>` within the index document makes all relative URIs resolve with respect to the root directory which is the behaviour of the server with the feature turned off.
 
 ### Transport layer security
 
-Serveit includes support for transport layer security for which a private key and certificate is required. These can be generated using tools like OpenSSL and signed using an ACME-enabled certificate authority like Let's Encrypt.
+Nexus includes support for transport layer security for which a private key and certificate is required. These can be generated using tools like OpenSSL and signed using an ACME-enabled certificate authority like Let's Encrypt.
 
-The paths for the private key and certificate files may be specified using the `--key=<string>` and `--cert=<string>` arguments, respectively. When specified, serveit will serve the contents over HTTPS using port 8443 as a default. You may specify a different port using the `--https=<number>` argument. An HTTP to HTTPS redirect will be served over regular HTTP.
+The paths for the private key and certificate files may be specified using the `--key=<string>` and `--cert=<string>` arguments, respectively. When specified, Nexus will serve the contents over HTTPS using port 8443 as a default. You may specify a different port using the `--https=<number>` argument. An HTTP to HTTPS redirect will be served over regular HTTP.
 
-Serveit monitors the files for changes and automatically presents the very latest certificates without having to restart the server.
+Nexus monitors the files for changes and automatically presents the very latest certificates without having to restart the server.
 
 ### Host filtering
 
-Serveit includes support for host filtering which prevents the server from being accessed without knowing information about its host. The use of host filtering can block some malicious access attempts but should not be relied on solely for server hardening.
+Nexus includes support for host filtering which prevents the server from being accessed without knowing information about its host. The use of host filtering can block some malicious access attempts but should not be relied on solely for server hardening.
 
 Host filtering may be specified using the `--host=<string>` argument where single asterisk labels are treated as wildcards.
 
-It is important to understand that serveit will stop accepting requests directed to `localhost` and through IPs when host filtering is used unless the hosts are explicitly allowed. Local DNS can be modified to direct the desired host to the local machine in order to access a locally running server. This is the recommended solution for use in conjunction with transport layer security during development.
+It is important to understand that Nexus will stop accepting requests directed to `localhost` and through IPs when host filtering is used unless the hosts are explicitly allowed. Local DNS can be modified to direct the desired host to the local machine in order to access a locally running server. This is the recommended solution for use in conjunction with transport layer security during development.
 
 ### Multiple hosts
 
-Serveit can be configured with multiple hosts and each host may have its distinct configuration. Every time the `--host=<string>` argument is passed, a domain configuration is created using the previously configured settings.
+Nexus can be configured with multiple hosts and each host may have its distinct configuration. Every time the `--host=<string>` argument is passed, a domain configuration is created using the previously configured settings.
 
 This allows for serving a single root using multiple hosts covering for example the apex domain and the `www` subdomain.
 
 ```
-serveit \
+nexus \
 	--root=./domain1/ \
 	--key=./domain1.key \
 	--cert=./domain1.cer \
@@ -62,7 +62,7 @@ serveit \
 It also allows for serving multiple roots using multiple hosts with multiple certificates.
 
 ```
-serveit \
+nexus \
 	--root=./domain1/ \
 	--key=./domain1.key \
 	--cert=./domain1.cer \
@@ -76,7 +76,7 @@ serveit \
 It even allows for serving a single root using multiple hosts with multiple certificates.
 
 ```
-serveit \
+nexus \
 	--root=./domain1and2/ \
 	--key=./domain1.key \
 	--cert=./domain1.cer \
@@ -88,7 +88,7 @@ serveit \
 
 ### Configuration files
 
-Serveit can load configuration files stored using the JSON format shown below. A configuration file is loaded using the `--config=<string>` argument.
+Nexus can load configuration files stored using the JSON format shown below. A configuration file is loaded using the `--config=<string>` argument.
 
 ```
 {
@@ -120,13 +120,13 @@ Thank you for your support!
 Releases follow semantic versioning and release packages are published using the GitHub platform. Use the following command to install the latest release.
 
 ```
-npm install -g joelek/ts-serveit#semver:^1
+npm install -g joelek/ts-nexus#semver:^1
 ```
 
 Use the following command to install the very latest build. The very latest build may include breaking changes and should not be used in production environments.
 
 ```
-npm install -g joelek/ts-serveit#master
+npm install -g joelek/ts-nexus#master
 ```
 
 ## Roadmap

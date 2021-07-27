@@ -1,6 +1,6 @@
 {
 	"bin": {
-		"serveit": "./dist/cli/index.js"
+		"nexus": "./dist/cli/index.js"
 	},
 	"dependencies": {
 		"@joelek/ts-autoguard": "github:joelek/ts-autoguard#semver:^5"
@@ -11,10 +11,10 @@
 	},
 	"license": "MIT",
 	"main": "./dist/lib/index.js",
-	"name": "@joelek/ts-serveit",
+	"name": "@joelek/ts-nexus",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/joelek/ts-serveit.git"
+		"url": "https://github.com/joelek/ts-nexus.git"
 	},
 	"scripts": {
 		"build": "npm run codegen && npm run compile && npm run package",
