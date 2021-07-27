@@ -16,7 +16,7 @@ Use the command line utility to launch nexus.
 nexus
 ```
 
-Nexus serves the contents of the current working direcory over port 8000 by default. You may specify a different root or port using the `--root=<string>` and `--http=<number>` arguments, respectively.
+Nexus serves the contents of the current working direcory over port 8080 by default. You may specify a different root or port using the `--root=<string>` and `--http=<number>` arguments, respectively.
 
 ### Index documents
 

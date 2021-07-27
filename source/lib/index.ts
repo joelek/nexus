@@ -230,7 +230,7 @@ export function matchesHostPattern(subject: string, pattern: string): boolean {
 };
 
 export function makeServer(options: Options): void {
-	let http = options.http ?? 8000;
+	let http = options.http ?? 8080;
 	let https = options.https ?? 8443;
 	let defaultSecureContext = libtls.createSecureContext();
 	let defaultRequestListener: libhttp.RequestListener = (request, response) => {
