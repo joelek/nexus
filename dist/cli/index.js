@@ -14,8 +14,9 @@ const lib = require("../lib");
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         let domain = {};
+        let domains = new Array();
         let options = {
-            domains: []
+            domains
         };
         let found_unrecognized_argument = false;
         for (let arg of process.argv.slice(2)) {
@@ -47,7 +48,7 @@ function run() {
             }
             else if ((parts = /^--host=(.*)$/.exec(arg)) !== null) {
                 domain.host = parts[1] || undefined;
-                options.domains.push(Object.assign({}, domain));
+                domains.push(Object.assign({}, domain));
             }
             else if ((parts = /^--indices=(true|false)$/.exec(arg)) !== null) {
                 domain.indices = parts[1] === "true";
@@ -83,8 +84,8 @@ function run() {
             process.exit(0);
         }
         else {
-            if (options.domains.length === 0) {
-                options.domains.push(Object.assign({}, domain));
+            if (domains.length === 0) {
+                domains.push(Object.assign({}, domain));
             }
             lib.makeServer(options);
         }

@@ -9,15 +9,15 @@ export declare const Domain: autoguard.serialization.MessageGuard<{
 }>;
 export declare type Domain = ReturnType<typeof Domain["as"]>;
 export declare const Options: autoguard.serialization.MessageGuard<{
-    domains: {
+    http?: number | undefined;
+    domains?: {
         host?: string | undefined;
         cert?: string | undefined;
         key?: string | undefined;
         root?: string | undefined;
         indices?: boolean | undefined;
         routing?: boolean | undefined;
-    }[];
-    http?: number | undefined;
+    }[] | undefined;
     https?: number | undefined;
 }>;
 export declare type Options = ReturnType<typeof Options["as"]>;
@@ -32,15 +32,15 @@ export declare namespace Autoguard {
             routing?: boolean | undefined;
         }>;
         Options: autoguard.serialization.MessageGuard<{
-            domains: {
+            http?: number | undefined;
+            domains?: {
                 host?: string | undefined;
                 cert?: string | undefined;
                 key?: string | undefined;
                 root?: string | undefined;
                 indices?: boolean | undefined;
                 routing?: boolean | undefined;
-            }[];
-            http?: number | undefined;
+            }[] | undefined;
             https?: number | undefined;
         }>;
     };

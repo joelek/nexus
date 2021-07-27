@@ -258,7 +258,7 @@ function matchesHostPattern(subject, pattern) {
 exports.matchesHostPattern = matchesHostPattern;
 ;
 function makeServer(options) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g;
     let http = (_a = options.http) !== null && _a !== void 0 ? _a : 8000;
     let https = (_b = options.https) !== null && _b !== void 0 ? _b : 8443;
     let defaultSecureContext = libtls.createSecureContext();
@@ -269,13 +269,13 @@ function makeServer(options) {
     let secureContexts = new Array();
     let httpRequestListeners = new Array();
     let httpsRequestListeners = new Array();
-    for (let domain of options.domains) {
-        let root = (_c = domain.root) !== null && _c !== void 0 ? _c : "./";
+    for (let domain of (_c = options.domains) !== null && _c !== void 0 ? _c : []) {
+        let root = (_d = domain.root) !== null && _d !== void 0 ? _d : "./";
         let key = domain.key;
         let cert = domain.cert;
-        let host = (_d = domain.host) !== null && _d !== void 0 ? _d : "*";
-        let routing = (_e = domain.routing) !== null && _e !== void 0 ? _e : false;
-        let indices = (_f = domain.indices) !== null && _f !== void 0 ? _f : true;
+        let host = (_e = domain.host) !== null && _e !== void 0 ? _e : "*";
+        let routing = (_f = domain.routing) !== null && _f !== void 0 ? _f : false;
+        let indices = (_g = domain.indices) !== null && _g !== void 0 ? _g : true;
         if (key || cert) {
             process.stdout.write(`Configuring https://${host}:${https}\n`);
             let secureContext = {
