@@ -84,6 +84,27 @@ serveit \
 	--host=domain2.com
 ```
 
+### Configuration files
+
+Serveit can load configuration files stored using the JSON format shown below. A configuration file is loaded using the `--config=<string>` argument.
+
+```
+{
+	"domains"?: [
+		{
+			"root"?: string,
+			"key"?: string,
+			"cert"?: string,
+			"host"?: string,
+			"indices"?: boolean,
+			"routing"?: boolean
+		}
+	],
+	"http"?: number,
+	"https"?: number
+}
+```
+
 ## Sponsorship
 
 The continued development of this software depends on your sponsorship. Please consider sponsoring this project if you find that the software creates value for you and your organization.
