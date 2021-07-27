@@ -260,7 +260,7 @@ exports.matchesHostPattern = matchesHostPattern;
 ;
 function makeServer(options) {
     var _a, _b, _c, _d, _e, _f, _g;
-    let http = (_a = options.http) !== null && _a !== void 0 ? _a : 8000;
+    let http = (_a = options.http) !== null && _a !== void 0 ? _a : 8080;
     let https = (_b = options.https) !== null && _b !== void 0 ? _b : 8443;
     let defaultSecureContext = libtls.createSecureContext();
     let defaultRequestListener = (request, response) => {
@@ -275,8 +275,8 @@ function makeServer(options) {
         let key = domain.key;
         let cert = domain.cert;
         let host = (_e = domain.host) !== null && _e !== void 0 ? _e : "*";
-        let routing = (_f = domain.routing) !== null && _f !== void 0 ? _f : false;
-        let indices = (_g = domain.indices) !== null && _g !== void 0 ? _g : true;
+        let routing = (_f = domain.routing) !== null && _f !== void 0 ? _f : true;
+        let indices = (_g = domain.indices) !== null && _g !== void 0 ? _g : false;
         if (key || cert) {
             process.stdout.write(`Configuring https://${host}:${https}\n`);
             let secureContext = {
