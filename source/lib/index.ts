@@ -229,7 +229,7 @@ export function matchesHostPattern(subject: string, pattern: string): boolean {
 	return true;
 };
 
-export function makeServer(options: Options): libhttp.Server {
+export function makeServer(options: Options): void {
 	let http = options.http ?? 8000;
 	let https = options.https ?? 8443;
 	let defaultSecureContext = libtls.createSecureContext();
@@ -308,18 +308,5 @@ export function makeServer(options: Options): libhttp.Server {
 	httpServer.listen(http, () => {
 		let address = httpServer.address() as libnet.AddressInfo;
 		process.stdout.write(`Listening on port ${address.port} (HTTP).\n`);
-	});
-	return httpServer;
-};
-
-// TODO: Remove compatibility shim in v2.
-export function serve(root: string, http: number): libhttp.Server {
-	return makeServer({
-		domains: [
-			{
-				root
-			}
-		],
-		http
 	});
 };
