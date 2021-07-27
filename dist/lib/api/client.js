@@ -13,9 +13,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.makeClient = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-client");
 const shared = require("./index");
-const makeClient = (options) => ({
+const makeClient = (clientOptions) => ({
     "getRequest": (request) => __awaiter(void 0, void 0, void 0, function* () {
-        var _a, _b, _c, _d, _e, _f, _g;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         let guard = shared.Autoguard.Requests["getRequest"];
         guard.as(request, "request");
         let method = "GET";
@@ -26,12 +26,15 @@ const makeClient = (options) => ({
         let headers = new Array();
         headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_d = request.headers) !== null && _d !== void 0 ? _d : {}, headers.map((header) => header[0])));
         let payload = (_e = request.payload) !== null && _e !== void 0 ? _e : [];
-        let requestHandler = (_f = options === null || options === void 0 ? void 0 : options.requestHandler) !== null && _f !== void 0 ? _f : autoguard.api.xhr;
-        let raw = yield requestHandler({ method, components, parameters, headers, payload }, options === null || options === void 0 ? void 0 : options.urlPrefix);
+        let requestHandler = (_f = clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.requestHandler) !== null && _f !== void 0 ? _f : autoguard.api.xhr;
+        let defaultHeaders = (_h = (_g = clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.defaultHeaders) === null || _g === void 0 ? void 0 : _g.slice()) !== null && _h !== void 0 ? _h : [];
+        defaultHeaders.push(["Content-Type", "application/octet-stream"]);
+        defaultHeaders.push(["Accept", "application/octet-stream"]);
+        let raw = yield requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.urlPrefix);
         {
             let status = raw.status;
             let headers = {};
-            headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_g = raw.headers) !== null && _g !== void 0 ? _g : {}, Object.keys(headers)));
+            headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_j = raw.headers) !== null && _j !== void 0 ? _j : {}, Object.keys(headers)));
             let payload = raw.payload;
             let guard = shared.Autoguard.Responses["getRequest"];
             let response = guard.as({ status, headers, payload }, "response");
@@ -39,23 +42,26 @@ const makeClient = (options) => ({
         }
     }),
     "headRequest": (request) => __awaiter(void 0, void 0, void 0, function* () {
-        var _h, _j, _k, _l, _m, _o, _p;
+        var _k, _l, _m, _o, _p, _q, _r, _s, _t;
         let guard = shared.Autoguard.Requests["headRequest"];
         guard.as(request, "request");
         let method = "HEAD";
         let components = new Array();
-        components.push(...autoguard.api.encodeComponents((_j = (_h = request.options) === null || _h === void 0 ? void 0 : _h["filename"]) !== null && _j !== void 0 ? _j : [], true));
+        components.push(...autoguard.api.encodeComponents((_l = (_k = request.options) === null || _k === void 0 ? void 0 : _k["filename"]) !== null && _l !== void 0 ? _l : [], true));
         let parameters = new Array();
-        parameters.push(...autoguard.api.encodeUndeclaredParameterPairs((_k = request.options) !== null && _k !== void 0 ? _k : {}, [...["filename"], ...parameters.map((parameter) => parameter[0])]));
+        parameters.push(...autoguard.api.encodeUndeclaredParameterPairs((_m = request.options) !== null && _m !== void 0 ? _m : {}, [...["filename"], ...parameters.map((parameter) => parameter[0])]));
         let headers = new Array();
-        headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_l = request.headers) !== null && _l !== void 0 ? _l : {}, headers.map((header) => header[0])));
-        let payload = (_m = request.payload) !== null && _m !== void 0 ? _m : [];
-        let requestHandler = (_o = options === null || options === void 0 ? void 0 : options.requestHandler) !== null && _o !== void 0 ? _o : autoguard.api.xhr;
-        let raw = yield requestHandler({ method, components, parameters, headers, payload }, options === null || options === void 0 ? void 0 : options.urlPrefix);
+        headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_o = request.headers) !== null && _o !== void 0 ? _o : {}, headers.map((header) => header[0])));
+        let payload = (_p = request.payload) !== null && _p !== void 0 ? _p : [];
+        let requestHandler = (_q = clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.requestHandler) !== null && _q !== void 0 ? _q : autoguard.api.xhr;
+        let defaultHeaders = (_s = (_r = clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.defaultHeaders) === null || _r === void 0 ? void 0 : _r.slice()) !== null && _s !== void 0 ? _s : [];
+        defaultHeaders.push(["Content-Type", "application/octet-stream"]);
+        defaultHeaders.push(["Accept", "application/octet-stream"]);
+        let raw = yield requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.urlPrefix);
         {
             let status = raw.status;
             let headers = {};
-            headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_p = raw.headers) !== null && _p !== void 0 ? _p : {}, Object.keys(headers)));
+            headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_t = raw.headers) !== null && _t !== void 0 ? _t : {}, Object.keys(headers)));
             let payload = raw.payload;
             let guard = shared.Autoguard.Responses["headRequest"];
             let response = guard.as({ status, headers, payload }, "response");

@@ -13,7 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.makeServer = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
 const shared = require("./index");
-const makeServer = (routes, options) => {
+const makeServer = (routes, serverOptions) => {
     let endpoints = new Array();
     endpoints.push((raw, auxillary) => {
         let method = "GET";
@@ -37,14 +37,16 @@ const makeServer = (routes, options) => {
                         let response = yield routes["getRequest"](new autoguard.api.ClientRequest(request, true, auxillary));
                         return {
                             validateResponse: () => __awaiter(void 0, void 0, void 0, function* () {
-                                var _c, _d, _e;
+                                var _c, _d, _e, _f, _g;
                                 let guard = shared.Autoguard.Responses["getRequest"];
                                 guard.as(response, "response");
                                 let status = (_c = response.status) !== null && _c !== void 0 ? _c : 200;
                                 let headers = new Array();
                                 headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_d = response.headers) !== null && _d !== void 0 ? _d : {}, headers.map((header) => header[0])));
                                 let payload = (_e = response.payload) !== null && _e !== void 0 ? _e : [];
-                                return autoguard.api.finalizeResponse({ status, headers, payload }, "application/octet-stream");
+                                let defaultHeaders = (_g = (_f = serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.defaultHeaders) === null || _f === void 0 ? void 0 : _f.slice()) !== null && _g !== void 0 ? _g : [];
+                                defaultHeaders.push(["Content-Type", "application/octet-stream"]);
+                                return autoguard.api.finalizeResponse({ status, headers, payload }, defaultHeaders);
                             })
                         };
                     })
@@ -74,14 +76,16 @@ const makeServer = (routes, options) => {
                         let response = yield routes["headRequest"](new autoguard.api.ClientRequest(request, true, auxillary));
                         return {
                             validateResponse: () => __awaiter(void 0, void 0, void 0, function* () {
-                                var _c, _d, _e;
+                                var _c, _d, _e, _f, _g;
                                 let guard = shared.Autoguard.Responses["headRequest"];
                                 guard.as(response, "response");
                                 let status = (_c = response.status) !== null && _c !== void 0 ? _c : 200;
                                 let headers = new Array();
                                 headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_d = response.headers) !== null && _d !== void 0 ? _d : {}, headers.map((header) => header[0])));
                                 let payload = (_e = response.payload) !== null && _e !== void 0 ? _e : [];
-                                return autoguard.api.finalizeResponse({ status, headers, payload }, "application/octet-stream");
+                                let defaultHeaders = (_g = (_f = serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.defaultHeaders) === null || _f === void 0 ? void 0 : _f.slice()) !== null && _g !== void 0 ? _g : [];
+                                defaultHeaders.push(["Content-Type", "application/octet-stream"]);
+                                return autoguard.api.finalizeResponse({ status, headers, payload }, defaultHeaders);
                             })
                         };
                     })
@@ -89,6 +93,6 @@ const makeServer = (routes, options) => {
             })
         };
     });
-    return (request, response) => autoguard.api.route(endpoints, request, response, options === null || options === void 0 ? void 0 : options.urlPrefix);
+    return (request, response) => autoguard.api.route(endpoints, request, response, serverOptions);
 };
 exports.makeServer = makeServer;

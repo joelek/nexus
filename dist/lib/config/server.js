@@ -3,8 +3,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.makeServer = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
-const makeServer = (routes, options) => {
+const makeServer = (routes, serverOptions) => {
     let endpoints = new Array();
-    return (request, response) => autoguard.api.route(endpoints, request, response, options === null || options === void 0 ? void 0 : options.urlPrefix);
+    return (request, response) => autoguard.api.route(endpoints, request, response, serverOptions);
 };
 exports.makeServer = makeServer;
