@@ -17,9 +17,6 @@ async function run(): Promise<void> {
 			break;
 		} else if ((parts = /^--root=(.*)$/.exec(arg)) !== null) {
 			domain.root = parts[1] || undefined;
-		} else if ((parts = /^--port=([0-9]+)$/.exec(arg)) !== null) {
-			// TODO: Remove compatibility behaviour in v2.
-			options.http = Number.parseInt(parts[1]);
 		} else if ((parts = /^--http=([0-9]+)$/.exec(arg)) !== null) {
 			options.http = Number.parseInt(parts[1]);
 		} else if ((parts = /^--https=([0-9]+)$/.exec(arg)) !== null) {
