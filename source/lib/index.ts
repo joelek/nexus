@@ -245,7 +245,7 @@ export function makeServer(options: Options): void {
 		let key = domain.key;
 		let cert = domain.cert;
 		let host = domain.host ?? "*";
-		let routing = domain.routing ?? false;
+		let routing = domain.routing ?? true;
 		let indices = domain.indices ?? false;
 		if (key || cert) {
 			process.stdout.write(`Configuring https://${host}:${https}\n`);

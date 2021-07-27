@@ -24,7 +24,7 @@ Nexus automatically generates and serves index documents for directory requests.
 
 ### Client-side routing
 
-Nexus includes support for applications utilizing client-side routing. The feature is turned _off_ by default and can be configured using the `--routing=<boolean>` argument.
+Nexus includes support for applications utilizing client-side routing. The feature is turned _on_ by default and can be configured using the `--routing=<boolean>` argument.
 
 Client-side routing is implemented as a redirect to the index document for all requests that would normally result in a 404 response. This allows an application to properly handle deep-linking using the history API but will alter to which resource relative URIs resolve. Placing a `<base href="/"/>` within the index document makes all relative URIs resolve with respect to the root directory which is the behaviour of the server with the feature turned off.
 
