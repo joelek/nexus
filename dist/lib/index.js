@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.serve = exports.makeServer = exports.matchesHostPattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Options = exports.Domain = void 0;
+exports.makeServer = exports.matchesHostPattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
 const libfs = require("fs");
 const libhttp = require("http");
@@ -343,20 +343,6 @@ function makeServer(options) {
         let address = httpServer.address();
         process.stdout.write(`Listening on port ${address.port} (HTTP).\n`);
     });
-    return httpServer;
 }
 exports.makeServer = makeServer;
-;
-// TODO: Remove compatibility shim in v2.
-function serve(root, http) {
-    return makeServer({
-        domains: [
-            {
-                root
-            }
-        ],
-        http
-    });
-}
-exports.serve = serve;
 ;
