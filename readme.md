@@ -6,6 +6,8 @@ Static web server for NodeJS written completely in TypeScript.
 
 ## Features
 
+This tool can be installed locally or globally. Use the `npx nexus` command for local installations and the `nexus` command for global installations.
+
 ### Instant server
 
 Nexus serves the contents of any directory by launching a web server that accepts GET and HEAD requests.
@@ -120,13 +122,13 @@ Thank you for your support!
 Releases follow semantic versioning and release packages are published using the GitHub platform. Use the following command to install the latest release.
 
 ```
-npm install -g joelek/ts-nexus#semver:^1
+npm install [-g] joelek/ts-nexus#semver:^2
 ```
 
 Use the following command to install the very latest build. The very latest build may include breaking changes and should not be used in production environments.
 
 ```
-npm install -g joelek/ts-nexus#master
+npm install [-g] joelek/ts-nexus#master
 ```
 
 ## Roadmap
