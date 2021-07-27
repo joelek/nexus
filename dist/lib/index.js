@@ -222,10 +222,11 @@ exports.makeRequestListener = makeRequestListener;
 ;
 function makeRedirectRequestListener(httpsPort) {
     return (request, response) => {
-        var _a, _b;
+        var _a, _b, _c;
         let host = ((_a = request.headers.host) !== null && _a !== void 0 ? _a : "localhost").split(":")[0];
-        let path = (_b = request.url) !== null && _b !== void 0 ? _b : "/";
-        let port = httpsPort != null ? `:${httpsPort}` : "";
+        let port = ((_b = request.headers.host) !== null && _b !== void 0 ? _b : "localhost").split(":")[1];
+        let path = (_c = request.url) !== null && _c !== void 0 ? _c : "/";
+        port = port != null ? `:${httpsPort}` : "";
         response.writeHead(301, {
             "Location": `https://${host}${port}${path}`
         });

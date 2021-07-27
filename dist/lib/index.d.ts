@@ -13,7 +13,7 @@ export declare function makeDirectoryListingResponse(pathPrefix: string, pathSuf
     payload: autoguard.api.Binary;
 };
 export declare function makeRequestListener(pathPrefix: string, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener;
-export declare function makeRedirectRequestListener(httpsPort?: number): libhttp.RequestListener;
+export declare function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener;
 export declare function matchesHostPattern(subject: string, pattern: string): boolean;
 export declare function makeServer(options: Options): libhttp.Server;
 export declare function serve(root: string, http: number): libhttp.Server;
