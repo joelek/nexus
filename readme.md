@@ -34,6 +34,8 @@ Serveit includes support for transport layer security for which a private key an
 
 The paths for the private key and certificate files may be specified using the `--key=<string>` and `--cert=<string>` arguments, respectively. When specified, serveit will serve the contents over HTTPS using port 8443 as a default. You may specify a different port using the `--https=<number>` argument. An HTTP to HTTPS redirect will be served over regular HTTP.
 
+Serveit monitors the files for changes and automatically presents the very latest certificates without having to restart the server.
+
 ### Host filtering
 
 Serveit includes support for host filtering which prevents the server from being accessed without knowing information about its host. The use of host filtering can block some malicious access attempts but should not be relied on solely for server hardening.
