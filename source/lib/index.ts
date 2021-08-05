@@ -207,7 +207,7 @@ export function makeRedirectRequestListener(httpsPort: number): libhttp.RequestL
 	};
 };
 
-export function matchesHostPattern(subject: string, pattern: string): boolean {
+export function matchesHostnamePattern(subject: string, pattern: string): boolean {
 	let subjectParts = subject.split(".");
 	let patternParts = pattern.split(".");
 	if (subjectParts.length < patternParts.length) {
@@ -287,13 +287,13 @@ export function makeServer(options: Options): void {
 	}
 	let httpsServer = libhttps.createServer({
 		SNICallback: (sni, callback) => {
-			let secureContext = secureContexts.find((pair) => matchesHostPattern(sni, pair.host));
+			let secureContext = secureContexts.find((pair) => matchesHostnamePattern(sni, pair.host));
 			secureContext?.load();
 			return callback(null, secureContext?.secureContext ?? defaultSecureContext);
 		}
 	}, (request, response) => {
 		let host = (request.headers.host ?? "localhost").split(":")[0];
-		let requestListener = httpsRequestListeners.find((pair) => matchesHostPattern(host, pair[0]))?.[1] ?? defaultRequestListener;
+		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(host, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
 	httpsServer.listen(https, () => {
@@ -302,7 +302,7 @@ export function makeServer(options: Options): void {
 	});
 	let httpServer = libhttp.createServer({}, (request, response) => {
 		let host = (request.headers.host ?? "localhost").split(":")[0];
-		let requestListener = httpRequestListeners.find((pair) => matchesHostPattern(host, pair[0]))?.[1] ?? defaultRequestListener;
+		let requestListener = httpRequestListeners.find((pair) => matchesHostnamePattern(host, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
 	httpServer.listen(http, () => {
