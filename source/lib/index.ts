@@ -346,7 +346,7 @@ export function makeServer(options: Options): void {
 		return requestListener(request, response);
 	});
 	httpsRequestRouter.listen(undefined, () => {
-		process.stdout.write(`Listening on port ${getServerPort(httpsRequestRouter)} (HTTP).\n`);
+		process.stdout.write(`Request router listening on port ${getServerPort(httpsRequestRouter)}\n`);
 	});
 	let certificateRouter = libtls.createServer({
 		SNICallback: (hostname, callback) => {
@@ -358,7 +358,7 @@ export function makeServer(options: Options): void {
 		makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
 	});
 	certificateRouter.listen(https, () => {
-		process.stdout.write(`Listening on port ${getServerPort(certificateRouter)} (TLS).\n`);
+		process.stdout.write(`Certificate router listening on port ${getServerPort(certificateRouter)}\n`);
 	});
 	let httpRequestRouter = libhttp.createServer({}, (request, response) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
@@ -366,6 +366,6 @@ export function makeServer(options: Options): void {
 		return requestListener(request, response);
 	});
 	httpRequestRouter.listen(http, () => {
-		process.stdout.write(`Listening on port ${getServerPort(httpRequestRouter)} (HTTP).\n`);
+		process.stdout.write(`Request router listening on port ${getServerPort(httpRequestRouter)}\n`);
 	});
 };
