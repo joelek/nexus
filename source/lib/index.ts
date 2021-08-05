@@ -265,12 +265,12 @@ export function makeServer(options: Options): void {
 				}
 			};
 			if (key) {
-				libfs.watch(key, (next, last) => {
+				libfs.watch(key, () => {
 					secureContext.dirty = true;
 				});
 			}
 			if (cert) {
-				libfs.watch(cert, (next, last) => {
+				libfs.watch(cert, () => {
 					secureContext.dirty = true;
 				});
 			}
