@@ -181,14 +181,14 @@ export function makeRequestListener(pathPrefix: string, clientRouting: boolean, 
 		}
 	});
 	return (request, response) => {
-		let host = (request.headers.host ?? "localhost").split(":")[0];
+		let hostname = (request.headers.host ?? "localhost").split(":")[0];
 		let path = request.url ?? "/";
 		let method = request.method ?? "GET";
 		let protocol = request.socket instanceof libtls.TLSSocket ? "https" : "http";
 		let start = Date.now();
 		response.on("finish", () => {
 			let duration = Date.now() - start;
-			process.stdout.write(`${response.statusCode} ${method} ${protocol}://${host}${path} (${duration} ms)\n`);
+			process.stdout.write(`${response.statusCode} ${method} ${protocol}://${hostname}${path} (${duration} ms)\n`);
 		});
 		requestListener(request, response);
 	};
@@ -196,12 +196,12 @@ export function makeRequestListener(pathPrefix: string, clientRouting: boolean, 
 
 export function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener {
 	return (request, response) => {
-		let host = (request.headers.host ?? "localhost").split(":")[0];
+		let hostname = (request.headers.host ?? "localhost").split(":")[0];
 		let port = (request.headers.host ?? "localhost").split(":")[1] as string | undefined;
 		let path = request.url ?? "/";
 		port = port != null ? `:${httpsPort}` : "";
 		response.writeHead(301, {
-			"Location": `https://${host}${port}${path}`
+			"Location": `https://${hostname}${port}${path}`
 		});
 		response.end();
 	};
@@ -286,14 +286,14 @@ export function makeServer(options: Options): void {
 		}
 	}
 	let httpsServer = libhttps.createServer({
-		SNICallback: (sni, callback) => {
-			let secureContext = secureContexts.find((pair) => matchesHostnamePattern(sni, pair.host));
+		SNICallback: (hostname, callback) => {
+			let secureContext = secureContexts.find((pair) => matchesHostnamePattern(hostname, pair.host));
 			secureContext?.load();
 			return callback(null, secureContext?.secureContext ?? defaultSecureContext);
 		}
 	}, (request, response) => {
-		let host = (request.headers.host ?? "localhost").split(":")[0];
-		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(host, pair[0]))?.[1] ?? defaultRequestListener;
+		let hostname = (request.headers.host ?? "localhost").split(":")[0];
+		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
 	httpsServer.listen(https, () => {
@@ -301,8 +301,8 @@ export function makeServer(options: Options): void {
 		process.stdout.write(`Listening on port ${address.port} (HTTPS).\n`);
 	});
 	let httpServer = libhttp.createServer({}, (request, response) => {
-		let host = (request.headers.host ?? "localhost").split(":")[0];
-		let requestListener = httpRequestListeners.find((pair) => matchesHostnamePattern(host, pair[0]))?.[1] ?? defaultRequestListener;
+		let hostname = (request.headers.host ?? "localhost").split(":")[0];
+		let requestListener = httpRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
 	httpServer.listen(http, () => {
