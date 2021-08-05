@@ -353,8 +353,7 @@ export function makeServer(options: Options): void {
 		return requestListener(request, response);
 	});
 	httpsServer.listen(https, () => {
-		let address = httpsServer.address() as libnet.AddressInfo;
-		process.stdout.write(`Listening on port ${address.port} (HTTPS).\n`);
+		process.stdout.write(`Listening on port ${getServerPort(httpsServer)} (HTTPS).\n`);
 	});
 	let httpServer = libhttp.createServer({}, (request, response) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
@@ -362,7 +361,6 @@ export function makeServer(options: Options): void {
 		return requestListener(request, response);
 	});
 	httpServer.listen(http, () => {
-		let address = httpServer.address() as libnet.AddressInfo;
-		process.stdout.write(`Listening on port ${address.port} (HTTP).\n`);
+		process.stdout.write(`Listening on port ${getServerPort(httpServer)} (HTTP).\n`);
 	});
 };
