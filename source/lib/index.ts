@@ -277,6 +277,14 @@ export function makeTlsProxyConnection(host: string, port: number, head: Buffer,
 	return serverSocket;
 };
 
+export function getServerPort(server: libnet.Server): number {
+	let address = server.address();
+	if (address == null || typeof address === "string") {
+		throw `Expected type AddressInfo!`;
+	}
+	return address.port;
+};
+
 export function makeServer(options: Options): void {
 	let http = options.http ?? 8080;
 	let https = options.https ?? 8443;
