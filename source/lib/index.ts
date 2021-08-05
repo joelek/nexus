@@ -248,7 +248,6 @@ export function makeServer(options: Options): void {
 		let routing = domain.routing ?? true;
 		let indices = domain.indices ?? false;
 		if (key || cert) {
-			process.stdout.write(`Configuring https://${host}:${https}\n`);
 			let secureContext = {
 				host,
 				secureContext: defaultSecureContext,
@@ -275,12 +274,13 @@ export function makeServer(options: Options): void {
 				});
 			}
 			secureContexts.push(secureContext);
+			process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
 			let httpRequestListener = makeRedirectRequestListener(https);
 			httpRequestListeners.push([host, httpRequestListener]);
 			let httpsRequestListener = makeRequestListener(root, routing, indices);
 			httpsRequestListeners.push([host, httpsRequestListener]);
 		} else {
-			process.stdout.write(`Configuring http://${host}:${http}\n`);
+			process.stdout.write(`Serving "${root}" at http://${host}:${http}\n`);
 			let httpRequestListener = makeRequestListener(root, routing, indices);
 			httpRequestListeners.push([host, httpRequestListener]);
 		}
