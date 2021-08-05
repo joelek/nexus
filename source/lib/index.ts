@@ -1,7 +1,6 @@
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
 import * as libfs from "fs";
 import * as libhttp from "http";
-import * as libhttps from "https";
 import * as libnet from "net";
 import * as libpath from "path";
 import * as libtls from "tls";
@@ -341,19 +340,25 @@ export function makeServer(options: Options): void {
 			httpRequestListeners.push([host, httpRequestListener]);
 		}
 	}
-	let httpsServer = libhttps.createServer({
+	let httpsServer = libhttp.createServer({}, (request, response) => {
+		let hostname = (request.headers.host ?? "localhost").split(":")[0];
+		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
+		return requestListener(request, response);
+	});
+	httpsServer.listen(undefined, () => {
+		process.stdout.write(`Listening on port ${getServerPort(httpsServer)} (HTTP).\n`);
+	});
+	let certificateRouter = libtls.createServer({
 		SNICallback: (hostname, callback) => {
 			let secureContext = secureContexts.find((pair) => matchesHostnamePattern(hostname, pair.host));
 			secureContext?.load();
 			return callback(null, secureContext?.secureContext ?? defaultSecureContext);
 		}
-	}, (request, response) => {
-		let hostname = (request.headers.host ?? "localhost").split(":")[0];
-		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
-		return requestListener(request, response);
+	}, (clientSocket) => {
+		makeTcpProxyConnection("localhost", getServerPort(httpsServer), Buffer.alloc(0), clientSocket);
 	});
-	httpsServer.listen(https, () => {
-		process.stdout.write(`Listening on port ${getServerPort(httpsServer)} (HTTPS).\n`);
+	certificateRouter.listen(https, () => {
+		process.stdout.write(`Listening on port ${getServerPort(certificateRouter)} (TLS).\n`);
 	});
 	let httpServer = libhttp.createServer({}, (request, response) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
