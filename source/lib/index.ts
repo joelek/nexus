@@ -340,13 +340,13 @@ export function makeServer(options: Options): void {
 			httpRequestListeners.push([host, httpRequestListener]);
 		}
 	}
-	let httpsServer = libhttp.createServer({}, (request, response) => {
+	let httpsRequestRouter = libhttp.createServer({}, (request, response) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
 		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
-	httpsServer.listen(undefined, () => {
-		process.stdout.write(`Listening on port ${getServerPort(httpsServer)} (HTTP).\n`);
+	httpsRequestRouter.listen(undefined, () => {
+		process.stdout.write(`Listening on port ${getServerPort(httpsRequestRouter)} (HTTP).\n`);
 	});
 	let certificateRouter = libtls.createServer({
 		SNICallback: (hostname, callback) => {
@@ -355,17 +355,17 @@ export function makeServer(options: Options): void {
 			return callback(null, secureContext?.secureContext ?? defaultSecureContext);
 		}
 	}, (clientSocket) => {
-		makeTcpProxyConnection("localhost", getServerPort(httpsServer), Buffer.alloc(0), clientSocket);
+		makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
 	});
 	certificateRouter.listen(https, () => {
 		process.stdout.write(`Listening on port ${getServerPort(certificateRouter)} (TLS).\n`);
 	});
-	let httpServer = libhttp.createServer({}, (request, response) => {
+	let httpRequestRouter = libhttp.createServer({}, (request, response) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
 		let requestListener = httpRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
-	httpServer.listen(http, () => {
-		process.stdout.write(`Listening on port ${getServerPort(httpServer)} (HTTP).\n`);
+	httpRequestRouter.listen(http, () => {
+		process.stdout.write(`Listening on port ${getServerPort(httpRequestRouter)} (HTTP).\n`);
 	});
 };
