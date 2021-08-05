@@ -229,6 +229,54 @@ export function matchesHostnamePattern(subject: string, pattern: string): boolea
 	return true;
 };
 
+export function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libnet.Socket {
+	let serverSocket = libnet.connect({
+		host,
+		port
+	});
+	serverSocket.on("connect", () => {
+		clientSocket.on("error", () => {
+			serverSocket.end();
+		});
+		serverSocket.write(head, () => {
+			serverSocket.on("data", (buffer) => {
+				clientSocket.write(buffer);
+			});
+			clientSocket.on("data", (buffer) => {
+				serverSocket.write(buffer);
+			});
+		});
+	});
+	serverSocket.on("error", () => {
+		clientSocket.end();
+	});
+	return serverSocket;
+};
+
+export function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libtls.TLSSocket {
+	let serverSocket = libtls.connect({
+		host,
+		port
+	});
+	serverSocket.on("secureConnect", () => {
+		clientSocket.on("error", () => {
+			serverSocket.end();
+		});
+		serverSocket.write(head, () => {
+			serverSocket.on("data", (buffer) => {
+				clientSocket.write(buffer);
+			});
+			clientSocket.on("data", (buffer) => {
+				serverSocket.write(buffer);
+			});
+		});
+	});
+	serverSocket.on("error", () => {
+		clientSocket.end();
+	});
+	return serverSocket;
+};
+
 export function makeServer(options: Options): void {
 	let http = options.http ?? 8080;
 	let https = options.https ?? 8443;
