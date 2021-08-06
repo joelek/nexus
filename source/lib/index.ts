@@ -228,6 +228,23 @@ export function matchesHostnamePattern(subject: string, pattern: string): boolea
 	return true;
 };
 
+export function connectSockets(serverSocket: libnet.Socket | libtls.TLSSocket, clientSocket: libnet.Socket | libtls.TLSSocket, head: Buffer): void {
+	serverSocket.on("error", () => {
+		clientSocket.end();
+	});
+	clientSocket.on("error", () => {
+		serverSocket.end();
+	});
+	serverSocket.write(head, () => {
+		serverSocket.on("data", (buffer) => {
+			clientSocket.write(buffer);
+		});
+		clientSocket.on("data", (buffer) => {
+			serverSocket.write(buffer);
+		});
+	});
+};
+
 export function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libnet.Socket {
 	let serverSocket = libnet.connect({
 		host,
