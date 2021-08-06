@@ -120,6 +120,32 @@ nexus \
 	--host=domain2.com
 ```
 
+### Request proxying
+
+TODO
+
+This allows Nexus to be configured as a outgoing proxy.
+
+```
+nexus --root=https://server.remote
+```
+
+
+
+
+This allows Nexus to be configured as an incoming proxy.
+
+```
+nexus --root=https://server.local
+```
+
+
+Nexus includes support for proxying requests to local or remote hosts. The feature is configured by setting the `--root` argument to a valid HTTP or HTTPS URI like for instance `https://www.domain.com/api`.
+
+With request proxying, requests sent to Nexus will be transmitted
+
+Request proxying is implemented at the request level through inspecting incoming HTTP requests. TLS- Applications that transmit sensitive information should employ connection routing that ensures end-to-end encryption of the information transmitted.
+
 ### Configuration files
 
 Nexus can load configuration files stored using the JSON format shown below. A configuration file is loaded using the `--config=<string>` argument.

@@ -2,6 +2,7 @@ import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
 import * as multipass from "@joelek/multipass/dist/mod";
 import * as libfs from "fs";
 import * as libhttp from "http";
+import * as libhttps from "https";
 import * as libnet from "net";
 import * as libpath from "path";
 import * as libtls from "tls";
@@ -242,6 +243,48 @@ export function makeRedirectRequestListener(httpsPort: number): libhttp.RequestL
 	};
 };
 
+export function makeProxyRequestListener(hostConnectionConfig: HostConnectionConfig): libhttp.RequestListener {
+	let { type, hostname, port } = { ...hostConnectionConfig };
+	let protocol = type === "tcp" ? "http:" : "https:";
+	let urlPrefix = `${protocol}//${hostname}:${port}`;
+	let lib = urlPrefix.startsWith("http:") ? libhttp : libhttps;
+	return (clientRequest, clientResponse) => {
+		new Promise<void>(async (resolve, reject) => {
+			let payload = await autoguard.api.collectPayload(clientRequest);
+			let headers = clientRequest.headers;
+			let method = clientRequest.method ?? "GET";
+			let path = clientRequest.url ?? "/";
+			let url = urlPrefix + path;
+			console.log("sending headers", headers);
+			let serverRequest = lib.request(url, {
+				method,
+			}, async (serverResponse) => {
+				console.log("response for ", url);
+				let status = serverResponse.statusCode ?? 200;
+				let headers = serverResponse.headers;
+				let payload = await autoguard.api.collectPayload(serverResponse);
+				clientResponse.writeHead(status, headers);
+				let clientConnectionUpgrade = clientRequest.headers.connection?.toLowerCase() === "upgrade";
+				let serverConnectionUpgrade = serverResponse.headers.connection?.toLowerCase() === "upgrade";
+				if (clientConnectionUpgrade && serverConnectionUpgrade) {
+					connectSockets(serverResponse.socket, clientRequest.socket, Buffer.alloc(0));
+					clientResponse.write(payload);
+				} else {
+					clientResponse.end(payload);
+				}
+				resolve();
+			});
+			serverRequest.on("abort", reject);
+			serverRequest.on("error", reject);
+			serverRequest.write(payload);
+			serverRequest.end();
+		}).catch((error) => {
+			console.log("there was an error", error);
+			clientRequest.socket.end();
+		});
+	};
+};
+
 export function matchesHostnamePattern(subject: string, pattern: string): boolean {
 	let subjectParts = subject.split(".");
 	let patternParts = pattern.split(".");
@@ -381,6 +424,40 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 	}
 };
 
+export type HostConnectionConfig = {
+	type: "tcp" | "tls",
+	hostname: string,
+	port: number
+};
+
+export function parseHostConnectionConfig(root: string): HostConnectionConfig {
+	let url = new liburl.URL(root);
+	if (url.username !== "" || url.password !== "" || url.pathname !== "" || url.search !== "" || url.hash !== "") {
+		throw `Expected a protocol-agnostic URI!`;
+	}
+	let protocol = url.protocol;
+	let hostname = url.hostname;
+	let port = Number.parseInt(url.port, 10) as number | undefined;
+	if (Number.isNaN(port)) {
+		port = undefined;
+	}
+	if (protocol === "http:") {
+		return {
+			type: "tcp",
+			hostname,
+			port: port ?? 80
+		};
+	} else if (protocol === "https:") {
+		return {
+			type: "tls",
+			hostname,
+			port: port ?? 443
+		};
+	} else {
+		throw `Expected a supported protocol!`;
+	}
+};
+
 export function makeServer(options: Options): void {
 	let http = options.http ?? 8080;
 	let https = options.https ?? 8443;
@@ -392,6 +469,8 @@ export function makeServer(options: Options): void {
 	let secureContexts = new Array<{ host: string, secureContext: libtls.SecureContext, dirty: boolean, load: () => void }>();
 	let httpRequestListeners = new Array<[string, libhttp.RequestListener]>();
 	let httpsRequestListeners = new Array<[string, libhttp.RequestListener]>();
+	let httpConnectionProxies = new Array<[string, HostConnectionConfig]>();
+	let httpsConnectionProxies = new Array<[string, HostConnectionConfig]>();
 	let handledServernameConnectionConfigs = new Array<[string, ServernameConnectionConfig]>();
 	let delegatedServernameConnectionConfigs = new Array<[string, ServernameConnectionConfig]>();
 	for (let domain of options.domains ?? []) {
@@ -433,6 +512,14 @@ export function makeServer(options: Options): void {
 			}
 			secureContexts.push(secureContext);
 			try {
+				let hostConnectionConfig = parseHostConnectionConfig(root);
+				let httpsRequestListener = makeProxyRequestListener(hostConnectionConfig);
+				httpsRequestListeners.push([host, httpsRequestListener]);
+				//httpsConnectionProxies.push([host, hostConnectionConfig]);
+				process.stdout.write(`Forwarding connections for https://${host}:${https} to ${root}\n`);
+				continue;
+			} catch (error) {}
+			try {
 				let servernameConnectionConfig = parseServernameConnectionConfig(root, 80);
 				handledServernameConnectionConfigs.push([host, servernameConnectionConfig]);
 				process.stdout.write(`Delegating connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
@@ -449,6 +536,14 @@ export function makeServer(options: Options): void {
 			let httpsRequestListener = makeRequestListener(root, routing, indices);
 			httpsRequestListeners.push([host, httpsRequestListener]);
 		} else {
+			try {
+				let hostConnectionConfig = parseHostConnectionConfig(root);
+				let httpRequestListener = makeProxyRequestListener(hostConnectionConfig);
+				httpRequestListeners.push([host, httpRequestListener]);
+				//httpConnectionProxies.push([host, hostConnectionConfig]);
+				process.stdout.write(`Forwarding connections for http://${host}:${http} to ${root}\n`);
+				continue;
+			} catch (error) {}
 			try {
 				let servernameConnectionConfig = parseServernameConnectionConfig(root, 443);
 				delegatedServernameConnectionConfigs.push([host, servernameConnectionConfig]);
@@ -517,6 +612,27 @@ export function makeServer(options: Options): void {
 	httpsRequestRouter.listen(undefined, () => {
 		process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpsRequestRouter), terminal.FG_CYAN)}\n`);
 	});
+	let httpsConnectionRouter = libnet.createServer({}, (clientSocket) => {
+		clientSocket.once("data", (head) => {
+			let string = head.toString("binary");
+			let hostname = /^host:(.+)$/mi.exec(string)?.[1]?.trim()?.split(":")[0] ?? "localhost";
+			let port = getServerPort(httpsRequestRouter);
+			let connectionProxySettings = httpsConnectionProxies.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1];
+			if (connectionProxySettings != null) {
+				let { type, hostname, port } = { ...connectionProxySettings };
+				if (type === "tcp") {
+					makeTcpProxyConnection(hostname, port, head, clientSocket);
+				} else {
+					makeTlsProxyConnection(hostname, port, head, clientSocket);
+				}
+			} else {
+				makeTcpProxyConnection(hostname, port, head, clientSocket);
+			}
+		});
+	});
+	httpsConnectionRouter.listen(undefined, () => {
+		process.stdout.write(`Connection router listening on port ${getServerPort(httpsConnectionRouter)}\n`);
+	});
 	let certificateRouter = libtls.createServer({
 		SNICallback: (hostname, callback) => {
 			let secureContext = secureContexts.find((pair) => matchesHostnamePattern(hostname, pair.host));
@@ -567,5 +683,26 @@ export function makeServer(options: Options): void {
 	});
 	httpRequestRouter.listen(http, () => {
 		process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpRequestRouter), terminal.FG_CYAN)}\n`);
+	});
+	let httpConnectionRouter = libnet.createServer({}, (clientSocket) => {
+		clientSocket.once("data", (head) => {
+			let string = head.toString("binary");
+			let hostname = /^host:(.+)$/mi.exec(string)?.[1]?.trim()?.split(":")[0] ?? "localhost";
+			let port = getServerPort(httpRequestRouter);
+			let connectionProxySettings = httpConnectionProxies.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1];
+			if (connectionProxySettings != null) {
+				let { type, hostname, port } = { ...connectionProxySettings };
+				if (type === "tcp") {
+					makeTcpProxyConnection(hostname, port, head, clientSocket);
+				} else {
+					makeTlsProxyConnection(hostname, port, head, clientSocket);
+				}
+			} else {
+				makeTcpProxyConnection(hostname, port, head, clientSocket);
+			}
+		});
+	});
+	httpConnectionRouter.listen(http, () => {
+		process.stdout.write(`Connection router listening on port ${getServerPort(httpConnectionRouter)}\n`);
 	});
 };
