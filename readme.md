@@ -46,6 +46,38 @@ Host filtering may be specified using the `--host=<string>` argument where singl
 
 It is important to understand that Nexus will stop accepting requests directed to `localhost` and through IPs when host filtering is used unless the hosts are explicitly allowed. Local DNS can be modified to direct the desired host to the local machine in order to access a locally running server. This is the recommended solution for use in conjunction with transport layer security during development.
 
+### Servername routing
+
+Nexus includes support for servername routing for incoming connections made using the TLS protocol. The feature may be enabled by setting the `--root` argument to a valid, protocol-agnostic URI where only protocol, hostname and port may be specified.
+
+Servername routing requires the protocol to be specified as `pipe:` while hostname may be specified as any valid local or remote hostname. Port may optionally be specified and will default as explained below.
+
+This allows for Nexus to handle encryption on behalf of another host.
+
+All connections between the client and the other host are encrypted and decrypted by Nexus which in theory allows Nexus to intercept the data transmitted. The private key and certificate files must be specified using the `--key=<string>` and `--cert=<string>` arguments in order for Nexus to handle encryption.
+
+Port 80 is used by default for connections to the other host when Nexus is configured to handle encryption.
+
+```
+nexus \
+	--root=pipe://hostname \
+	--key=./domain.key \
+	--cert=./domain.cer \
+	--host=domain.com
+```
+
+This also allows for Nexus to delegate encryption to another host.
+
+All connections between the client and the other host are end-to-end encrypted without Nexus being able to intercept the data transmitted. The private key and certificate files must not be specified as they would instead configure Nexus to handle encryption.
+
+Port 443 is used by default for connections to the other host when Nexus is configured to delegate encryption.
+
+```
+nexus --root=pipe://hostname --host=domain.com
+```
+
+Servername routing is implemented using the TLS servername extension and is therefore served over the HTTPS port of Nexus. The port may be configured using the `--https=<number>` argument.
+
 ### Multiple hosts
 
 Nexus can be configured with multiple hosts and each host may have its distinct configuration. Every time the `--host=<string>` argument is passed, a domain configuration is created using the previously configured settings.
