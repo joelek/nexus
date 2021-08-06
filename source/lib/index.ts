@@ -380,6 +380,8 @@ export function makeServer(options: Options): void {
 				let servernameConnectionConfig = parseServernameConnectionConfig(root, 80);
 				handledServernameConnectionConfigs.push([host, servernameConnectionConfig]);
 				process.stdout.write(`Delegating connections for https://${host}:${https} to ${root}\n`);
+				let httpRequestListener = makeRedirectRequestListener(https);
+				httpRequestListeners.push([host, httpRequestListener]);
 				continue;
 			} catch (error) {}
 			process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
@@ -392,6 +394,8 @@ export function makeServer(options: Options): void {
 				let servernameConnectionConfig = parseServernameConnectionConfig(root, 443);
 				delegatedServernameConnectionConfigs.push([host, servernameConnectionConfig]);
 				process.stdout.write(`Delegating connections for https://${host}:${https} to ${root} (E2EE)\n`);
+				let httpRequestListener = makeRedirectRequestListener(https);
+				httpRequestListeners.push([host, httpRequestListener]);
 				continue;
 			} catch (error) {}
 			process.stdout.write(`Serving "${root}" at http://${host}:${http}\n`);
