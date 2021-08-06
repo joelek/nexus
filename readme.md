@@ -76,7 +76,7 @@ Port 443 is used by default for connections to the other host when Nexus is conf
 nexus --root=pipe://hostname --host=domain.com
 ```
 
-Servername routing is implemented using the TLS servername extension and is therefore served over the HTTPS port of Nexus. The port may be configured using the `--https=<number>` argument.
+Servername routing is implemented using the TLS servername extension and is therefore served over the HTTPS port of Nexus. The port may be configured using the `--https=<number>` argument. An HTTP to HTTPS redirect will be served over regular HTTP.
 
 ### Multiple hosts
 
