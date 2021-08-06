@@ -1,6 +1,6 @@
 # @joelek/ts-nexus
 
-Static web server for NodeJS written completely in TypeScript.
+Web server and connection router for NodeJS written completely in TypeScript.
 
 ![](./public/images/mobile.png)
 
