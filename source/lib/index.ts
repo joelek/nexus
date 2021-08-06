@@ -256,6 +256,9 @@ export function makeTcpProxyConnection(host: string, port: number, head: Buffer,
 		clientSocket.on("error", () => {
 			serverSocket.end();
 		});
+		clientSocket.on("end", () => {
+			serverSocket.end();
+		});
 		serverSocket.write(head, () => {
 			serverSocket.on("data", (buffer) => {
 				clientSocket.write(buffer);
@@ -266,6 +269,9 @@ export function makeTcpProxyConnection(host: string, port: number, head: Buffer,
 		});
 	});
 	serverSocket.on("error", () => {
+		clientSocket.end();
+	});
+	serverSocket.on("end", () => {
 		clientSocket.end();
 	});
 	return serverSocket;
@@ -280,6 +286,9 @@ export function makeTlsProxyConnection(host: string, port: number, head: Buffer,
 		clientSocket.on("error", () => {
 			serverSocket.end();
 		});
+		clientSocket.on("end", () => {
+			serverSocket.end();
+		});
 		serverSocket.write(head, () => {
 			serverSocket.on("data", (buffer) => {
 				clientSocket.write(buffer);
@@ -290,6 +299,9 @@ export function makeTlsProxyConnection(host: string, port: number, head: Buffer,
 		});
 	});
 	serverSocket.on("error", () => {
+		clientSocket.end();
+	});
+	serverSocket.on("end", () => {
 		clientSocket.end();
 	});
 	return serverSocket;
