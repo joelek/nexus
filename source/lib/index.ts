@@ -234,7 +234,13 @@ export function connectSockets(serverSocket: libnet.Socket | libtls.TLSSocket, c
 	serverSocket.on("error", () => {
 		clientSocket.end();
 	});
+	serverSocket.on("end", () => {
+		clientSocket.end();
+	});
 	clientSocket.on("error", () => {
+		serverSocket.end();
+	});
+	clientSocket.on("end", () => {
 		serverSocket.end();
 	});
 	serverSocket.write(head, () => {
