@@ -453,6 +453,9 @@ export function makeServer(options: Options): void {
 		process.stdout.write(`Certificate router listening on port ${getServerPort(certificateRouter)}\n`);
 	});
 	let servernameRouter = libnet.createServer({}, (clientSocket) => {
+		clientSocket.on("error", () => {
+			clientSocket.end();
+		});
 		clientSocket.once("data", (head) => {
 			try {
 				let hostname = tls.getServername(head);
