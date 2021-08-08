@@ -264,7 +264,13 @@ function connectSockets(serverSocket, clientSocket, head) {
     serverSocket.on("error", () => {
         clientSocket.end();
     });
+    serverSocket.on("end", () => {
+        clientSocket.end();
+    });
     clientSocket.on("error", () => {
+        serverSocket.end();
+    });
+    clientSocket.on("end", () => {
         serverSocket.end();
     });
     serverSocket.write(head, () => {
@@ -485,6 +491,9 @@ function makeServer(options) {
         process.stdout.write(`Certificate router listening on port ${getServerPort(certificateRouter)}\n`);
     });
     let servernameRouter = libnet.createServer({}, (clientSocket) => {
+        clientSocket.on("error", () => {
+            clientSocket.end();
+        });
         clientSocket.once("data", (head) => {
             var _a;
             try {
