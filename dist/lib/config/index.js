@@ -3,18 +3,18 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Autoguard = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-shared");
-exports.Domain = autoguard.guards.Object.of({
-    "root": autoguard.guards.Union.of(autoguard.guards.String, autoguard.guards.Undefined),
-    "key": autoguard.guards.Union.of(autoguard.guards.String, autoguard.guards.Undefined),
-    "cert": autoguard.guards.Union.of(autoguard.guards.String, autoguard.guards.Undefined),
-    "host": autoguard.guards.Union.of(autoguard.guards.String, autoguard.guards.Undefined),
-    "indices": autoguard.guards.Union.of(autoguard.guards.Boolean, autoguard.guards.Undefined),
-    "routing": autoguard.guards.Union.of(autoguard.guards.Boolean, autoguard.guards.Undefined)
+exports.Domain = autoguard.guards.Object.of({}, {
+    "root": autoguard.guards.String,
+    "key": autoguard.guards.String,
+    "cert": autoguard.guards.String,
+    "host": autoguard.guards.String,
+    "indices": autoguard.guards.Boolean,
+    "routing": autoguard.guards.Boolean
 });
-exports.Options = autoguard.guards.Object.of({
-    "domains": autoguard.guards.Union.of(autoguard.guards.Array.of(autoguard.guards.Reference.of(() => exports.Domain)), autoguard.guards.Undefined),
-    "http": autoguard.guards.Union.of(autoguard.guards.Number, autoguard.guards.Undefined),
-    "https": autoguard.guards.Union.of(autoguard.guards.Number, autoguard.guards.Undefined)
+exports.Options = autoguard.guards.Object.of({}, {
+    "domains": autoguard.guards.Array.of(autoguard.guards.Reference.of(() => exports.Domain)),
+    "http": autoguard.guards.Number,
+    "https": autoguard.guards.Number
 });
 var Autoguard;
 (function (Autoguard) {

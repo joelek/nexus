@@ -1,46 +1,39 @@
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-shared";
-export declare const Domain: autoguard.serialization.MessageGuard<{
-    host?: string | undefined;
-    cert?: string | undefined;
-    key?: string | undefined;
-    root?: string | undefined;
-    indices?: boolean | undefined;
-    routing?: boolean | undefined;
+export declare const Domain: autoguard.serialization.MessageGuard<Domain>;
+export declare type Domain = autoguard.guards.Object<{}, {
+    "root": autoguard.guards.String;
+    "key": autoguard.guards.String;
+    "cert": autoguard.guards.String;
+    "host": autoguard.guards.String;
+    "indices": autoguard.guards.Boolean;
+    "routing": autoguard.guards.Boolean;
 }>;
-export declare type Domain = ReturnType<typeof Domain["as"]>;
-export declare const Options: autoguard.serialization.MessageGuard<{
-    http?: number | undefined;
-    domains?: {
-        host?: string | undefined;
-        cert?: string | undefined;
-        key?: string | undefined;
-        root?: string | undefined;
-        indices?: boolean | undefined;
-        routing?: boolean | undefined;
-    }[] | undefined;
-    https?: number | undefined;
+export declare const Options: autoguard.serialization.MessageGuard<Options>;
+export declare type Options = autoguard.guards.Object<{}, {
+    "domains": autoguard.guards.Array<autoguard.guards.Reference<Domain>>;
+    "http": autoguard.guards.Number;
+    "https": autoguard.guards.Number;
 }>;
-export declare type Options = ReturnType<typeof Options["as"]>;
 export declare namespace Autoguard {
     const Guards: {
         Domain: autoguard.serialization.MessageGuard<{
-            host?: string | undefined;
-            cert?: string | undefined;
-            key?: string | undefined;
             root?: string | undefined;
+            key?: string | undefined;
+            cert?: string | undefined;
+            host?: string | undefined;
             indices?: boolean | undefined;
             routing?: boolean | undefined;
         }>;
         Options: autoguard.serialization.MessageGuard<{
-            http?: number | undefined;
-            domains?: {
-                host?: string | undefined;
-                cert?: string | undefined;
-                key?: string | undefined;
+            domains?: autoguard.guards.Array<{
                 root?: string | undefined;
+                key?: string | undefined;
+                cert?: string | undefined;
+                host?: string | undefined;
                 indices?: boolean | undefined;
                 routing?: boolean | undefined;
-            }[] | undefined;
+            }> | undefined;
+            http?: number | undefined;
             https?: number | undefined;
         }>;
     };

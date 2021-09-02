@@ -23,12 +23,11 @@ const makeServer = (routes, serverOptions) => {
             acceptsComponents: () => autoguard.api.acceptsComponents(raw.components, matchers),
             acceptsMethod: () => autoguard.api.acceptsMethod(raw.method, method),
             validateRequest: () => __awaiter(void 0, void 0, void 0, function* () {
-                var _a, _b;
                 let options = {};
                 options["filename"] = matchers[0].getValue();
-                options = Object.assign(Object.assign({}, options), autoguard.api.decodeUndeclaredParameters((_a = raw.parameters) !== null && _a !== void 0 ? _a : {}, Object.keys(options)));
+                options = Object.assign(Object.assign({}, options), autoguard.api.decodeUndeclaredParameters(raw.parameters, Object.keys(options)));
                 let headers = {};
-                headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_b = raw.headers) !== null && _b !== void 0 ? _b : {}, Object.keys(headers)));
+                headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders(raw.headers, Object.keys(headers)));
                 let payload = raw.payload;
                 let guard = shared.Autoguard.Requests["getRequest"];
                 let request = guard.as({ options, headers, payload }, "request");
@@ -37,14 +36,14 @@ const makeServer = (routes, serverOptions) => {
                         let response = yield routes["getRequest"](new autoguard.api.ClientRequest(request, true, auxillary));
                         return {
                             validateResponse: () => __awaiter(void 0, void 0, void 0, function* () {
-                                var _c, _d, _e, _f, _g;
+                                var _a, _b, _c, _d, _e;
                                 let guard = shared.Autoguard.Responses["getRequest"];
                                 guard.as(response, "response");
-                                let status = (_c = response.status) !== null && _c !== void 0 ? _c : 200;
+                                let status = (_a = response.status) !== null && _a !== void 0 ? _a : 200;
                                 let headers = new Array();
-                                headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_d = response.headers) !== null && _d !== void 0 ? _d : {}, headers.map((header) => header[0])));
-                                let payload = (_e = response.payload) !== null && _e !== void 0 ? _e : [];
-                                let defaultHeaders = (_g = (_f = serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.defaultHeaders) === null || _f === void 0 ? void 0 : _f.slice()) !== null && _g !== void 0 ? _g : [];
+                                headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_b = response.headers) !== null && _b !== void 0 ? _b : {}, headers.map((header) => header[0])));
+                                let payload = (_c = response.payload) !== null && _c !== void 0 ? _c : [];
+                                let defaultHeaders = (_e = (_d = serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.defaultHeaders) === null || _d === void 0 ? void 0 : _d.slice()) !== null && _e !== void 0 ? _e : [];
                                 defaultHeaders.push(["Content-Type", "application/octet-stream"]);
                                 return autoguard.api.finalizeResponse({ status, headers, payload }, defaultHeaders);
                             })
@@ -62,12 +61,11 @@ const makeServer = (routes, serverOptions) => {
             acceptsComponents: () => autoguard.api.acceptsComponents(raw.components, matchers),
             acceptsMethod: () => autoguard.api.acceptsMethod(raw.method, method),
             validateRequest: () => __awaiter(void 0, void 0, void 0, function* () {
-                var _a, _b;
                 let options = {};
                 options["filename"] = matchers[0].getValue();
-                options = Object.assign(Object.assign({}, options), autoguard.api.decodeUndeclaredParameters((_a = raw.parameters) !== null && _a !== void 0 ? _a : {}, Object.keys(options)));
+                options = Object.assign(Object.assign({}, options), autoguard.api.decodeUndeclaredParameters(raw.parameters, Object.keys(options)));
                 let headers = {};
-                headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders((_b = raw.headers) !== null && _b !== void 0 ? _b : {}, Object.keys(headers)));
+                headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders(raw.headers, Object.keys(headers)));
                 let payload = raw.payload;
                 let guard = shared.Autoguard.Requests["headRequest"];
                 let request = guard.as({ options, headers, payload }, "request");
@@ -76,14 +74,14 @@ const makeServer = (routes, serverOptions) => {
                         let response = yield routes["headRequest"](new autoguard.api.ClientRequest(request, true, auxillary));
                         return {
                             validateResponse: () => __awaiter(void 0, void 0, void 0, function* () {
-                                var _c, _d, _e, _f, _g;
+                                var _a, _b, _c, _d, _e;
                                 let guard = shared.Autoguard.Responses["headRequest"];
                                 guard.as(response, "response");
-                                let status = (_c = response.status) !== null && _c !== void 0 ? _c : 200;
+                                let status = (_a = response.status) !== null && _a !== void 0 ? _a : 200;
                                 let headers = new Array();
-                                headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_d = response.headers) !== null && _d !== void 0 ? _d : {}, headers.map((header) => header[0])));
-                                let payload = (_e = response.payload) !== null && _e !== void 0 ? _e : [];
-                                let defaultHeaders = (_g = (_f = serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.defaultHeaders) === null || _f === void 0 ? void 0 : _f.slice()) !== null && _g !== void 0 ? _g : [];
+                                headers.push(...autoguard.api.encodeUndeclaredHeaderPairs((_b = response.headers) !== null && _b !== void 0 ? _b : {}, headers.map((header) => header[0])));
+                                let payload = (_c = response.payload) !== null && _c !== void 0 ? _c : [];
+                                let defaultHeaders = (_e = (_d = serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.defaultHeaders) === null || _d === void 0 ? void 0 : _d.slice()) !== null && _e !== void 0 ? _e : [];
                                 defaultHeaders.push(["Content-Type", "application/octet-stream"]);
                                 return autoguard.api.finalizeResponse({ status, headers, payload }, defaultHeaders);
                             })

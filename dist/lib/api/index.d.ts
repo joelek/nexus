@@ -6,22 +6,22 @@ export declare namespace Autoguard {
     };
     const Requests: {
         getRequest: autoguard.serialization.MessageGuard<{
-            headers?: {
-                [x: string]: autoguard.api.JSON;
-            } | undefined;
             options?: {
                 [x: string]: autoguard.api.JSON;
-                filename?: string[] | undefined;
+                filename?: autoguard.guards.Array<string> | undefined;
+            } | undefined;
+            headers?: {
+                [x: string]: autoguard.api.JSON;
             } | undefined;
             payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
         }>;
         headRequest: autoguard.serialization.MessageGuard<{
-            headers?: {
-                [x: string]: autoguard.api.JSON;
-            } | undefined;
             options?: {
                 [x: string]: autoguard.api.JSON;
-                filename?: string[] | undefined;
+                filename?: autoguard.guards.Array<string> | undefined;
+            } | undefined;
+            headers?: {
+                [x: string]: autoguard.api.JSON;
             } | undefined;
             payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
         }>;
@@ -31,18 +31,18 @@ export declare namespace Autoguard {
     };
     const Responses: {
         getRequest: autoguard.serialization.MessageGuard<{
+            status?: number | undefined;
             headers?: {
                 [x: string]: autoguard.api.JSON;
             } | undefined;
             payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
-            status?: number | undefined;
         }>;
         headRequest: autoguard.serialization.MessageGuard<{
+            status?: number | undefined;
             headers?: {
                 [x: string]: autoguard.api.JSON;
             } | undefined;
             payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
-            status?: number | undefined;
         }>;
     };
     type Responses = {
