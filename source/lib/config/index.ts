@@ -2,51 +2,35 @@
 
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-shared";
 
-export const Domain = autoguard.guards.Object.of({
-	"root": autoguard.guards.Union.of(
-		autoguard.guards.String,
-		autoguard.guards.Undefined
-	),
-	"key": autoguard.guards.Union.of(
-		autoguard.guards.String,
-		autoguard.guards.Undefined
-	),
-	"cert": autoguard.guards.Union.of(
-		autoguard.guards.String,
-		autoguard.guards.Undefined
-	),
-	"host": autoguard.guards.Union.of(
-		autoguard.guards.String,
-		autoguard.guards.Undefined
-	),
-	"indices": autoguard.guards.Union.of(
-		autoguard.guards.Boolean,
-		autoguard.guards.Undefined
-	),
-	"routing": autoguard.guards.Union.of(
-		autoguard.guards.Boolean,
-		autoguard.guards.Undefined
-	)
+export const Domain: autoguard.serialization.MessageGuard<Domain> = autoguard.guards.Object.of({}, {
+	"root": autoguard.guards.String,
+	"key": autoguard.guards.String,
+	"cert": autoguard.guards.String,
+	"host": autoguard.guards.String,
+	"indices": autoguard.guards.Boolean,
+	"routing": autoguard.guards.Boolean
 });
 
-export type Domain = ReturnType<typeof Domain["as"]>;
+export type Domain = autoguard.guards.Object<{}, {
+	"root": autoguard.guards.String,
+	"key": autoguard.guards.String,
+	"cert": autoguard.guards.String,
+	"host": autoguard.guards.String,
+	"indices": autoguard.guards.Boolean,
+	"routing": autoguard.guards.Boolean
+}>;
 
-export const Options = autoguard.guards.Object.of({
-	"domains": autoguard.guards.Union.of(
-		autoguard.guards.Array.of(autoguard.guards.Reference.of(() => Domain)),
-		autoguard.guards.Undefined
-	),
-	"http": autoguard.guards.Union.of(
-		autoguard.guards.Number,
-		autoguard.guards.Undefined
-	),
-	"https": autoguard.guards.Union.of(
-		autoguard.guards.Number,
-		autoguard.guards.Undefined
-	)
+export const Options: autoguard.serialization.MessageGuard<Options> = autoguard.guards.Object.of({}, {
+	"domains": autoguard.guards.Array.of(autoguard.guards.Reference.of(() => Domain)),
+	"http": autoguard.guards.Number,
+	"https": autoguard.guards.Number
 });
 
-export type Options = ReturnType<typeof Options["as"]>;
+export type Options = autoguard.guards.Object<{}, {
+	"domains": autoguard.guards.Array<autoguard.guards.Reference<Domain>>,
+	"http": autoguard.guards.Number,
+	"https": autoguard.guards.Number
+}>;
 
 export namespace Autoguard {
 	export const Guards = {
