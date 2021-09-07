@@ -165,5 +165,6 @@ npm install [-g] joelek/ts-nexus#master
 
 ## Roadmap
 
+* Add support for password-protected private keys.
 * Add support for custom CSS-files.
 * Write unit tests.
