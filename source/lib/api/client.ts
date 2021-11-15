@@ -3,9 +3,11 @@
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-client";
 import * as shared from "./index";
 
-export const makeClient = (clientOptions?: autoguard.api.MakeClientOptions): autoguard.api.Client<shared.Autoguard.Requests, shared.Autoguard.Responses> => ({
+export type Client = autoguard.api.Client<shared.Autoguard.Requests, shared.Autoguard.Responses>;
+
+export const makeClient = (clientOptions?: autoguard.api.ClientOptions): Client => ({
 	"getRequest": async (request) => {
-		let guard = shared.Autoguard.Requests["getRequest"];
+		let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Requests["getRequest"], clientOptions?.debugMode);
 		guard.as(request, "request");
 		let method = "GET";
 		let components = new Array<string>();
@@ -19,19 +21,19 @@ export const makeClient = (clientOptions?: autoguard.api.MakeClientOptions): aut
 		let defaultHeaders = clientOptions?.defaultHeaders?.slice() ?? [];
 		defaultHeaders.push(["Content-Type", "application/octet-stream"]);
 		defaultHeaders.push(["Accept", "application/octet-stream"]);
-		let raw = await requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions?.urlPrefix);
+		let raw = await requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions);
 		{
 			let status = raw.status;
 			let headers: Record<string, autoguard.api.JSON> = {};
 			headers = { ...headers, ...autoguard.api.decodeUndeclaredHeaders(raw.headers, Object.keys(headers)) };
 			let payload = raw.payload;
-			let guard = shared.Autoguard.Responses["getRequest"];
+			let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Responses["getRequest"], clientOptions?.debugMode);
 			let response = guard.as({ status, headers, payload }, "response");
 			return new autoguard.api.ServerResponse(response, true);
 		}
 	},
 	"headRequest": async (request) => {
-		let guard = shared.Autoguard.Requests["headRequest"];
+		let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Requests["headRequest"], clientOptions?.debugMode);
 		guard.as(request, "request");
 		let method = "HEAD";
 		let components = new Array<string>();
@@ -45,13 +47,13 @@ export const makeClient = (clientOptions?: autoguard.api.MakeClientOptions): aut
 		let defaultHeaders = clientOptions?.defaultHeaders?.slice() ?? [];
 		defaultHeaders.push(["Content-Type", "application/octet-stream"]);
 		defaultHeaders.push(["Accept", "application/octet-stream"]);
-		let raw = await requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions?.urlPrefix);
+		let raw = await requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions);
 		{
 			let status = raw.status;
 			let headers: Record<string, autoguard.api.JSON> = {};
 			headers = { ...headers, ...autoguard.api.decodeUndeclaredHeaders(raw.headers, Object.keys(headers)) };
 			let payload = raw.payload;
-			let guard = shared.Autoguard.Responses["headRequest"];
+			let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Responses["headRequest"], clientOptions?.debugMode);
 			let response = guard.as({ status, headers, payload }, "response");
 			return new autoguard.api.ServerResponse(response, true);
 		}
