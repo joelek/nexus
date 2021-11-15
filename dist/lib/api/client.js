@@ -16,7 +16,7 @@ const shared = require("./index");
 const makeClient = (clientOptions) => ({
     "getRequest": (request) => __awaiter(void 0, void 0, void 0, function* () {
         var _a, _b, _c, _d, _e, _f, _g, _h;
-        let guard = shared.Autoguard.Requests["getRequest"];
+        let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Requests["getRequest"], clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.debugMode);
         guard.as(request, "request");
         let method = "GET";
         let components = new Array();
@@ -30,20 +30,20 @@ const makeClient = (clientOptions) => ({
         let defaultHeaders = (_h = (_g = clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.defaultHeaders) === null || _g === void 0 ? void 0 : _g.slice()) !== null && _h !== void 0 ? _h : [];
         defaultHeaders.push(["Content-Type", "application/octet-stream"]);
         defaultHeaders.push(["Accept", "application/octet-stream"]);
-        let raw = yield requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.urlPrefix);
+        let raw = yield requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions);
         {
             let status = raw.status;
             let headers = {};
             headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders(raw.headers, Object.keys(headers)));
             let payload = raw.payload;
-            let guard = shared.Autoguard.Responses["getRequest"];
+            let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Responses["getRequest"], clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.debugMode);
             let response = guard.as({ status, headers, payload }, "response");
             return new autoguard.api.ServerResponse(response, true);
         }
     }),
     "headRequest": (request) => __awaiter(void 0, void 0, void 0, function* () {
         var _j, _k, _l, _m, _o, _p, _q, _r;
-        let guard = shared.Autoguard.Requests["headRequest"];
+        let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Requests["headRequest"], clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.debugMode);
         guard.as(request, "request");
         let method = "HEAD";
         let components = new Array();
@@ -57,13 +57,13 @@ const makeClient = (clientOptions) => ({
         let defaultHeaders = (_r = (_q = clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.defaultHeaders) === null || _q === void 0 ? void 0 : _q.slice()) !== null && _r !== void 0 ? _r : [];
         defaultHeaders.push(["Content-Type", "application/octet-stream"]);
         defaultHeaders.push(["Accept", "application/octet-stream"]);
-        let raw = yield requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.urlPrefix);
+        let raw = yield requestHandler(autoguard.api.finalizeRequest({ method, components, parameters, headers, payload }, defaultHeaders), clientOptions);
         {
             let status = raw.status;
             let headers = {};
             headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders(raw.headers, Object.keys(headers)));
             let payload = raw.payload;
-            let guard = shared.Autoguard.Responses["headRequest"];
+            let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Responses["headRequest"], clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.debugMode);
             let response = guard.as({ status, headers, payload }, "response");
             return new autoguard.api.ServerResponse(response, true);
         }

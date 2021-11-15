@@ -5,44 +5,44 @@ export declare namespace Autoguard {
         [A in keyof typeof Guards]: ReturnType<typeof Guards[A]["as"]>;
     };
     const Requests: {
-        getRequest: autoguard.serialization.MessageGuard<{
-            options?: {
-                [x: string]: autoguard.api.JSON;
+        getRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
+            options: {
+                [x: string]: any;
                 filename?: autoguard.guards.Array<string> | undefined;
-            } | undefined;
-            headers?: {
-                [x: string]: autoguard.api.JSON;
-            } | undefined;
-            payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
+            };
+            headers: {
+                [x: string]: any;
+            };
+            payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
-        headRequest: autoguard.serialization.MessageGuard<{
-            options?: {
-                [x: string]: autoguard.api.JSON;
+        headRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
+            options: {
+                [x: string]: any;
                 filename?: autoguard.guards.Array<string> | undefined;
-            } | undefined;
-            headers?: {
-                [x: string]: autoguard.api.JSON;
-            } | undefined;
-            payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
+            };
+            headers: {
+                [x: string]: any;
+            };
+            payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
     };
     type Requests = {
         [A in keyof typeof Requests]: ReturnType<typeof Requests[A]["as"]>;
     };
     const Responses: {
-        getRequest: autoguard.serialization.MessageGuard<{
-            status?: number | undefined;
-            headers?: {
-                [x: string]: autoguard.api.JSON;
-            } | undefined;
-            payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
+        getRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
+            status: number;
+            headers: {
+                [x: string]: any;
+            };
+            payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
-        headRequest: autoguard.serialization.MessageGuard<{
-            status?: number | undefined;
-            headers?: {
-                [x: string]: autoguard.api.JSON;
-            } | undefined;
-            payload?: autoguard.api.AsyncBinary | autoguard.api.SyncBinary | undefined;
+        headRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
+            status: number;
+            headers: {
+                [x: string]: any;
+            };
+            payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
     };
     type Responses = {

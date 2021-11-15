@@ -29,7 +29,7 @@ const makeServer = (routes, serverOptions) => {
                 let headers = {};
                 headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders(raw.headers, Object.keys(headers)));
                 let payload = raw.payload;
-                let guard = shared.Autoguard.Requests["getRequest"];
+                let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Requests["getRequest"], serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.debugMode);
                 let request = guard.as({ options, headers, payload }, "request");
                 return {
                     handleRequest: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -37,7 +37,7 @@ const makeServer = (routes, serverOptions) => {
                         return {
                             validateResponse: () => __awaiter(void 0, void 0, void 0, function* () {
                                 var _a, _b, _c, _d, _e;
-                                let guard = shared.Autoguard.Responses["getRequest"];
+                                let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Responses["getRequest"], serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.debugMode);
                                 guard.as(response, "response");
                                 let status = (_a = response.status) !== null && _a !== void 0 ? _a : 200;
                                 let headers = new Array();
@@ -67,7 +67,7 @@ const makeServer = (routes, serverOptions) => {
                 let headers = {};
                 headers = Object.assign(Object.assign({}, headers), autoguard.api.decodeUndeclaredHeaders(raw.headers, Object.keys(headers)));
                 let payload = raw.payload;
-                let guard = shared.Autoguard.Requests["headRequest"];
+                let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Requests["headRequest"], serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.debugMode);
                 let request = guard.as({ options, headers, payload }, "request");
                 return {
                     handleRequest: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -75,7 +75,7 @@ const makeServer = (routes, serverOptions) => {
                         return {
                             validateResponse: () => __awaiter(void 0, void 0, void 0, function* () {
                                 var _a, _b, _c, _d, _e;
-                                let guard = shared.Autoguard.Responses["headRequest"];
+                                let guard = autoguard.api.wrapMessageGuard(shared.Autoguard.Responses["headRequest"], serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.debugMode);
                                 guard.as(response, "response");
                                 let status = (_a = response.status) !== null && _a !== void 0 ? _a : 200;
                                 let headers = new Array();

@@ -16,26 +16,8 @@ export declare type Options = autoguard.guards.Object<{}, {
 }>;
 export declare namespace Autoguard {
     const Guards: {
-        Domain: autoguard.serialization.MessageGuard<{
-            root?: string | undefined;
-            key?: string | undefined;
-            cert?: string | undefined;
-            host?: string | undefined;
-            indices?: boolean | undefined;
-            routing?: boolean | undefined;
-        }>;
-        Options: autoguard.serialization.MessageGuard<{
-            domains?: autoguard.guards.Array<{
-                root?: string | undefined;
-                key?: string | undefined;
-                cert?: string | undefined;
-                host?: string | undefined;
-                indices?: boolean | undefined;
-                routing?: boolean | undefined;
-            }> | undefined;
-            http?: number | undefined;
-            https?: number | undefined;
-        }>;
+        Domain: autoguard.guards.ReferenceGuard<Domain>;
+        Options: autoguard.guards.ReferenceGuard<Options>;
     };
     type Guards = {
         [A in keyof typeof Guards]: ReturnType<typeof Guards[A]["as"]>;
