@@ -154,7 +154,7 @@ Thank you for your support!
 Releases follow semantic versioning and release packages are published using the GitHub platform. Use the following command to install the latest release.
 
 ```
-npm install [-g] joelek/ts-nexus#semver:^2
+npm install [-g] joelek/ts-nexus#semver:^2.1
 ```
 
 Use the following command to install the very latest build. The very latest build may include breaking changes and should not be used in production environments.
