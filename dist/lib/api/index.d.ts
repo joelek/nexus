@@ -7,21 +7,21 @@ export declare namespace Autoguard {
     const Requests: {
         getRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
             options: {
-                [x: string]: any;
+                [x: string]: autoguard.api.JSON;
                 filename?: autoguard.guards.Array<string> | undefined;
             };
             headers: {
-                [x: string]: any;
+                [x: string]: autoguard.api.JSON;
             };
             payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
         headRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
             options: {
-                [x: string]: any;
+                [x: string]: autoguard.api.JSON;
                 filename?: autoguard.guards.Array<string> | undefined;
             };
             headers: {
-                [x: string]: any;
+                [x: string]: autoguard.api.JSON;
             };
             payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
@@ -33,14 +33,14 @@ export declare namespace Autoguard {
         getRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
             status: number;
             headers: {
-                [x: string]: any;
+                [x: string]: autoguard.api.JSON;
             };
             payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
         headRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
             status: number;
             headers: {
-                [x: string]: any;
+                [x: string]: autoguard.api.JSON;
             };
             payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
