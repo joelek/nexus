@@ -1,4 +1,7 @@
 /// <reference types="node" />
+/// <reference types="node" />
+/// <reference types="node" />
+/// <reference types="node" />
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
 import * as libhttp from "http";
 import * as libnet from "net";
