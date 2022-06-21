@@ -17,6 +17,9 @@ export declare function renderDirectoryListing(directoryListing: autoguard.api.D
 export declare function makeDirectoryListingResponse(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>): autoguard.api.EndpointResponse & {
     payload: autoguard.api.Binary;
 };
+export declare function makeReadStreamResponse(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>): autoguard.api.EndpointResponse & {
+    payload: autoguard.api.Binary;
+};
 export declare function makeRequestListener(pathPrefix: string, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener;
 export declare function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener;
 export declare function matchesHostnamePattern(subject: string, pattern: string): boolean;

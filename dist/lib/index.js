@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeServer = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Options = exports.Domain = void 0;
+exports.makeServer = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
 const libfs = require("fs");
 const libhttp = require("http");
@@ -154,12 +154,20 @@ function makeDirectoryListingResponse(pathPrefix, pathSuffix, request) {
     return {
         status: 200,
         headers: {
-            "Content-Type": "text/html; charset=utf-8"
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "must-revalidate, max-age=0",
+            "Last-Modified": new Date().toUTCString()
         },
         payload: autoguard.api.serializeStringPayload(renderDirectoryListing(directoryListing))
     };
 }
 exports.makeDirectoryListingResponse = makeDirectoryListingResponse;
+;
+function makeReadStreamResponse(pathPrefix, pathSuffix, request) {
+    let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+    return Object.assign(Object.assign({}, response), { headers: Object.assign(Object.assign({}, response.headers), { "Cache-Control": "must-revalidate, max-age=0" }) });
+}
+exports.makeReadStreamResponse = makeReadStreamResponse;
 ;
 function makeRequestListener(pathPrefix, clientRouting, generateIndices) {
     let requestListener = libserver.makeServer({
@@ -169,7 +177,7 @@ function makeRequestListener(pathPrefix, clientRouting, generateIndices) {
                 let options = request.options();
                 let pathSuffix = ((_a = options.filename) !== null && _a !== void 0 ? _a : []).join("/");
                 try {
-                    return autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+                    return makeReadStreamResponse(pathPrefix, pathSuffix, request);
                 }
                 catch (error) {
                     if (error !== 404) {
@@ -178,7 +186,7 @@ function makeRequestListener(pathPrefix, clientRouting, generateIndices) {
                 }
                 if (clientRouting) {
                     try {
-                        return autoguard.api.makeReadStreamResponse(pathPrefix, "index.html", request);
+                        return makeReadStreamResponse(pathPrefix, "index.html", request);
                     }
                     catch (error) {
                         if (error !== 404) {
