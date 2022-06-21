@@ -135,9 +135,24 @@ export function makeDirectoryListingResponse(pathPrefix: string, pathSuffix: str
 	return {
 		status: 200,
 		headers: {
-			"Content-Type": "text/html; charset=utf-8"
+			"Content-Type": "text/html; charset=utf-8",
+			"Cache-Control": "must-revalidate, max-age=0",
+			"Last-Modified": new Date().toUTCString()
 		},
 		payload: autoguard.api.serializeStringPayload(renderDirectoryListing(directoryListing))
+	};
+};
+
+export function makeReadStreamResponse(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>): autoguard.api.EndpointResponse & {
+	payload: autoguard.api.Binary;
+} {
+	let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+	return {
+		...response,
+		headers: {
+			...response.headers,
+			"Cache-Control": "must-revalidate, max-age=0"
+		}
 	};
 };
 
@@ -147,7 +162,7 @@ export function makeRequestListener(pathPrefix: string, clientRouting: boolean, 
 			let options = request.options();
 			let pathSuffix = (options.filename ?? []).join("/");
 			try {
-				return autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+				return makeReadStreamResponse(pathPrefix, pathSuffix, request);
 			} catch (error) {
 				if (error !== 404) {
 					throw error;
@@ -155,7 +170,7 @@ export function makeRequestListener(pathPrefix: string, clientRouting: boolean, 
 			}
 			if (clientRouting) {
 				try {
-					return autoguard.api.makeReadStreamResponse(pathPrefix, "index.html", request);
+					return makeReadStreamResponse(pathPrefix, "index.html", request);
 				} catch (error) {
 					if (error !== 404) {
 						throw error;
