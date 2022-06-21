@@ -147,6 +147,22 @@ export function makeReadStreamResponse(pathPrefix: string, pathSuffix: string, r
 	payload: autoguard.api.Binary;
 } {
 	let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+	let ifModifiedSinceHeader = request.headers()?.["if-modified-since"];
+	let lastModifiedHeader = response.headers?.["Last-Modified"];
+	if (typeof ifModifiedSinceHeader === "string" && typeof lastModifiedHeader === "string") {
+		let ifModifiedSince = new Date(ifModifiedSinceHeader);
+		let lastModified = new Date(lastModifiedHeader);
+		if (lastModified <= ifModifiedSince) {
+			return {
+				status: 304,
+				headers: {
+					...response.headers,
+					"Cache-Control": "must-revalidate, max-age=0"
+				},
+				payload: []
+			};
+		}
+	}
 	return {
 		...response,
 		headers: {

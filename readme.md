@@ -175,4 +175,3 @@ npm install [-g] joelek/ts-nexus#master
 * Add support for custom CSS-files.
 * Write unit tests.
 * Consider implementing proxy features.
-* Implement "If-Modified-Since" and return 304 when files are unmodified.

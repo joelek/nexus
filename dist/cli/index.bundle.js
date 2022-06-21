@@ -3681,7 +3681,21 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
     exports.makeDirectoryListingResponse = makeDirectoryListingResponse;
     ;
     function makeReadStreamResponse(pathPrefix, pathSuffix, request) {
+        var _a, _b;
         let response = autoguard.api.makeReadStreamResponse(pathPrefix, pathSuffix, request);
+        let ifModifiedSinceHeader = (_a = request.headers()) === null || _a === void 0 ? void 0 : _a["if-modified-since"];
+        let lastModifiedHeader = (_b = response.headers) === null || _b === void 0 ? void 0 : _b["Last-Modified"];
+        if (typeof ifModifiedSinceHeader === "string" && typeof lastModifiedHeader === "string") {
+            let ifModifiedSince = new Date(ifModifiedSinceHeader);
+            let lastModified = new Date(lastModifiedHeader);
+            if (lastModified <= ifModifiedSince) {
+                return {
+                    status: 304,
+                    headers: Object.assign(Object.assign({}, response.headers), { "Cache-Control": "must-revalidate, max-age=0" }),
+                    payload: []
+                };
+            }
+        }
         return Object.assign(Object.assign({}, response), { headers: Object.assign(Object.assign({}, response.headers), { "Cache-Control": "must-revalidate, max-age=0" }) });
     }
     exports.makeReadStreamResponse = makeReadStreamResponse;
