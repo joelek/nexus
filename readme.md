@@ -175,3 +175,4 @@ npm install [-g] joelek/ts-nexus#master
 * Add support for custom CSS-files.
 * Write unit tests.
 * Consider implementing proxy features.
+* Set content-type for uppercased file suffixes.
