@@ -176,3 +176,4 @@ npm install [-g] joelek/ts-nexus#master
 * Write unit tests.
 * Consider implementing proxy features.
 * Add support for automatical generation of self-signed TLS certificates.
+* Throw an error when root points to something other than a readable directory.
