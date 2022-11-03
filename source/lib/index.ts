@@ -433,6 +433,9 @@ export function makeServer(options: Options): void {
 				httpRequestListeners.push([host, httpRequestListener]);
 				continue;
 			} catch (error) {}
+			if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
+				throw `Expected "${root}" to exist and be a directory!`;
+			}
 			process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
 			let httpRequestListener = makeRedirectRequestListener(https);
 			httpRequestListeners.push([host, httpRequestListener]);
@@ -447,6 +450,9 @@ export function makeServer(options: Options): void {
 				httpRequestListeners.push([host, httpRequestListener]);
 				continue;
 			} catch (error) {}
+			if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
+				throw `Expected "${root}" to exist and be a directory!`;
+			}
 			process.stdout.write(`Serving "${root}" at http://${host}:${http}\n`);
 			let httpRequestListener = makeRequestListener(root, routing, indices);
 			httpRequestListeners.push([host, httpRequestListener]);
