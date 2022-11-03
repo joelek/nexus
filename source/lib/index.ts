@@ -405,7 +405,7 @@ export function makeServer(options: Options): void {
 				dirty: true,
 				load() {
 					if (this.dirty) {
-						process.stdout.write(`Loading certificates for ${host}\n`);
+						process.stdout.write(`Loading certificate for ${host}\n`);
 						this.secureContext = libtls.createSecureContext({
 							key: key ? libfs.readFileSync(key) : undefined,
 							cert: cert ? libfs.readFileSync(cert) : undefined
