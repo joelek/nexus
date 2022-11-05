@@ -137,9 +137,18 @@ Nexus can load configuration files stored using the JSON format shown below. A c
 		}
 	],
 	"http"?: number,
-	"https"?: number
+	"https"?: number,
+	"sign"?: booolean
 }
 ```
+
+### Self-signed certificates
+
+Nexus includes support for generating self-signed certificates for domains not provided with a valid encryption configuration. The feature is turned _off_ by default and can be configured using the `--sign=<boolean>` argument.
+
+The self-signed certificates will not be recognized as secure by any entity and are valid for only a single day. These certificates are intended for development purposes and will be virtually useless in production environments.
+
+Self-signed certificates will not be generated when Nexus is configured to delegate encryption to another host.
 
 ## Sponsorship
 
@@ -175,4 +184,3 @@ npm install [-g] joelek/ts-nexus#master
 * Add support for custom CSS-files.
 * Write unit tests.
 * Consider implementing proxy features.
-* Add support for automatical generation of self-signed TLS certificates.

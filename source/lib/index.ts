@@ -1,4 +1,5 @@
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
+import * as multipass from "@joelek/multipass/dist/mod";
 import * as libfs from "fs";
 import * as libhttp from "http";
 import * as libnet from "net";
@@ -453,9 +454,53 @@ export function makeServer(options: Options): void {
 			if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
 				throw `Expected "${root}" to exist and be a directory!`;
 			}
-			process.stdout.write(`Serving "${root}" at http://${host}:${http}\n`);
-			let httpRequestListener = makeRequestListener(root, routing, indices);
-			httpRequestListeners.push([host, httpRequestListener]);
+			if (options.sign) {
+				let days = 1;
+				let secureContext = {
+					host,
+					secureContext: defaultSecureContext,
+					dirty: true,
+					load() {
+						if (this.dirty) {
+							process.stdout.write(`Generating certificate for ${host}\n`);
+							let key = multipass.rsa.generatePrivateKey();
+							let cert = multipass.pem.serialize({
+								sections: [
+									{
+										label: "CERTIFICATE",
+										buffer: multipass.x509.generateSelfSignedCertificate([host], key, {
+											validityPeriod: {
+												days: days
+											}
+										})
+									}
+								]
+							});
+							this.secureContext = libtls.createSecureContext({
+								key: key.export({
+									format: "pem",
+									type: "pkcs1"
+								}),
+								cert: cert
+							});
+							this.dirty = false;
+							setTimeout(() => {
+								this.dirty = true;
+							}, days * 24 * 60 * 60 * 1000);
+						}
+					}
+				};
+				secureContexts.push(secureContext);
+				process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
+				let httpRequestListener = makeRedirectRequestListener(https);
+				httpRequestListeners.push([host, httpRequestListener]);
+				let httpsRequestListener = makeRequestListener(root, routing, indices);
+				httpsRequestListeners.push([host, httpsRequestListener]);
+			} else {
+				process.stdout.write(`Serving "${root}" at http://${host}:${http}\n`);
+				let httpRequestListener = makeRequestListener(root, routing, indices);
+				httpRequestListeners.push([host, httpRequestListener]);
+			}
 		}
 	}
 	let httpsRequestRouter = libhttp.createServer({}, (request, response) => {

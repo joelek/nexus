@@ -10,5 +10,6 @@ guard Domain: {
 guard Options: {
 	domains?: Domain[],
 	http?: number,
-	https?: number
+	https?: number,
+	sign?: boolean
 };
