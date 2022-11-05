@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.makeServer = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
+const multipass = require("@joelek/multipass/dist/mod");
 const libfs = require("fs");
 const libhttp = require("http");
 const libnet = require("net");
@@ -428,7 +429,7 @@ function makeServer(options) {
                 dirty: true,
                 load() {
                     if (this.dirty) {
-                        process.stdout.write(`Loading certificates for ${host}\n`);
+                        process.stdout.write(`Loading certificate for ${host}\n`);
                         this.secureContext = libtls.createSecureContext({
                             key: key ? libfs.readFileSync(key) : undefined,
                             cert: cert ? libfs.readFileSync(cert) : undefined
@@ -457,6 +458,9 @@ function makeServer(options) {
                 continue;
             }
             catch (error) { }
+            if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
+                throw `Expected "${root}" to exist and be a directory!`;
+            }
             process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
             let httpRequestListener = makeRedirectRequestListener(https);
             httpRequestListeners.push([host, httpRequestListener]);
@@ -473,9 +477,57 @@ function makeServer(options) {
                 continue;
             }
             catch (error) { }
-            process.stdout.write(`Serving "${root}" at http://${host}:${http}\n`);
-            let httpRequestListener = makeRequestListener(root, routing, indices);
-            httpRequestListeners.push([host, httpRequestListener]);
+            if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
+                throw `Expected "${root}" to exist and be a directory!`;
+            }
+            if (options.sign) {
+                let days = 1;
+                let secureContext = {
+                    host,
+                    secureContext: defaultSecureContext,
+                    dirty: true,
+                    load() {
+                        if (this.dirty) {
+                            process.stdout.write(`Generating certificate for ${host}\n`);
+                            let key = multipass.rsa.generatePrivateKey();
+                            let cert = multipass.pem.serialize({
+                                sections: [
+                                    {
+                                        label: "CERTIFICATE",
+                                        buffer: multipass.x509.generateSelfSignedCertificate([host], key, {
+                                            validityPeriod: {
+                                                days: days
+                                            }
+                                        })
+                                    }
+                                ]
+                            });
+                            this.secureContext = libtls.createSecureContext({
+                                key: key.export({
+                                    format: "pem",
+                                    type: "pkcs1"
+                                }),
+                                cert: cert
+                            });
+                            this.dirty = false;
+                            setTimeout(() => {
+                                this.dirty = true;
+                            }, days * 24 * 60 * 60 * 1000);
+                        }
+                    }
+                };
+                secureContexts.push(secureContext);
+                process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
+                let httpRequestListener = makeRedirectRequestListener(https);
+                httpRequestListeners.push([host, httpRequestListener]);
+                let httpsRequestListener = makeRequestListener(root, routing, indices);
+                httpsRequestListeners.push([host, httpsRequestListener]);
+            }
+            else {
+                process.stdout.write(`Serving "${root}" at http://${host}:${http}\n`);
+                let httpRequestListener = makeRequestListener(root, routing, indices);
+                httpRequestListeners.push([host, httpRequestListener]);
+            }
         }
     }
     let httpsRequestRouter = libhttp.createServer({}, (request, response) => {

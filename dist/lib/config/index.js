@@ -14,7 +14,8 @@ exports.Domain = autoguard.guards.Object.of({}, {
 exports.Options = autoguard.guards.Object.of({}, {
     "domains": autoguard.guards.Array.of(autoguard.guards.Reference.of(() => exports.Domain)),
     "http": autoguard.guards.Number,
-    "https": autoguard.guards.Number
+    "https": autoguard.guards.Number,
+    "sign": autoguard.guards.Boolean
 });
 var Autoguard;
 (function (Autoguard) {

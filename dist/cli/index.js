@@ -52,6 +52,9 @@ function run() {
             else if ((parts = /^--routing=(true|false)$/.exec(arg)) !== null) {
                 domain.routing = parts[1] === "true";
             }
+            else if ((parts = /^--sign=(true|false)$/.exec(arg)) !== null) {
+                options.sign = parts[1] === "true";
+            }
             else {
                 found_unrecognized_argument = true;
                 process.stderr.write(`Unrecognized argument "${arg}"!\n`);
@@ -77,6 +80,8 @@ function run() {
             process.stderr.write(`		Configure automatic generation of index documents.\n`);
             process.stderr.write(`	--routing=boolean\n`);
             process.stderr.write(`		Configure support for client-side routing.\n`);
+            process.stderr.write(`	--sign=boolean\n`);
+            process.stderr.write(`		Configure automatic generation of self-signed certificates.\n`);
             process.exit(0);
         }
         else {
