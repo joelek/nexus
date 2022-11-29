@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import * as app from "../app.json";
 import * as lib from "../lib";
 
 async function run(): Promise<void> {
@@ -8,7 +9,7 @@ async function run(): Promise<void> {
 	let options: lib.Options = {
 		domains
 	};
-	let found_unrecognized_argument = false;
+	let unrecognizedArguments = [] as Array<string>;
 	for (let arg of process.argv.slice(2)) {
 		let parts: RegExpExecArray | null = null;
 		if (false) {
@@ -35,11 +36,16 @@ async function run(): Promise<void> {
 		} else if ((parts = /^--sign=(true|false)$/.exec(arg)) !== null) {
 			options.sign = parts[1] === "true";
 		} else {
-			found_unrecognized_argument = true;
-			process.stderr.write(`Unrecognized argument "${arg}"!\n`);
+			unrecognizedArguments.push(arg);
 		}
 	}
-	if (found_unrecognized_argument) {
+	if (unrecognizedArguments.length > 0) {
+		process.stderr.write(`${app.name} v${app.version}\n`);
+		process.stderr.write(`\n`);
+		for (let unrecognizedArgument of unrecognizedArguments) {
+			process.stderr.write(`Unrecognized argument "${unrecognizedArgument}"!\n`);
+		}
+		process.stderr.write(`\n`);
 		process.stderr.write(`Arguments:\n`);
 		process.stderr.write(`	--config=string\n`);
 		process.stderr.write(`		Load specified config.\n`);
