@@ -181,4 +181,3 @@ npm install [-g] joelek/ts-nexus#master
 ## Roadmap
 
 * Write unit tests.
-* Consider implementing proxy features.
