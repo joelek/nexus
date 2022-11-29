@@ -183,4 +183,3 @@ npm install [-g] joelek/ts-nexus#master
 * Add support for password-protected private keys.
 * Write unit tests.
 * Consider implementing proxy features.
-* Colorize terminal output.

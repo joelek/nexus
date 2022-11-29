@@ -10,6 +10,7 @@ import * as libserver from "./api/server";
 import { Domain, Options } from "./config";
 export { Domain, Options } from "./config";
 import * as tls from "./tls";
+import * as terminal from "./terminal";
 
 export function loadConfig(config: string): Options {
 	let string = libfs.readFileSync(config, "utf-8");
@@ -221,7 +222,8 @@ export function makeRequestListener(pathPrefix: string, clientRouting: boolean, 
 		let start = Date.now();
 		response.on("finish", () => {
 			let duration = Date.now() - start;
-			process.stdout.write(`${response.statusCode} ${method} ${protocol}://${hostname}${path} (${duration} ms)\n`);
+			let url = `${protocol}://${hostname}${path}`;
+			process.stdout.write(`${terminal.stylize(response.statusCode, response.statusCode >= 400 ? terminal.FG_RED : terminal.FG_GREEN)} ${terminal.stylize(method, terminal.FG_MAGENTA)} ${terminal.stylize(url, terminal.FG_YELLOW)} (${terminal.stylize(duration, terminal.FG_CYAN)} ms)\n`);
 		});
 		requestListener(request, response);
 	};
@@ -399,6 +401,8 @@ export function makeServer(options: Options): void {
 		let host = domain.host ?? "*";
 		let routing = domain.routing ?? true;
 		let indices = domain.indices ?? false;
+		let httpHost = `http://${host}:${http}`;
+		let httpsHost = `https://${host}:${https}`;
 		if (key || cert) {
 			let secureContext = {
 				host,
@@ -406,7 +410,7 @@ export function makeServer(options: Options): void {
 				dirty: true,
 				load() {
 					if (this.dirty) {
-						process.stdout.write(`Loading certificate for ${host}\n`);
+						process.stdout.write(`Loading certificate for ${terminal.stylize(host, terminal.FG_YELLOW)}\n`);
 						this.secureContext = libtls.createSecureContext({
 							key: key ? libfs.readFileSync(key) : undefined,
 							cert: cert ? libfs.readFileSync(cert) : undefined
@@ -429,7 +433,7 @@ export function makeServer(options: Options): void {
 			try {
 				let servernameConnectionConfig = parseServernameConnectionConfig(root, 80);
 				handledServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-				process.stdout.write(`Delegating connections for https://${host}:${https} to ${root}\n`);
+				process.stdout.write(`Delegating connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 				let httpRequestListener = makeRedirectRequestListener(https);
 				httpRequestListeners.push([host, httpRequestListener]);
 				continue;
@@ -437,7 +441,7 @@ export function makeServer(options: Options): void {
 			if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
 				throw `Expected "${root}" to exist and be a directory!`;
 			}
-			process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
+			process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
 			let httpRequestListener = makeRedirectRequestListener(https);
 			httpRequestListeners.push([host, httpRequestListener]);
 			let httpsRequestListener = makeRequestListener(root, routing, indices);
@@ -446,7 +450,7 @@ export function makeServer(options: Options): void {
 			try {
 				let servernameConnectionConfig = parseServernameConnectionConfig(root, 443);
 				delegatedServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-				process.stdout.write(`Delegating connections for https://${host}:${https} to ${root} (E2EE)\n`);
+				process.stdout.write(`Delegating connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
 				let httpRequestListener = makeRedirectRequestListener(https);
 				httpRequestListeners.push([host, httpRequestListener]);
 				continue;
@@ -462,7 +466,7 @@ export function makeServer(options: Options): void {
 					dirty: true,
 					load() {
 						if (this.dirty) {
-							process.stdout.write(`Generating certificate for ${host}\n`);
+							process.stdout.write(`Generating certificate for ${terminal.stylize(host, terminal.FG_YELLOW)}\n`);
 							let key = multipass.rsa.generatePrivateKey();
 							let cert = multipass.pem.serialize({
 								sections: [
@@ -491,13 +495,13 @@ export function makeServer(options: Options): void {
 					}
 				};
 				secureContexts.push(secureContext);
-				process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
+				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
 				let httpRequestListener = makeRedirectRequestListener(https);
 				httpRequestListeners.push([host, httpRequestListener]);
 				let httpsRequestListener = makeRequestListener(root, routing, indices);
 				httpsRequestListeners.push([host, httpsRequestListener]);
 			} else {
-				process.stdout.write(`Serving "${root}" at http://${host}:${http}\n`);
+				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
 				let httpRequestListener = makeRequestListener(root, routing, indices);
 				httpRequestListeners.push([host, httpRequestListener]);
 			}
@@ -509,7 +513,7 @@ export function makeServer(options: Options): void {
 		return requestListener(request, response);
 	});
 	httpsRequestRouter.listen(undefined, () => {
-		process.stdout.write(`Request router listening on port ${getServerPort(httpsRequestRouter)}\n`);
+		process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpsRequestRouter), terminal.FG_CYAN)}\n`);
 	});
 	let certificateRouter = libtls.createServer({
 		SNICallback: (hostname, callback) => {
@@ -532,7 +536,7 @@ export function makeServer(options: Options): void {
 		makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
 	});
 	certificateRouter.listen(undefined, () => {
-		process.stdout.write(`Certificate router listening on port ${getServerPort(certificateRouter)}\n`);
+		process.stdout.write(`Certificate router listening on port ${terminal.stylize(getServerPort(certificateRouter), terminal.FG_CYAN)}\n`);
 	});
 	let servernameRouter = libnet.createServer({}, (clientSocket) => {
 		clientSocket.on("error", () => {
@@ -552,7 +556,7 @@ export function makeServer(options: Options): void {
 		});
 	});
 	servernameRouter.listen(https, () => {
-		process.stdout.write(`Servername router listening on port ${getServerPort(servernameRouter)}\n`);
+		process.stdout.write(`Servername router listening on port ${terminal.stylize(getServerPort(servernameRouter), terminal.FG_CYAN)}\n`);
 	});
 	let httpRequestRouter = libhttp.createServer({}, (request, response) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
@@ -560,6 +564,6 @@ export function makeServer(options: Options): void {
 		return requestListener(request, response);
 	});
 	httpRequestRouter.listen(http, () => {
-		process.stdout.write(`Request router listening on port ${getServerPort(httpRequestRouter)}\n`);
+		process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpRequestRouter), terminal.FG_CYAN)}\n`);
 	});
 };
