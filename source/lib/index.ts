@@ -29,13 +29,13 @@ export function computeSimpleHash(string: string): number {
 
 export function encodeXMLText(string: string): string {
 	return string.replace(/[&<>'"]/g, (match) => {
-		return {
+		return ({
 			"&": "&amp;",
 			"<": "&lt;",
 			">": "&gt;",
 			"'": "&#39;",
 			"\"": "&quot;"
-		}[match] ?? match;
+		} as Record<string, string>)[match] ?? match;
 	});
 };
 
