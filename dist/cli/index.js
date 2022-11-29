@@ -43,6 +43,9 @@ function run() {
             else if ((parts = /^--cert=(.*)$/.exec(arg)) !== null) {
                 domain.cert = parts[1] || undefined;
             }
+            else if ((parts = /^--pass=(.*)$/.exec(arg)) !== null) {
+                domain.pass = parts[1] || undefined;
+            }
             else if ((parts = /^--host=(.*)$/.exec(arg)) !== null) {
                 domain.host = parts[1] || undefined;
                 domains.push(Object.assign({}, domain));
@@ -80,6 +83,8 @@ function run() {
             process.stderr.write(`		Set path for TLS private key.\n`);
             process.stderr.write(`	--cert=string\n`);
             process.stderr.write(`		Set path for TLS certificate.\n`);
+            process.stderr.write(`	--pass=string\n`);
+            process.stderr.write(`		Set passphrase for TLS private key.\n`);
             process.stderr.write(`	--host=string\n`);
             process.stderr.write(`		Set host for which to respond.\n`);
             process.stderr.write(`	--indices=boolean\n`);

@@ -4,6 +4,7 @@ export declare type Domain = autoguard.guards.Object<{}, {
     "root": autoguard.guards.String;
     "key": autoguard.guards.String;
     "cert": autoguard.guards.String;
+    "pass": autoguard.guards.String;
     "host": autoguard.guards.String;
     "indices": autoguard.guards.Boolean;
     "routing": autoguard.guards.Boolean;
@@ -21,6 +22,7 @@ export declare namespace Autoguard {
             root?: string | undefined;
             key?: string | undefined;
             cert?: string | undefined;
+            pass?: string | undefined;
             host?: string | undefined;
             indices?: boolean | undefined;
             routing?: boolean | undefined;
@@ -30,6 +32,7 @@ export declare namespace Autoguard {
                 root?: string | undefined;
                 key?: string | undefined;
                 cert?: string | undefined;
+                pass?: string | undefined;
                 host?: string | undefined;
                 indices?: boolean | undefined;
                 routing?: boolean | undefined;

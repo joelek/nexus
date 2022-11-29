@@ -421,6 +421,7 @@ function makeServer(options) {
         let root = (_d = domain.root) !== null && _d !== void 0 ? _d : "./";
         let key = domain.key;
         let cert = domain.cert;
+        let pass = domain.pass;
         let host = (_e = domain.host) !== null && _e !== void 0 ? _e : "*";
         let routing = (_f = domain.routing) !== null && _f !== void 0 ? _f : true;
         let indices = (_g = domain.indices) !== null && _g !== void 0 ? _g : false;
@@ -436,7 +437,8 @@ function makeServer(options) {
                         process.stdout.write(`Loading certificate for ${terminal.stylize(host, terminal.FG_YELLOW)}\n`);
                         this.secureContext = libtls.createSecureContext({
                             key: key ? libfs.readFileSync(key) : undefined,
-                            cert: cert ? libfs.readFileSync(cert) : undefined
+                            cert: cert ? libfs.readFileSync(cert) : undefined,
+                            passphrase: pass
                         });
                         this.dirty = false;
                     }

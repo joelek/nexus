@@ -7,6 +7,7 @@ exports.Domain = autoguard.guards.Object.of({}, {
     "root": autoguard.guards.String,
     "key": autoguard.guards.String,
     "cert": autoguard.guards.String,
+    "pass": autoguard.guards.String,
     "host": autoguard.guards.String,
     "indices": autoguard.guards.Boolean,
     "routing": autoguard.guards.Boolean

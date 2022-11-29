@@ -8448,6 +8448,7 @@ define("build/lib/config/index", ["require", "exports", "node_modules/@joelek/ts
         "root": autoguard.guards.String,
         "key": autoguard.guards.String,
         "cert": autoguard.guards.String,
+        "pass": autoguard.guards.String,
         "host": autoguard.guards.String,
         "indices": autoguard.guards.Boolean,
         "routing": autoguard.guards.Boolean
@@ -9218,6 +9219,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
             let root = (_d = domain.root) !== null && _d !== void 0 ? _d : "./";
             let key = domain.key;
             let cert = domain.cert;
+            let pass = domain.pass;
             let host = (_e = domain.host) !== null && _e !== void 0 ? _e : "*";
             let routing = (_f = domain.routing) !== null && _f !== void 0 ? _f : true;
             let indices = (_g = domain.indices) !== null && _g !== void 0 ? _g : false;
@@ -9233,7 +9235,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                             process.stdout.write(`Loading certificate for ${terminal.stylize(host, terminal.FG_YELLOW)}\n`);
                             this.secureContext = libtls.createSecureContext({
                                 key: key ? libfs.readFileSync(key) : undefined,
-                                cert: cert ? libfs.readFileSync(cert) : undefined
+                                cert: cert ? libfs.readFileSync(cert) : undefined,
+                                passphrase: pass
                             });
                             this.dirty = false;
                         }
@@ -9458,6 +9461,9 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
                 else if ((parts = /^--cert=(.*)$/.exec(arg)) !== null) {
                     domain.cert = parts[1] || undefined;
                 }
+                else if ((parts = /^--pass=(.*)$/.exec(arg)) !== null) {
+                    domain.pass = parts[1] || undefined;
+                }
                 else if ((parts = /^--host=(.*)$/.exec(arg)) !== null) {
                     domain.host = parts[1] || undefined;
                     domains.push(Object.assign({}, domain));
@@ -9495,6 +9501,8 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
                 process.stderr.write(`		Set path for TLS private key.\n`);
                 process.stderr.write(`	--cert=string\n`);
                 process.stderr.write(`		Set path for TLS certificate.\n`);
+                process.stderr.write(`	--pass=string\n`);
+                process.stderr.write(`		Set passphrase for TLS private key.\n`);
                 process.stderr.write(`	--host=string\n`);
                 process.stderr.write(`		Set host for which to respond.\n`);
                 process.stderr.write(`	--indices=boolean\n`);
