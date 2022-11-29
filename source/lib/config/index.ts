@@ -6,6 +6,7 @@ export const Domain: autoguard.serialization.MessageGuard<Domain> = autoguard.gu
 	"root": autoguard.guards.String,
 	"key": autoguard.guards.String,
 	"cert": autoguard.guards.String,
+	"pass": autoguard.guards.String,
 	"host": autoguard.guards.String,
 	"indices": autoguard.guards.Boolean,
 	"routing": autoguard.guards.Boolean
@@ -15,6 +16,7 @@ export type Domain = autoguard.guards.Object<{}, {
 	"root": autoguard.guards.String,
 	"key": autoguard.guards.String,
 	"cert": autoguard.guards.String,
+	"pass": autoguard.guards.String,
 	"host": autoguard.guards.String,
 	"indices": autoguard.guards.Boolean,
 	"routing": autoguard.guards.Boolean

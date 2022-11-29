@@ -2,6 +2,7 @@ guard Domain: {
 	root?: string,
 	key?: string,
 	cert?: string,
+	pass?: string,
 	host?: string,
 	indices?: boolean,
 	routing?: boolean
