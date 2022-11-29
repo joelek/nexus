@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const app = require("../app.json");
 const lib = require("../lib");
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -18,7 +19,7 @@ function run() {
         let options = {
             domains
         };
-        let found_unrecognized_argument = false;
+        let unrecognizedArguments = [];
         for (let arg of process.argv.slice(2)) {
             let parts = null;
             if (false) {
@@ -56,11 +57,16 @@ function run() {
                 options.sign = parts[1] === "true";
             }
             else {
-                found_unrecognized_argument = true;
-                process.stderr.write(`Unrecognized argument "${arg}"!\n`);
+                unrecognizedArguments.push(arg);
             }
         }
-        if (found_unrecognized_argument) {
+        if (unrecognizedArguments.length > 0) {
+            process.stderr.write(`${app.name} v${app.version}\n`);
+            process.stderr.write(`\n`);
+            for (let unrecognizedArgument of unrecognizedArguments) {
+                process.stderr.write(`Unrecognized argument "${unrecognizedArgument}"!\n`);
+            }
+            process.stderr.write(`\n`);
             process.stderr.write(`Arguments:\n`);
             process.stderr.write(`	--config=string\n`);
             process.stderr.write(`		Load specified config.\n`);

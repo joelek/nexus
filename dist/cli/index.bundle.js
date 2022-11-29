@@ -13,6 +13,10 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
+define("build/app", [], {
+    "name": "@joelek/ts-nexus",
+    "version": "2.2.0"
+});
 define("node_modules/@joelek/ts-autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -8757,7 +8761,38 @@ define("build/lib/tls", ["require", "exports"], function (require, exports) {
     exports.getServername = getServername;
     ;
 });
-define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autoguard/dist/lib-server/index", "node_modules/@joelek/multipass/dist/mod/index", "fs", "http", "net", "path", "tls", "url", "build/lib/api/server", "build/lib/config/index", "build/lib/config/index", "build/lib/tls"], function (require, exports, autoguard, multipass, libfs, libhttp, libnet, libpath, libtls, liburl, libserver, config_1, config_2, tls) {
+define("build/lib/terminal", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.stylize = exports.BG_WHITE = exports.BG_CYAN = exports.BG_MAGENTA = exports.BG_BLUE = exports.BG_YELLOW = exports.BG_GREEN = exports.BG_RED = exports.BG_BLACK = exports.FG_WHITE = exports.FG_CYAN = exports.FG_MAGENTA = exports.FG_BLUE = exports.FG_YELLOW = exports.FG_GREEN = exports.FG_RED = exports.FG_BLACK = exports.UNDERLINE = exports.ITALIC = exports.FAINT = exports.BOLD = exports.RESET = void 0;
+    exports.RESET = 0;
+    exports.BOLD = 1;
+    exports.FAINT = 2;
+    exports.ITALIC = 3;
+    exports.UNDERLINE = 4;
+    exports.FG_BLACK = 30;
+    exports.FG_RED = 31;
+    exports.FG_GREEN = 32;
+    exports.FG_YELLOW = 33;
+    exports.FG_BLUE = 34;
+    exports.FG_MAGENTA = 35;
+    exports.FG_CYAN = 36;
+    exports.FG_WHITE = 37;
+    exports.BG_BLACK = 40;
+    exports.BG_RED = 41;
+    exports.BG_GREEN = 42;
+    exports.BG_YELLOW = 43;
+    exports.BG_BLUE = 44;
+    exports.BG_MAGENTA = 45;
+    exports.BG_CYAN = 46;
+    exports.BG_WHITE = 47;
+    function stylize(string, ...parameters) {
+        return `\x1B[${parameters.join(";")}m` + string + `\x1B[${exports.RESET}m`;
+    }
+    exports.stylize = stylize;
+    ;
+});
+define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autoguard/dist/lib-server/index", "node_modules/@joelek/multipass/dist/mod/index", "fs", "http", "net", "path", "tls", "url", "build/lib/api/server", "build/lib/config/index", "build/lib/config/index", "build/lib/tls", "build/lib/terminal"], function (require, exports, autoguard, multipass, libfs, libhttp, libnet, libpath, libtls, liburl, libserver, config_1, config_2, tls, terminal) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -8892,12 +8927,12 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
         return [
             `<!DOCTYPE html>`,
             `<html>`,
+            `<head>`,
             `<base href="/${components.map((component) => encodeURIComponent(component)).join("/")}"/>`,
             `<meta charset="utf-8"/>`,
             `<meta content="width=device-width,initial-scale=1.0" name="viewport"/>`,
             `<style>${makeStylesheet()}</style>`,
             `<title>${components.join("/")}</title>`,
-            `<head>`,
             `</head>`,
             `<body>`,
             ...directories.map((entry) => {
@@ -9001,7 +9036,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
             let start = Date.now();
             response.on("finish", () => {
                 let duration = Date.now() - start;
-                process.stdout.write(`${response.statusCode} ${method} ${protocol}://${hostname}${path} (${duration} ms)\n`);
+                let url = `${protocol}://${hostname}${path}`;
+                process.stdout.write(`${terminal.stylize(response.statusCode, response.statusCode >= 400 ? terminal.FG_RED : terminal.FG_GREEN)} ${terminal.stylize(method, terminal.FG_MAGENTA)} ${terminal.stylize(url, terminal.FG_YELLOW)} (${terminal.stylize(duration, terminal.FG_CYAN)} ms)\n`);
             });
             requestListener(request, response);
         };
@@ -9185,6 +9221,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
             let host = (_e = domain.host) !== null && _e !== void 0 ? _e : "*";
             let routing = (_f = domain.routing) !== null && _f !== void 0 ? _f : true;
             let indices = (_g = domain.indices) !== null && _g !== void 0 ? _g : false;
+            let httpHost = `http://${host}:${http}`;
+            let httpsHost = `https://${host}:${https}`;
             if (key || cert) {
                 let secureContext = {
                     host,
@@ -9192,7 +9230,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                     dirty: true,
                     load() {
                         if (this.dirty) {
-                            process.stdout.write(`Loading certificate for ${host}\n`);
+                            process.stdout.write(`Loading certificate for ${terminal.stylize(host, terminal.FG_YELLOW)}\n`);
                             this.secureContext = libtls.createSecureContext({
                                 key: key ? libfs.readFileSync(key) : undefined,
                                 cert: cert ? libfs.readFileSync(cert) : undefined
@@ -9215,7 +9253,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                 try {
                     let servernameConnectionConfig = parseServernameConnectionConfig(root, 80);
                     handledServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-                    process.stdout.write(`Delegating connections for https://${host}:${https} to ${root}\n`);
+                    process.stdout.write(`Delegating connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
                     let httpRequestListener = makeRedirectRequestListener(https);
                     httpRequestListeners.push([host, httpRequestListener]);
                     continue;
@@ -9224,7 +9262,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                 if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
                     throw `Expected "${root}" to exist and be a directory!`;
                 }
-                process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
+                process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
                 let httpRequestListener = makeRedirectRequestListener(https);
                 httpRequestListeners.push([host, httpRequestListener]);
                 let httpsRequestListener = makeRequestListener(root, routing, indices);
@@ -9234,7 +9272,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                 try {
                     let servernameConnectionConfig = parseServernameConnectionConfig(root, 443);
                     delegatedServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-                    process.stdout.write(`Delegating connections for https://${host}:${https} to ${root} (E2EE)\n`);
+                    process.stdout.write(`Delegating connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
                     let httpRequestListener = makeRedirectRequestListener(https);
                     httpRequestListeners.push([host, httpRequestListener]);
                     continue;
@@ -9251,7 +9289,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                         dirty: true,
                         load() {
                             if (this.dirty) {
-                                process.stdout.write(`Generating certificate for ${host}\n`);
+                                process.stdout.write(`Generating certificate for ${terminal.stylize(host, terminal.FG_YELLOW)}\n`);
                                 let key = multipass.rsa.generatePrivateKey();
                                 let cert = multipass.pem.serialize({
                                     sections: [
@@ -9280,14 +9318,14 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                         }
                     };
                     secureContexts.push(secureContext);
-                    process.stdout.write(`Serving "${root}" at https://${host}:${https}\n`);
+                    process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
                     let httpRequestListener = makeRedirectRequestListener(https);
                     httpRequestListeners.push([host, httpRequestListener]);
                     let httpsRequestListener = makeRequestListener(root, routing, indices);
                     httpsRequestListeners.push([host, httpsRequestListener]);
                 }
                 else {
-                    process.stdout.write(`Serving "${root}" at http://${host}:${http}\n`);
+                    process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
                     let httpRequestListener = makeRequestListener(root, routing, indices);
                     httpRequestListeners.push([host, httpRequestListener]);
                 }
@@ -9300,7 +9338,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
             return requestListener(request, response);
         });
         httpsRequestRouter.listen(undefined, () => {
-            process.stdout.write(`Request router listening on port ${getServerPort(httpsRequestRouter)}\n`);
+            process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpsRequestRouter), terminal.FG_CYAN)}\n`);
         });
         let certificateRouter = libtls.createServer({
             SNICallback: (hostname, callback) => {
@@ -9325,7 +9363,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
             makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
         });
         certificateRouter.listen(undefined, () => {
-            process.stdout.write(`Certificate router listening on port ${getServerPort(certificateRouter)}\n`);
+            process.stdout.write(`Certificate router listening on port ${terminal.stylize(getServerPort(certificateRouter), terminal.FG_CYAN)}\n`);
         });
         let servernameRouter = libnet.createServer({}, (clientSocket) => {
             clientSocket.on("error", () => {
@@ -9347,7 +9385,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
             });
         });
         servernameRouter.listen(https, () => {
-            process.stdout.write(`Servername router listening on port ${getServerPort(servernameRouter)}\n`);
+            process.stdout.write(`Servername router listening on port ${terminal.stylize(getServerPort(servernameRouter), terminal.FG_CYAN)}\n`);
         });
         let httpRequestRouter = libhttp.createServer({}, (request, response) => {
             var _a, _b, _c;
@@ -9356,13 +9394,13 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
             return requestListener(request, response);
         });
         httpRequestRouter.listen(http, () => {
-            process.stdout.write(`Request router listening on port ${getServerPort(httpRequestRouter)}\n`);
+            process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpRequestRouter), terminal.FG_CYAN)}\n`);
         });
     }
     exports.makeServer = makeServer;
     ;
 });
-define("build/cli/index", ["require", "exports", "build/lib/index"], function (require, exports, lib) {
+define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"], function (require, exports, app, lib) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -9396,7 +9434,7 @@ define("build/cli/index", ["require", "exports", "build/lib/index"], function (r
             let options = {
                 domains
             };
-            let found_unrecognized_argument = false;
+            let unrecognizedArguments = [];
             for (let arg of process.argv.slice(2)) {
                 let parts = null;
                 if (false) {
@@ -9434,11 +9472,16 @@ define("build/cli/index", ["require", "exports", "build/lib/index"], function (r
                     options.sign = parts[1] === "true";
                 }
                 else {
-                    found_unrecognized_argument = true;
-                    process.stderr.write(`Unrecognized argument "${arg}"!\n`);
+                    unrecognizedArguments.push(arg);
                 }
             }
-            if (found_unrecognized_argument) {
+            if (unrecognizedArguments.length > 0) {
+                process.stderr.write(`${app.name} v${app.version}\n`);
+                process.stderr.write(`\n`);
+                for (let unrecognizedArgument of unrecognizedArguments) {
+                    process.stderr.write(`Unrecognized argument "${unrecognizedArgument}"!\n`);
+                }
+                process.stderr.write(`\n`);
                 process.stderr.write(`Arguments:\n`);
                 process.stderr.write(`	--config=string\n`);
                 process.stderr.write(`		Load specified config.\n`);
@@ -9473,4 +9516,4 @@ define("build/cli/index", ["require", "exports", "build/lib/index"], function (r
     ;
     run().catch((error) => console.log(String(error)));
 });
-function define(e,t,l){let n=define;function u(e){return require(e)}null==n.moduleStates&&(n.moduleStates=new Map),null==n.dependentsMap&&(n.dependentsMap=new Map);let d=n.moduleStates.get(e);if(null!=d)throw"Duplicate module found with name "+e+"!";d={callback:l,dependencies:t,module:null},n.moduleStates.set(e,d);for(let l of t){let t=n.dependentsMap.get(l);null==t&&(t=new Set,n.dependentsMap.set(l,t)),t.add(e)}!function e(t){let l=n.moduleStates.get(t);if(null==l||null!=l.module)return;let d=Array(),o={exports:{}};for(let e of l.dependencies){if("require"===e){d.push(u);continue}if("module"===e){d.push(o);continue}if("exports"===e){d.push(o.exports);continue}try{d.push(u(e));continue}catch(e){}let t=n.moduleStates.get(e);if(null==t||null==t.module)return;d.push(t.module.exports)}l.callback(...d),l.module=o;let p=n.dependentsMap.get(t);if(null!=p)for(let t of p)e(t)}(e)}
+function define(e,t,n){let l=define;function u(e){return require(e)}null==l.moduleStates&&(l.moduleStates=new Map),null==l.dependentsMap&&(l.dependentsMap=new Map);let i=l.moduleStates.get(e);if(null!=i)throw new Error("Duplicate module found with name "+e+"!");i={initializer:n,dependencies:t,module:null},l.moduleStates.set(e,i);for(let n of t){let t=l.dependentsMap.get(n);null==t&&(t=new Set,l.dependentsMap.set(n,t)),t.add(e)}!function e(t){let n=l.moduleStates.get(t);if(null==n||null!=n.module)return;let i=Array(),o={exports:{}};for(let e of n.dependencies){if("require"===e){i.push(u);continue}if("module"===e){i.push(o);continue}if("exports"===e){i.push(o.exports);continue}try{i.push(u(e));continue}catch(e){}let t=l.moduleStates.get(e);if(null==t||null==t.module)return;i.push(t.module.exports)}"function"==typeof n.initializer?n.initializer(...i):o.exports=n.initializer,n.module=o;let d=l.dependentsMap.get(t);if(null!=d)for(let t of d)e(t)}(e)}
