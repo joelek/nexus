@@ -131,6 +131,7 @@ Nexus can load configuration files stored using the JSON format shown below. A c
 			"root"?: string,
 			"key"?: string,
 			"cert"?: string,
+			"pass"?: string,
 			"host"?: string,
 			"indices"?: boolean,
 			"routing"?: boolean
