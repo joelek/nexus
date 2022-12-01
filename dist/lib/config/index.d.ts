@@ -1,6 +1,6 @@
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-shared";
 export declare const Domain: autoguard.serialization.MessageGuard<Domain>;
-export declare type Domain = autoguard.guards.Object<{}, {
+export type Domain = autoguard.guards.Object<{}, {
     "root": autoguard.guards.String;
     "key": autoguard.guards.String;
     "cert": autoguard.guards.String;
@@ -10,7 +10,7 @@ export declare type Domain = autoguard.guards.Object<{}, {
     "routing": autoguard.guards.Boolean;
 }>;
 export declare const Options: autoguard.serialization.MessageGuard<Options>;
-export declare type Options = autoguard.guards.Object<{}, {
+export type Options = autoguard.guards.Object<{}, {
     "domains": autoguard.guards.Array<autoguard.guards.Reference<Domain>>;
     "http": autoguard.guards.Number;
     "https": autoguard.guards.Number;

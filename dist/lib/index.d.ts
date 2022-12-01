@@ -27,7 +27,7 @@ export declare function connectSockets(serverSocket: libnet.Socket | libtls.TLSS
 export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libnet.Socket;
 export declare function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libtls.TLSSocket;
 export declare function getServerPort(server: libnet.Server): number;
-export declare type ServernameConnectionConfig = {
+export type ServernameConnectionConfig = {
     hostname: string;
     port: number;
 };

@@ -1,5 +1,5 @@
 /// <reference types="node" />
-declare type ParsingState = {
+type ParsingState = {
     buffer: Buffer;
     offset: number;
 };
@@ -10,12 +10,12 @@ export declare enum ContentType {
     APPLICATION_DATA = 23
 }
 export declare function parseContentType(state: ParsingState): ContentType;
-export declare type ProtocolVersion = {
+export type ProtocolVersion = {
     major: number;
     minor: number;
 };
 export declare function parseProtocolVersion(state: ParsingState): ProtocolVersion;
-export declare type TlsPlaintext = {
+export type TlsPlaintext = {
     type: ContentType;
     protocolVersion: ProtocolVersion;
     body: Buffer;
@@ -36,21 +36,21 @@ export declare enum HandshakeType {
     CERTIFICATE_STATUS = 22
 }
 export declare function parseHandshakeType(state: ParsingState): HandshakeType;
-export declare type Handshake = {
+export type Handshake = {
     type: HandshakeType;
     body: Buffer;
 };
 export declare function parseHandshake(state: ParsingState): Handshake;
-export declare type Random = {
+export type Random = {
     timestamp: number;
     buffer: Buffer;
 };
 export declare function parseRandom(state: ParsingState): Random;
-export declare type SessionId = {
+export type SessionId = {
     body: Buffer;
 };
 export declare function parseSessionId(state: ParsingState): SessionId;
-export declare type CipherSuite = {
+export type CipherSuite = {
     one: number;
     two: number;
 };
@@ -59,7 +59,7 @@ export declare enum CompressionMethod {
     NULL = 0
 }
 export declare function parseCompressionMethod(state: ParsingState): CompressionMethod;
-export declare type ClientHello = {
+export type ClientHello = {
     protocolVersion: ProtocolVersion;
     random: Random;
     sessionId: SessionId;
@@ -72,7 +72,7 @@ export declare enum ExtensionType {
     SIGNATURE_ALGORITHMS = 13
 }
 export declare function parseExtensionType(state: ParsingState): ExtensionType;
-export declare type Extension = {
+export type Extension = {
     type: ExtensionType;
     body: Buffer;
 };
@@ -82,13 +82,13 @@ export declare enum NameType {
     HOST_NAME = 0
 }
 export declare function parseNameType(state: ParsingState): NameType;
-export declare type ServerName = {
+export type ServerName = {
     type: NameType;
     body: Buffer;
 };
 export declare function parseServerName(state: ParsingState): ServerName;
 export declare function parseServerNames(state: ParsingState): ServerName[];
-export declare type Hostname = {
+export type Hostname = {
     name: string;
 };
 export declare function parseHostname(state: ParsingState): Hostname;
