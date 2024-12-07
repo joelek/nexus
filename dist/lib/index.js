@@ -9,9 +9,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeServer = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Options = exports.Domain = void 0;
+exports.makeServer = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/ts-autoguard/dist/lib-server");
 const multipass = require("@joelek/multipass/dist/mod");
+const libcp = require("child_process");
 const libfs = require("fs");
 const libhttp = require("http");
 const libnet = require("net");
@@ -23,6 +24,7 @@ const config_1 = require("./config");
 var config_2 = require("./config");
 Object.defineProperty(exports, "Domain", { enumerable: true, get: function () { return config_2.Domain; } });
 Object.defineProperty(exports, "Options", { enumerable: true, get: function () { return config_2.Options; } });
+Object.defineProperty(exports, "Handler", { enumerable: true, get: function () { return config_2.Handler; } });
 const tls = require("./tls");
 const terminal = require("./terminal");
 function loadConfig(config) {
@@ -185,13 +187,94 @@ function makeReadStreamResponse(pathPrefix, pathSuffix, request) {
 }
 exports.makeReadStreamResponse = makeReadStreamResponse;
 ;
-function makeRequestListener(pathPrefix, clientRouting, generateIndices) {
+function makeGitHandlerResponse(pathPrefix, pathSuffix, request) {
+    var _a;
+    let pathSuffixParts = libpath.normalize(pathSuffix).split(libpath.sep);
+    if (pathSuffixParts[0] === "..") {
+        throw 400;
+    }
+    if (pathSuffixParts[0] === "" || pathSuffixParts[0] === ".") {
+        return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
+    }
+    {
+        let response = libcp.spawnSync("git", [
+            "ls-tree", `HEAD:${pathSuffixParts.slice(1).join("/")}`
+        ], {
+            cwd: `${pathPrefix}/${pathSuffixParts[0]}`,
+            encoding: "utf-8"
+        });
+        if (response.status === 0) {
+            let directoryListing = {
+                components: pathSuffixParts[pathSuffixParts.length - 1] === "" ? pathSuffixParts : [...pathSuffixParts, ""],
+                directories: [],
+                files: []
+            };
+            let lines = response.stdout.split(/\r?\n/);
+            for (let line of lines) {
+                let parts = /^([0-7]{6})\s+(tree|blob)\s+([0-9a-f]{40})\s+(.+)$/.exec(line);
+                if (parts == null) {
+                    continue;
+                }
+                if (parts[2] === "tree") {
+                    directoryListing.directories.push({
+                        name: parts[4]
+                    });
+                    continue;
+                }
+                if (parts[2] === "blob") {
+                    directoryListing.files.push({
+                        name: parts[4],
+                        size: 0,
+                        timestamp: 0
+                    });
+                    continue;
+                }
+            }
+            return {
+                status: 200,
+                headers: {
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Cache-Control": "must-revalidate, max-age=0",
+                    "Last-Modified": new Date().toUTCString()
+                },
+                payload: autoguard.api.serializeStringPayload(renderDirectoryListing(directoryListing))
+            };
+        }
+    }
+    {
+        let response = libcp.spawnSync("git", [
+            "cat-file", "-p", `HEAD:${pathSuffixParts.slice(1).join("/")}`
+        ], {
+            cwd: `${pathPrefix}/${pathSuffixParts[0]}`
+        });
+        if (response.status === 0) {
+            return {
+                status: 200,
+                headers: {
+                    "Content-Type": (_a = autoguard.api.getContentTypeFromExtension(libpath.extname(pathSuffix))) !== null && _a !== void 0 ? _a : "text/plain",
+                    "Cache-Control": "must-revalidate, max-age=0",
+                    "Last-Modified": new Date().toUTCString()
+                },
+                payload: [response.stdout]
+            };
+        }
+    }
+    throw 404;
+}
+;
+const HANDLERS = {
+    git: makeGitHandlerResponse
+};
+function makeRequestListener(pathPrefix, handler, clientRouting, generateIndices) {
     let requestListener = libserver.makeServer({
         getRequest(request) {
             var _a;
             return __awaiter(this, void 0, void 0, function* () {
                 let options = request.options();
                 let pathSuffix = ((_a = options.filename) !== null && _a !== void 0 ? _a : []).join("/");
+                if (handler != null) {
+                    return HANDLERS[handler](pathPrefix, pathSuffix, request);
+                }
                 try {
                     return makeReadStreamResponse(pathPrefix, pathSuffix, request);
                 }
@@ -423,6 +506,7 @@ function makeServer(options) {
         let cert = domain.cert;
         let pass = domain.pass;
         let host = (_e = domain.host) !== null && _e !== void 0 ? _e : "*";
+        let handler = domain.handler;
         let routing = (_f = domain.routing) !== null && _f !== void 0 ? _f : true;
         let indices = (_g = domain.indices) !== null && _g !== void 0 ? _g : false;
         let httpHost = `http://${host}:${http}`;
@@ -470,7 +554,7 @@ function makeServer(options) {
             process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
             let httpRequestListener = makeRedirectRequestListener(https);
             httpRequestListeners.push([host, httpRequestListener]);
-            let httpsRequestListener = makeRequestListener(root, routing, indices);
+            let httpsRequestListener = makeRequestListener(root, handler, routing, indices);
             httpsRequestListeners.push([host, httpsRequestListener]);
         }
         else {
@@ -526,12 +610,12 @@ function makeServer(options) {
                 process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
                 let httpRequestListener = makeRedirectRequestListener(https);
                 httpRequestListeners.push([host, httpRequestListener]);
-                let httpsRequestListener = makeRequestListener(root, routing, indices);
+                let httpsRequestListener = makeRequestListener(root, handler, routing, indices);
                 httpsRequestListeners.push([host, httpsRequestListener]);
             }
             else {
                 process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
-                let httpRequestListener = makeRequestListener(root, routing, indices);
+                let httpRequestListener = makeRequestListener(root, handler, routing, indices);
                 httpRequestListeners.push([host, httpRequestListener]);
             }
         }

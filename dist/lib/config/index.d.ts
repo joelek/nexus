@@ -1,4 +1,6 @@
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-shared";
+export declare const Handler: autoguard.serialization.MessageGuard<Handler>;
+export type Handler = autoguard.guards.StringLiteral<"git">;
 export declare const Domain: autoguard.serialization.MessageGuard<Domain>;
 export type Domain = autoguard.guards.Object<{}, {
     "root": autoguard.guards.String;
@@ -6,6 +8,7 @@ export type Domain = autoguard.guards.Object<{}, {
     "cert": autoguard.guards.String;
     "pass": autoguard.guards.String;
     "host": autoguard.guards.String;
+    "handler": autoguard.guards.Reference<Handler>;
     "indices": autoguard.guards.Boolean;
     "routing": autoguard.guards.Boolean;
 }>;
@@ -18,12 +21,14 @@ export type Options = autoguard.guards.Object<{}, {
 }>;
 export declare namespace Autoguard {
     const Guards: {
+        Handler: autoguard.guards.ReferenceGuard<"git">;
         Domain: autoguard.guards.ReferenceGuard<{
             root?: string | undefined;
             key?: string | undefined;
             cert?: string | undefined;
             pass?: string | undefined;
             host?: string | undefined;
+            handler?: "git" | undefined;
             indices?: boolean | undefined;
             routing?: boolean | undefined;
         }>;
@@ -34,6 +39,7 @@ export declare namespace Autoguard {
                 cert?: string | undefined;
                 pass?: string | undefined;
                 host?: string | undefined;
+                handler?: "git" | undefined;
                 indices?: boolean | undefined;
                 routing?: boolean | undefined;
             }> | undefined;

@@ -6,8 +6,8 @@ import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
 import * as libhttp from "http";
 import * as libnet from "net";
 import * as libtls from "tls";
-import { Options } from "./config";
-export { Domain, Options } from "./config";
+import { Options, Handler } from "./config";
+export { Domain, Options, Handler } from "./config";
 export declare function loadConfig(config: string): Options;
 export declare function computeSimpleHash(string: string): number;
 export declare function encodeXMLText(string: string): string;
@@ -20,7 +20,7 @@ export declare function makeDirectoryListingResponse(pathPrefix: string, pathSuf
 export declare function makeReadStreamResponse(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>): autoguard.api.EndpointResponse & {
     payload: autoguard.api.Binary;
 };
-export declare function makeRequestListener(pathPrefix: string, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener;
+export declare function makeRequestListener(pathPrefix: string, handler: Handler | undefined, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener;
 export declare function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener;
 export declare function matchesHostnamePattern(subject: string, pattern: string): boolean;
 export declare function connectSockets(serverSocket: libnet.Socket | libtls.TLSSocket, clientSocket: libnet.Socket | libtls.TLSSocket, head: Buffer): void;

@@ -50,6 +50,9 @@ function run() {
                 domain.host = parts[1] || undefined;
                 domains.push(Object.assign({}, domain));
             }
+            else if ((parts = /^--handler=(git)$/.exec(arg)) !== null) {
+                domain.handler = parts[1];
+            }
             else if ((parts = /^--indices=(true|false)$/.exec(arg)) !== null) {
                 domain.indices = parts[1] === "true";
             }
@@ -87,6 +90,8 @@ function run() {
             process.stderr.write(`		Set passphrase for TLS private key.\n`);
             process.stderr.write(`	--host=string\n`);
             process.stderr.write(`		Set host for which to respond.\n`);
+            process.stderr.write(`	--handler=string\n`);
+            process.stderr.write(`		Assign custom handler.\n`);
             process.stderr.write(`	--indices=boolean\n`);
             process.stderr.write(`		Configure automatic generation of index documents.\n`);
             process.stderr.write(`	--routing=boolean\n`);
