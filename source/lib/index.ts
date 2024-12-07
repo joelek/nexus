@@ -1,5 +1,6 @@
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
 import * as multipass from "@joelek/multipass/dist/mod";
+import * as libcp from "child_process";
 import * as libfs from "fs";
 import * as libhttp from "http";
 import * as libnet from "net";
@@ -7,8 +8,8 @@ import * as libpath from "path";
 import * as libtls from "tls";
 import * as liburl from "url";
 import * as libserver from "./api/server";
-import { Domain, Options } from "./config";
-export { Domain, Options } from "./config";
+import { Domain, Options, Handler } from "./config";
+export { Domain, Options, Handler } from "./config";
 import * as tls from "./tls";
 import * as terminal from "./terminal";
 
@@ -174,11 +175,94 @@ export function makeReadStreamResponse(pathPrefix: string, pathSuffix: string, r
 	};
 };
 
-export function makeRequestListener(pathPrefix: string, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener {
+function makeGitHandlerResponse(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>): autoguard.api.EndpointResponse & {
+	payload: autoguard.api.Binary;
+} {
+	let pathSuffixParts = libpath.normalize(pathSuffix).split(libpath.sep);
+	if (pathSuffixParts[0] === "..") {
+		throw 400;
+	}
+	if (pathSuffixParts[0] === "" || pathSuffixParts[0] === ".") {
+		return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
+	}
+	{
+		let response = libcp.spawnSync("git", [
+			"ls-tree", `HEAD:${pathSuffixParts.slice(1).join("/")}`
+		], {
+			cwd: `${pathPrefix}/${pathSuffixParts[0]}`,
+			encoding: "utf-8"
+		});
+		if (response.status === 0) {
+			let directoryListing: autoguard.api.DirectoryListing = {
+				components: pathSuffixParts[pathSuffixParts.length - 1] === "" ? pathSuffixParts : [...pathSuffixParts, ""],
+				directories: [],
+				files: []
+			};
+			let lines = response.stdout.split(/\r?\n/);
+			for (let line of lines) {
+				let parts = /^([0-7]{6})\s+(tree|blob)\s+([0-9a-f]{40})\s+(.+)$/.exec(line);
+				if (parts == null) {
+					continue;
+				}
+				if (parts[2] === "tree") {
+					directoryListing.directories.push({
+						name: parts[4]
+					});
+					continue;
+				}
+				if (parts[2] === "blob") {
+					directoryListing.files.push({
+						name: parts[4],
+						size: 0,
+						timestamp: 0
+					});
+					continue;
+				}
+			}
+			return {
+				status: 200,
+				headers: {
+					"Content-Type": "text/html; charset=utf-8",
+					"Cache-Control": "must-revalidate, max-age=0",
+					"Last-Modified": new Date().toUTCString()
+				},
+				payload: autoguard.api.serializeStringPayload(renderDirectoryListing(directoryListing))
+			};
+		}
+	}
+	{
+		let response = libcp.spawnSync("git", [
+			"cat-file", "-p", `HEAD:${pathSuffixParts.slice(1).join("/")}`
+		], {
+			cwd: `${pathPrefix}/${pathSuffixParts[0]}`
+		});
+		if (response.status === 0) {
+			return {
+				status: 200,
+				headers: {
+					"Content-Type": autoguard.api.getContentTypeFromExtension(libpath.extname(pathSuffix)) ?? "text/plain",
+					"Cache-Control": "must-revalidate, max-age=0",
+					"Last-Modified": new Date().toUTCString()
+				},
+				payload: [response.stdout]
+			};
+		}
+	}
+	throw 404;
+};
+
+const HANDLERS = {
+	git: makeGitHandlerResponse
+};
+
+export function makeRequestListener(pathPrefix: string, handler: Handler | undefined, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener {
 	let requestListener = libserver.makeServer({
 		async getRequest(request) {
 			let options = request.options();
 			let pathSuffix = (options.filename ?? []).join("/");
+			if (handler != null) {
+				return HANDLERS[handler](pathPrefix, pathSuffix, request);
+			}
 			try {
 				return makeReadStreamResponse(pathPrefix, pathSuffix, request);
 			} catch (error) {
@@ -400,6 +484,7 @@ export function makeServer(options: Options): void {
 		let cert = domain.cert;
 		let pass = domain.pass;
 		let host = domain.host ?? "*";
+		let handler = domain.handler;
 		let routing = domain.routing ?? true;
 		let indices = domain.indices ?? false;
 		let httpHost = `http://${host}:${http}`;
@@ -446,7 +531,7 @@ export function makeServer(options: Options): void {
 			process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
 			let httpRequestListener = makeRedirectRequestListener(https);
 			httpRequestListeners.push([host, httpRequestListener]);
-			let httpsRequestListener = makeRequestListener(root, routing, indices);
+			let httpsRequestListener = makeRequestListener(root, handler, routing, indices);
 			httpsRequestListeners.push([host, httpsRequestListener]);
 		} else {
 			try {
@@ -500,11 +585,11 @@ export function makeServer(options: Options): void {
 				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
 				let httpRequestListener = makeRedirectRequestListener(https);
 				httpRequestListeners.push([host, httpRequestListener]);
-				let httpsRequestListener = makeRequestListener(root, routing, indices);
+				let httpsRequestListener = makeRequestListener(root, handler, routing, indices);
 				httpsRequestListeners.push([host, httpsRequestListener]);
 			} else {
 				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
-				let httpRequestListener = makeRequestListener(root, routing, indices);
+				let httpRequestListener = makeRequestListener(root, handler, routing, indices);
 				httpRequestListeners.push([host, httpRequestListener]);
 			}
 		}

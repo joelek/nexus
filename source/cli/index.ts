@@ -31,6 +31,8 @@ async function run(): Promise<void> {
 		} else if ((parts = /^--host=(.*)$/.exec(arg)) !== null) {
 			domain.host = parts[1] || undefined;
 			domains.push({ ...domain });
+		} else if ((parts = /^--handler=(git)$/.exec(arg)) !== null) {
+			domain.handler = parts[1] as lib.Handler;
 		} else if ((parts = /^--indices=(true|false)$/.exec(arg)) !== null) {
 			domain.indices = parts[1] === "true";
 		} else if ((parts = /^--routing=(true|false)$/.exec(arg)) !== null) {
@@ -65,6 +67,8 @@ async function run(): Promise<void> {
 		process.stderr.write(`		Set passphrase for TLS private key.\n`);
 		process.stderr.write(`	--host=string\n`);
 		process.stderr.write(`		Set host for which to respond.\n`);
+		process.stderr.write(`	--handler=string\n`);
+		process.stderr.write(`		Assign custom handler.\n`);
 		process.stderr.write(`	--indices=boolean\n`);
 		process.stderr.write(`		Configure automatic generation of index documents.\n`);
 		process.stderr.write(`	--routing=boolean\n`);

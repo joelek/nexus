@@ -2,12 +2,17 @@
 
 import * as autoguard from "@joelek/ts-autoguard/dist/lib-shared";
 
+export const Handler: autoguard.serialization.MessageGuard<Handler> = autoguard.guards.StringLiteral.of("git");
+
+export type Handler = autoguard.guards.StringLiteral<"git">;
+
 export const Domain: autoguard.serialization.MessageGuard<Domain> = autoguard.guards.Object.of({}, {
 	"root": autoguard.guards.String,
 	"key": autoguard.guards.String,
 	"cert": autoguard.guards.String,
 	"pass": autoguard.guards.String,
 	"host": autoguard.guards.String,
+	"handler": autoguard.guards.Reference.of(() => Handler),
 	"indices": autoguard.guards.Boolean,
 	"routing": autoguard.guards.Boolean
 });
@@ -18,6 +23,7 @@ export type Domain = autoguard.guards.Object<{}, {
 	"cert": autoguard.guards.String,
 	"pass": autoguard.guards.String,
 	"host": autoguard.guards.String,
+	"handler": autoguard.guards.Reference<Handler>,
 	"indices": autoguard.guards.Boolean,
 	"routing": autoguard.guards.Boolean
 }>;
@@ -38,6 +44,7 @@ export type Options = autoguard.guards.Object<{}, {
 
 export namespace Autoguard {
 	export const Guards = {
+		"Handler": autoguard.guards.Reference.of(() => Handler),
 		"Domain": autoguard.guards.Reference.of(() => Domain),
 		"Options": autoguard.guards.Reference.of(() => Options)
 	};

@@ -1,9 +1,12 @@
+guard Handler: "git";
+
 guard Domain: {
 	root?: string,
 	key?: string,
 	cert?: string,
 	pass?: string,
 	host?: string,
+	handler?: Handler,
 	indices?: boolean,
 	routing?: boolean
 };
