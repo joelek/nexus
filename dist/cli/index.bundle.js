@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/ts-nexus",
-    "timestamp": 1733598183469,
+    "timestamp": 1733598725482,
     "version": "2.3.0"
 });
 define("node_modules/@joelek/ts-autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9214,7 +9214,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
         }
         {
             let response = libcp.spawnSync("git", [
-                "ls-tree", `HEAD:${pathSuffixParts.slice(1).join("/")}`
+                "ls-tree", "-l", `HEAD:${pathSuffixParts.slice(1).join("/")}`
             ], {
                 cwd: `${pathPrefix}/${pathSuffixParts[0]}`,
                 encoding: "utf-8"
@@ -9227,20 +9227,20 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                 };
                 let lines = response.stdout.split(/\r?\n/);
                 for (let line of lines) {
-                    let parts = /^([0-7]{6})\s+(tree|blob)\s+([0-9a-f]{40})\s+(.+)$/.exec(line);
+                    let parts = /^([0-7]{6})\s+(tree|blob)\s+([0-9a-f]{40})\s+([0-9]+|[-])\s+(.+)$/.exec(line);
                     if (parts == null) {
                         continue;
                     }
                     if (parts[2] === "tree") {
                         directoryListing.directories.push({
-                            name: parts[4]
+                            name: parts[5]
                         });
                         continue;
                     }
                     if (parts[2] === "blob") {
                         directoryListing.files.push({
-                            name: parts[4],
-                            size: 0,
+                            name: parts[5],
+                            size: Number.parseInt(parts[4]),
                             timestamp: 0
                         });
                         continue;
