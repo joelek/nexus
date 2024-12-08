@@ -15,8 +15,8 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1733661097192,
-    "version": "2.4.1"
+    "timestamp": 1733661177327,
+    "version": "2.4.2"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
     "use strict";
