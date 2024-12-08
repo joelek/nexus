@@ -1,11 +1,11 @@
-import * as autoguard from "@joelek/ts-autoguard/dist/lib-shared";
+import * as autoguard from "@joelek/autoguard/dist/lib-shared";
 export declare namespace Autoguard {
     const Guards: {};
     type Guards = {
         [A in keyof typeof Guards]: ReturnType<typeof Guards[A]["as"]>;
     };
     const Requests: {
-        getRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
+        getRequest: autoguard.guards.ObjectGuard<import("@joelek/stdlib/dist/lib/routing").MessageMap<unknown>, {
             options: {
                 [x: string]: autoguard.api.JSON;
                 filename?: autoguard.guards.Array<string> | undefined;
@@ -15,7 +15,7 @@ export declare namespace Autoguard {
             };
             payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
-        headRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
+        headRequest: autoguard.guards.ObjectGuard<import("@joelek/stdlib/dist/lib/routing").MessageMap<unknown>, {
             options: {
                 [x: string]: autoguard.api.JSON;
                 filename?: autoguard.guards.Array<string> | undefined;
@@ -30,14 +30,14 @@ export declare namespace Autoguard {
         [A in keyof typeof Requests]: ReturnType<typeof Requests[A]["as"]>;
     };
     const Responses: {
-        getRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
+        getRequest: autoguard.guards.ObjectGuard<import("@joelek/stdlib/dist/lib/routing").MessageMap<unknown>, {
             status: number;
             headers: {
                 [x: string]: autoguard.api.JSON;
             };
             payload: autoguard.api.AsyncBinary | autoguard.api.SyncBinary;
         }>;
-        headRequest: autoguard.guards.ObjectGuard<import("@joelek/ts-stdlib/dist/lib/routing").MessageMap<unknown>, {
+        headRequest: autoguard.guards.ObjectGuard<import("@joelek/stdlib/dist/lib/routing").MessageMap<unknown>, {
             status: number;
             headers: {
                 [x: string]: autoguard.api.JSON;

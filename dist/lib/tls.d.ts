@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 type ParsingState = {
     buffer: Buffer;
     offset: number;

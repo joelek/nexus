@@ -1,4 +1,4 @@
-import * as autoguard from "@joelek/ts-autoguard/dist/lib-shared";
+import * as autoguard from "@joelek/autoguard/dist/lib-shared";
 export declare const Handler: autoguard.serialization.MessageGuard<Handler>;
 export type Handler = autoguard.guards.StringLiteral<"git">;
 export declare const Domain: autoguard.serialization.MessageGuard<Domain>;
