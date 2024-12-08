@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1733661177327,
+    "timestamp": 1733671820602,
     "version": "2.4.2"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -453,7 +453,7 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             this.record = record;
         }
         as(subject, path = "") {
-            if ((subject != null) && (subject.constructor === globalThis.String)) {
+            if ((subject != null) && (subject.constructor === globalThis.String || subject.constructor === globalThis.Number)) {
                 let string = subject;
                 if (string in this.record) {
                     return string;
