@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1733645593881,
+    "timestamp": 1733646342318,
     "version": "2.3.0"
 });
 define("node_modules/@joelek/ts-autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9227,7 +9227,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                 };
                 let lines = response.stdout.split(/\r?\n/);
                 for (let line of lines) {
-                    let parts = /^([0-7]{6})\s+(tree|blob)\s+([0-9a-f]{40})\s+([0-9]+|[-])\s+(.+)$/.exec(line);
+                    let parts = /^([0-7]{6})\s+(tree|blob)\s+([0-9a-f]{40})\s+([0-9]+|[-])\s+(.+)$/u.exec(line);
                     if (parts == null) {
                         continue;
                     }
