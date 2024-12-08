@@ -320,7 +320,6 @@ export function makeRequestListener(pathPrefix: string, handler: Handler | undef
 		async getRequest(request) {
 			let options = request.options();
 			let pathSuffixParts = libpath.normalize((options.filename ?? []).join("/")).split(libpath.sep);
-			console.log(pathSuffixParts);
 			if (pathSuffixParts[0] === "..") {
 				throw 400;
 			}
