@@ -200,7 +200,7 @@ function makeGitHandlerResponse(pathPrefix: string, pathSuffix: string, request:
 			};
 			let lines = response.stdout.split(/\r?\n/);
 			for (let line of lines) {
-				let parts = /^([0-7]{6})\s+(tree|blob)\s+([0-9a-f]{40})\s+([0-9]+|[-])\s+(.+)$/.exec(line);
+				let parts = /^([0-7]{6})\s+(tree|blob)\s+([0-9a-f]{40})\s+([0-9]+|[-])\s+(.+)$/u.exec(line);
 				if (parts == null) {
 					continue;
 				}
