@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 define("build/app", [], {
-    "name": "@joelek/ts-nexus",
+    "name": "@joelek/nexus",
     "timestamp": 1733598725482,
     "version": "2.3.0"
 });

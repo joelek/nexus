@@ -1,4 +1,4 @@
-# @joelek/ts-nexus
+# @joelek/nexus
 
 Web server and connection router for NodeJS written completely in TypeScript.
 
@@ -170,13 +170,13 @@ Ethereum contributions can be made to address `0xf1B63d95BEfEdAf70B3623B1A4Ba0D9
 Releases follow semantic versioning and release packages are published using the GitHub platform. Use the following command to install the latest release.
 
 ```
-npm install [-g] joelek/ts-nexus#semver:^2.2
+npm install [-g] joelek/nexus#semver:^2.2
 ```
 
 Use the following command to install the very latest build. The very latest build may include breaking changes and should not be used in production environments.
 
 ```
-npm install [-g] joelek/ts-nexus#master
+npm install [-g] joelek/nexus#master
 ```
 
 ## Roadmap
