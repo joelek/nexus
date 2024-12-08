@@ -20,6 +20,20 @@ nexus
 
 Nexus serves the contents of the current working direcory over port 8080 by default. You may specify a different root or port using the `--root=<string>` and `--http=<number>` arguments, respectively.
 
+### Request handlers
+
+By default, Nexus will serve the contents of the specified root directory in a way that is suitable for modern web applications. Nexus includes support for serving other types of content through its different request handlers.
+
+The request handler is specified through the `--handler=<string>` argument.
+
+Nexus include support for rendering a directory containing any number of git repos through its `git` request handler.
+
+```
+nexus \
+	--root=./repos/ \
+	--handler=git
+```
+
 ### Index documents
 
 Nexus automatically generates and serves index documents for directory requests. The feature is turned _off_ by default and can be configued using the `--indices=<boolean>` argument.
