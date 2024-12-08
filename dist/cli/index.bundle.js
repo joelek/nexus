@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1733598725482,
+    "timestamp": 1733645593881,
     "version": "2.3.0"
 });
 define("node_modules/@joelek/ts-autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9811,7 +9811,7 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
                 process.stderr.write(`	--host=string\n`);
                 process.stderr.write(`		Set host for which to respond.\n`);
                 process.stderr.write(`	--handler=string\n`);
-                process.stderr.write(`		Assign custom handler.\n`);
+                process.stderr.write(`		Set request handler.\n`);
                 process.stderr.write(`	--indices=boolean\n`);
                 process.stderr.write(`		Configure automatic generation of index documents.\n`);
                 process.stderr.write(`	--routing=boolean\n`);
