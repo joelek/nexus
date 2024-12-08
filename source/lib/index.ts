@@ -1,4 +1,4 @@
-import * as autoguard from "@joelek/ts-autoguard/dist/lib-server";
+import * as autoguard from "@joelek/autoguard/dist/lib-server";
 import * as multipass from "@joelek/multipass/dist/mod";
 import * as libcp from "child_process";
 import * as libfs from "fs";
