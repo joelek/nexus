@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1733646383921,
+    "timestamp": 1733658409336,
     "version": "2.4.0"
 });
 define("node_modules/@joelek/ts-autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9203,25 +9203,85 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
     }
     exports.makeReadStreamResponse = makeReadStreamResponse;
     ;
-    function makeGitHandlerResponse(pathPrefix, pathSuffix, request) {
+    function defaultRequestHandler(pathPrefix, pathSuffix, request, clientRouting, generateIndices) {
+        try {
+            return makeReadStreamResponse(pathPrefix, pathSuffix, request);
+        }
+        catch (error) {
+            if (error !== 404) {
+                throw error;
+            }
+        }
+        if (clientRouting) {
+            try {
+                return makeReadStreamResponse(pathPrefix, "index.html", request);
+            }
+            catch (error) {
+                if (error !== 404) {
+                    throw error;
+                }
+            }
+        }
+        if (generateIndices) {
+            try {
+                return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
+            }
+            catch (error) {
+                if (error !== 404) {
+                    throw error;
+                }
+            }
+        }
+        throw 404;
+    }
+    function getGitRootParts(pathPrefix, pathSuffix) {
+        let gitRootParts = [];
+        function isGitRoot() {
+            let cwd = [pathPrefix, ...gitRootParts].join("/");
+            let response = libcp.spawnSync("git", [
+                "rev-parse", "--show-prefix"
+            ], {
+                cwd: cwd,
+                encoding: "utf-8"
+            });
+            if (response.status === 0) {
+                if (response.stdout.split(/\r?\n/)[0] === "") {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (isGitRoot()) {
+            return gitRootParts;
+        }
+        let pathSuffixParts = pathSuffix.split("/");
+        for (let pathSuffixPart of pathSuffixParts) {
+            gitRootParts.push(pathSuffixPart);
+            if (isGitRoot()) {
+                return gitRootParts;
+            }
+        }
+        return;
+    }
+    ;
+    function gitRequestHandler(pathPrefix, pathSuffix, request, clientRouting, generateIndices) {
         var _a;
-        let pathSuffixParts = libpath.normalize(pathSuffix).split(libpath.sep);
-        if (pathSuffixParts[0] === "..") {
-            throw 400;
+        let gitRootParts = getGitRootParts(pathPrefix, pathSuffix);
+        if (gitRootParts == null) {
+            return defaultRequestHandler(pathPrefix, pathSuffix, request, clientRouting, generateIndices);
         }
-        if (pathSuffixParts[0] === "" || pathSuffixParts[0] === ".") {
-            return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
-        }
+        let gitParts = pathSuffix.split("/").slice(gitRootParts.length);
+        let cwd = [pathPrefix, ...gitRootParts].join("/");
         {
             let response = libcp.spawnSync("git", [
-                "ls-tree", "-l", `HEAD:${pathSuffixParts.slice(1).join("/")}`
+                "ls-tree", "-l", `HEAD:${gitParts.join("/")}`
             ], {
-                cwd: `${pathPrefix}/${pathSuffixParts[0]}`,
+                cwd: cwd,
                 encoding: "utf-8"
             });
             if (response.status === 0) {
                 let directoryListing = {
-                    components: pathSuffixParts[pathSuffixParts.length - 1] === "" ? pathSuffixParts : [...pathSuffixParts, ""],
+                    components: [...gitRootParts, ...(gitParts[gitParts.length - 1] === "" ? gitParts : [...gitParts, ""])],
                     directories: [],
                     files: []
                 };
@@ -9259,9 +9319,9 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
         }
         {
             let response = libcp.spawnSync("git", [
-                "cat-file", "-p", `HEAD:${pathSuffixParts.slice(1).join("/")}`
+                "cat-file", "-p", `HEAD:${gitParts.join("/")}`
             ], {
-                cwd: `${pathPrefix}/${pathSuffixParts[0]}`
+                cwd: cwd
             });
             if (response.status === 0) {
                 return {
@@ -9278,8 +9338,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
         throw 404;
     }
     ;
-    const HANDLERS = {
-        git: makeGitHandlerResponse
+    const REQUEST_HANDLERS = {
+        git: gitRequestHandler
     };
     function makeRequestListener(pathPrefix, handler, clientRouting, generateIndices) {
         let requestListener = libserver.makeServer({
@@ -9287,39 +9347,19 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/ts-autogu
                 var _a;
                 return __awaiter(this, void 0, void 0, function* () {
                     let options = request.options();
-                    let pathSuffix = ((_a = options.filename) !== null && _a !== void 0 ? _a : []).join("/");
+                    let pathSuffixParts = libpath.normalize(((_a = options.filename) !== null && _a !== void 0 ? _a : []).join("/")).split(libpath.sep);
+                    console.log(pathSuffixParts);
+                    if (pathSuffixParts[0] === "..") {
+                        throw 400;
+                    }
+                    if (pathSuffixParts[0] === ".") {
+                        pathSuffixParts = pathSuffixParts.slice(1);
+                    }
+                    let pathSuffix = pathSuffixParts.join("/");
                     if (handler != null) {
-                        return HANDLERS[handler](pathPrefix, pathSuffix, request);
+                        return REQUEST_HANDLERS[handler](pathPrefix, pathSuffix, request, clientRouting, generateIndices);
                     }
-                    try {
-                        return makeReadStreamResponse(pathPrefix, pathSuffix, request);
-                    }
-                    catch (error) {
-                        if (error !== 404) {
-                            throw error;
-                        }
-                    }
-                    if (clientRouting) {
-                        try {
-                            return makeReadStreamResponse(pathPrefix, "index.html", request);
-                        }
-                        catch (error) {
-                            if (error !== 404) {
-                                throw error;
-                            }
-                        }
-                    }
-                    if (generateIndices) {
-                        try {
-                            return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
-                        }
-                        catch (error) {
-                            if (error !== 404) {
-                                throw error;
-                            }
-                        }
-                    }
-                    throw 404;
+                    return defaultRequestHandler(pathPrefix, pathSuffix, request, clientRouting, generateIndices);
                 });
             },
             headRequest(request) {
