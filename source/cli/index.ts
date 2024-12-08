@@ -68,7 +68,7 @@ async function run(): Promise<void> {
 		process.stderr.write(`	--host=string\n`);
 		process.stderr.write(`		Set host for which to respond.\n`);
 		process.stderr.write(`	--handler=string\n`);
-		process.stderr.write(`		Assign custom handler.\n`);
+		process.stderr.write(`		Set request handler.\n`);
 		process.stderr.write(`	--indices=boolean\n`);
 		process.stderr.write(`		Configure automatic generation of index documents.\n`);
 		process.stderr.write(`	--routing=boolean\n`);
