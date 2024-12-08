@@ -175,26 +175,86 @@ export function makeReadStreamResponse(pathPrefix: string, pathSuffix: string, r
 	};
 };
 
-function makeGitHandlerResponse(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>): autoguard.api.EndpointResponse & {
+function defaultRequestHandler(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>, clientRouting: boolean, generateIndices: boolean): autoguard.api.EndpointResponse & {
 	payload: autoguard.api.Binary;
 } {
-	let pathSuffixParts = libpath.normalize(pathSuffix).split(libpath.sep);
-	if (pathSuffixParts[0] === "..") {
-		throw 400;
+	try {
+		return makeReadStreamResponse(pathPrefix, pathSuffix, request);
+	} catch (error) {
+		if (error !== 404) {
+			throw error;
+		}
 	}
-	if (pathSuffixParts[0] === "" || pathSuffixParts[0] === ".") {
-		return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
+	if (clientRouting) {
+		try {
+			return makeReadStreamResponse(pathPrefix, "index.html", request);
+		} catch (error) {
+			if (error !== 404) {
+				throw error;
+			}
+		}
 	}
+	if (generateIndices) {
+		try {
+			return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
+		} catch (error) {
+			if (error !== 404) {
+				throw error;
+			}
+		}
+	}
+	throw 404;
+}
+
+function getGitRootParts(pathPrefix: string, pathSuffix: string): Array<string> | undefined {
+	let gitRootParts: Array<string> = [];
+	function isGitRoot() {
+		let cwd = [pathPrefix, ...gitRootParts].join("/");
+		let response = libcp.spawnSync("git", [
+			"rev-parse", "--show-prefix"
+		], {
+			cwd: cwd,
+			encoding: "utf-8"
+		});
+		if (response.status === 0) {
+			if (response.stdout.split(/\r?\n/)[0] === "") {
+				return true;
+			}
+		}
+		return false;
+	}
+	if (isGitRoot()) {
+		return gitRootParts;
+	}
+	let pathSuffixParts = pathSuffix.split("/");
+	for (let pathSuffixPart of pathSuffixParts) {
+		gitRootParts.push(pathSuffixPart);
+		if (isGitRoot()) {
+			return gitRootParts;
+		}
+	}
+	return;
+};
+
+function gitRequestHandler(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>, clientRouting: boolean, generateIndices: boolean): autoguard.api.EndpointResponse & {
+	payload: autoguard.api.Binary;
+} {
+	let gitRootParts = getGitRootParts(pathPrefix, pathSuffix);
+	if (gitRootParts == null) {
+		return defaultRequestHandler(pathPrefix, pathSuffix, request, clientRouting, generateIndices);
+	}
+	let gitParts = pathSuffix.split("/").slice(gitRootParts.length);
+	let cwd = [pathPrefix, ...gitRootParts].join("/");
 	{
 		let response = libcp.spawnSync("git", [
-			"ls-tree", "-l", `HEAD:${pathSuffixParts.slice(1).join("/")}`
+			"ls-tree", "-l", `HEAD:${gitParts.join("/")}`
 		], {
-			cwd: `${pathPrefix}/${pathSuffixParts[0]}`,
+			cwd: cwd,
 			encoding: "utf-8"
 		});
 		if (response.status === 0) {
 			let directoryListing: autoguard.api.DirectoryListing = {
-				components: pathSuffixParts[pathSuffixParts.length - 1] === "" ? pathSuffixParts : [...pathSuffixParts, ""],
+				components: [...gitRootParts, ...(gitParts[gitParts.length - 1] === "" ? gitParts : [...gitParts, ""])],
 				directories: [],
 				files: []
 			};
@@ -232,9 +292,9 @@ function makeGitHandlerResponse(pathPrefix: string, pathSuffix: string, request:
 	}
 	{
 		let response = libcp.spawnSync("git", [
-			"cat-file", "-p", `HEAD:${pathSuffixParts.slice(1).join("/")}`
+			"cat-file", "-p", `HEAD:${gitParts.join("/")}`
 		], {
-			cwd: `${pathPrefix}/${pathSuffixParts[0]}`
+			cwd: cwd
 		});
 		if (response.status === 0) {
 			return {
@@ -251,44 +311,27 @@ function makeGitHandlerResponse(pathPrefix: string, pathSuffix: string, request:
 	throw 404;
 };
 
-const HANDLERS = {
-	git: makeGitHandlerResponse
+const REQUEST_HANDLERS = {
+	git: gitRequestHandler
 };
 
 export function makeRequestListener(pathPrefix: string, handler: Handler | undefined, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener {
 	let requestListener = libserver.makeServer({
 		async getRequest(request) {
 			let options = request.options();
-			let pathSuffix = (options.filename ?? []).join("/");
+			let pathSuffixParts = libpath.normalize((options.filename ?? []).join("/")).split(libpath.sep);
+			console.log(pathSuffixParts);
+			if (pathSuffixParts[0] === "..") {
+				throw 400;
+			}
+			if (pathSuffixParts[0] === ".") {
+				pathSuffixParts = pathSuffixParts.slice(1);
+			}
+			let pathSuffix = pathSuffixParts.join("/");
 			if (handler != null) {
-				return HANDLERS[handler](pathPrefix, pathSuffix, request);
+				return REQUEST_HANDLERS[handler](pathPrefix, pathSuffix, request, clientRouting, generateIndices);
 			}
-			try {
-				return makeReadStreamResponse(pathPrefix, pathSuffix, request);
-			} catch (error) {
-				if (error !== 404) {
-					throw error;
-				}
-			}
-			if (clientRouting) {
-				try {
-					return makeReadStreamResponse(pathPrefix, "index.html", request);
-				} catch (error) {
-					if (error !== 404) {
-						throw error;
-					}
-				}
-			}
-			if (generateIndices) {
-				try {
-					return makeDirectoryListingResponse(pathPrefix, pathSuffix, request);
-				} catch (error) {
-					if (error !== 404) {
-						throw error;
-					}
-				}
-			}
-			throw 404;
+			return defaultRequestHandler(pathPrefix, pathSuffix, request, clientRouting, generateIndices);
 		},
 		async headRequest(request) {
 			let response = await this.getRequest(request);
