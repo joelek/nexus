@@ -93,5 +93,5 @@ export type Hostname = {
     name: string;
 };
 export declare function parseHostname(state: ParsingState): Hostname;
-export declare function getServername(head: Buffer): string;
+export declare function getServername(tlsPlaintext: TlsPlaintext): string;
 export {};

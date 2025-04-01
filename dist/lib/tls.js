@@ -237,11 +237,7 @@ function parseHostname(state) {
 }
 exports.parseHostname = parseHostname;
 ;
-function getServername(head) {
-    let tlsPlaintext = parseTlsPlaintext({
-        buffer: head,
-        offset: 0
-    });
+function getServername(tlsPlaintext) {
     if (tlsPlaintext.type !== ContentType.HANDSHAKE) {
         throw `Expected a TLS handshake!`;
     }
