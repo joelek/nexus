@@ -507,6 +507,8 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 	}
 };
 
+const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
+
 export function makeServer(options: Options): void {
 	let http = options.http ?? 8080;
 	let https = options.https ?? 8443;
@@ -671,17 +673,32 @@ export function makeServer(options: Options): void {
 		clientSocket.on("error", () => {
 			clientSocket.end();
 		});
-		clientSocket.once("data", (head) => {
+		let buffer = Buffer.alloc(0);
+		clientSocket.on("data", function ondata(chunk: Buffer): void {
+			buffer = Buffer.concat([buffer, chunk]);
 			try {
-				let hostname = tls.getServername(head);
-				let servernameConnectionConfig = delegatedServernameConnectionConfigs.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1];
-				if (servernameConnectionConfig != null) {
-					let { hostname, port } = { ...servernameConnectionConfig };
-					makeTcpProxyConnection(hostname, port, head, clientSocket);
-					return;
+				let tlsPlaintext = tls.parseTlsPlaintext({
+					buffer: buffer,
+					offset: 0
+				});
+				try {
+					let hostname = tls.getServername(tlsPlaintext);
+					let servernameConnectionConfig = delegatedServernameConnectionConfigs.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1];
+					if (servernameConnectionConfig != null) {
+						let { hostname, port } = { ...servernameConnectionConfig };
+						clientSocket.off("data", ondata);
+						makeTcpProxyConnection(hostname, port, buffer, clientSocket);
+						return;
+					}
+				} catch (error) {}
+				clientSocket.off("data", ondata);
+				makeTcpProxyConnection("localhost", getServerPort(certificateRouter), buffer, clientSocket);
+			} catch (error) {
+				if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
+					clientSocket.off("data", ondata);
+					clientSocket.end();
 				}
-			} catch (error) {}
-			makeTcpProxyConnection("localhost", getServerPort(certificateRouter), head, clientSocket);
+			}
 		});
 	});
 	servernameRouter.listen(https, () => {
