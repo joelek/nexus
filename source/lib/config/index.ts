@@ -32,14 +32,16 @@ export const Options: autoguard.serialization.MessageGuard<Options> = autoguard.
 	"domains": autoguard.guards.Array.of(autoguard.guards.Reference.of(() => Domain)),
 	"http": autoguard.guards.Number,
 	"https": autoguard.guards.Number,
-	"sign": autoguard.guards.Boolean
+	"sign": autoguard.guards.Boolean,
+	"jump": autoguard.guards.Boolean
 });
 
 export type Options = autoguard.guards.Object<{}, {
 	"domains": autoguard.guards.Array<autoguard.guards.Reference<Domain>>,
 	"http": autoguard.guards.Number,
 	"https": autoguard.guards.Number,
-	"sign": autoguard.guards.Boolean
+	"sign": autoguard.guards.Boolean,
+	"jump": autoguard.guards.Boolean
 }>;
 
 export namespace Autoguard {

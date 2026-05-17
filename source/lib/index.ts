@@ -666,7 +666,13 @@ export function makeServer(options: Options): void {
 			return;
 		}
 		// Delegate to internal HTTP handler.
-		makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
+		if (options.jump !== false) {
+			makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
+		} else {
+			try {
+				httpsRequestRouter.emit("connection", clientSocket);
+			} catch (error) {}
+		}
 	});
 	certificateRouter.listen(undefined, () => {
 		process.stdout.write(`Certificate router listening on port ${terminal.stylize(getServerPort(certificateRouter), terminal.FG_CYAN)}\n`);
@@ -696,7 +702,13 @@ export function makeServer(options: Options): void {
 				} catch (error) {}
 				clientSocket.off("data", ondata);
 				// Delegate to internal TLS handler.
-				makeTcpProxyConnection("localhost", getServerPort(certificateRouter), buffer, clientSocket);
+				if (options.jump !== false) {
+					makeTcpProxyConnection("localhost", getServerPort(certificateRouter), buffer, clientSocket);
+				} else {
+					try {
+						certificateRouter.emit("connection", clientSocket);
+					} catch (error) {}
+				}
 			} catch (error) {
 				if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
 					clientSocket.off("data", ondata);
