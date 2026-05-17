@@ -661,9 +661,11 @@ export function makeServer(options: Options): void {
 		let servernameConnectionConfig = handledServernameConnectionConfigs.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1];
 		if (servernameConnectionConfig != null) {
 			let { hostname, port } = { ...servernameConnectionConfig };
+			// Delegate to external HTTP handler.
 			makeTcpProxyConnection(hostname, port, Buffer.alloc(0), clientSocket);
 			return;
 		}
+		// Delegate to internal HTTP handler.
 		makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
 	});
 	certificateRouter.listen(undefined, () => {
@@ -687,11 +689,13 @@ export function makeServer(options: Options): void {
 					if (servernameConnectionConfig != null) {
 						let { hostname, port } = { ...servernameConnectionConfig };
 						clientSocket.off("data", ondata);
+						// Delegate to external TLS handler.
 						makeTcpProxyConnection(hostname, port, buffer, clientSocket);
 						return;
 					}
 				} catch (error) {}
 				clientSocket.off("data", ondata);
+				// Delegate to internal TLS handler.
 				makeTcpProxyConnection("localhost", getServerPort(certificateRouter), buffer, clientSocket);
 			} catch (error) {
 				if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
