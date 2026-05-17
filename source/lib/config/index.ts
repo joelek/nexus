@@ -33,7 +33,7 @@ export const Options: autoguard.serialization.MessageGuard<Options> = autoguard.
 	"http": autoguard.guards.Number,
 	"https": autoguard.guards.Number,
 	"sign": autoguard.guards.Boolean,
-	"jump": autoguard.guards.Boolean
+	"tcpr": autoguard.guards.Boolean
 });
 
 export type Options = autoguard.guards.Object<{}, {
@@ -41,7 +41,7 @@ export type Options = autoguard.guards.Object<{}, {
 	"http": autoguard.guards.Number,
 	"https": autoguard.guards.Number,
 	"sign": autoguard.guards.Boolean,
-	"jump": autoguard.guards.Boolean
+	"tcpr": autoguard.guards.Boolean
 }>;
 
 export namespace Autoguard {

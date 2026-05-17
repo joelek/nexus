@@ -693,7 +693,7 @@ export function makeServer(options: Options): void {
 			return;
 		}
 		// Delegate to internal HTTP handler.
-		if (options.jump !== false) {
+		if (options.tcpr !== false) {
 			makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
 		} else {
 			try {
@@ -729,7 +729,7 @@ export function makeServer(options: Options): void {
 				} catch (error) {}
 				clientSocket.off("data", ondata);
 				// Delegate to internal TLS handler.
-				if (options.jump !== false) {
+				if (options.tcpr !== false) {
 					makeTcpProxyConnection("localhost", getServerPort(certificateRouter), buffer, clientSocket);
 				} else {
 					try {
