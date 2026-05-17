@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeServer = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+exports.makeServer = exports.appendXForwardedForHeader = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/autoguard/dist/lib-server");
 const multipass = require("@joelek/multipass/dist/mod");
 const libcp = require("child_process");
@@ -526,6 +526,21 @@ function parseServernameConnectionConfig(root, defaultPort) {
 exports.parseServernameConnectionConfig = parseServernameConnectionConfig;
 ;
 const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
+const HTTP_HEADER_MAX_SIZE_BYTES = 16384;
+function appendXForwardedForHeader(buffer, remoteAddress) {
+    if (remoteAddress == null) {
+        return buffer;
+    }
+    let string = buffer.toString("ascii");
+    let end = string.indexOf("\r\n\r\n");
+    if (end < 0) {
+        throw new Error(`Expected to parse a complete HTTP header!`);
+    }
+    string = string.slice(0, end) + `X-Forwarded-For: ${remoteAddress}\r\n` + string.slice(end);
+    return Buffer.from(string, "ascii");
+}
+exports.appendXForwardedForHeader = appendXForwardedForHeader;
+;
 function makeServer(options) {
     var _a, _b, _c, _d, _e, _f, _g;
     let http = (_a = options.http) !== null && _a !== void 0 ? _a : 8080;
@@ -686,10 +701,34 @@ function makeServer(options) {
         let servernameConnectionConfig = (_a = handledServernameConnectionConfigs.find((pair) => matchesHostnamePattern(hostname, pair[0]))) === null || _a === void 0 ? void 0 : _a[1];
         if (servernameConnectionConfig != null) {
             let { hostname, port } = Object.assign({}, servernameConnectionConfig);
-            makeTcpProxyConnection(hostname, port, Buffer.alloc(0), clientSocket);
+            let buffer = Buffer.alloc(0);
+            clientSocket.on("data", function ondata(chunk) {
+                buffer = Buffer.concat([buffer, chunk]);
+                try {
+                    let updatedBuffer = appendXForwardedForHeader(buffer, clientSocket.remoteAddress);
+                    clientSocket.off("data", ondata);
+                    // Delegate to external HTTP handler.
+                    makeTcpProxyConnection(hostname, port, updatedBuffer, clientSocket);
+                }
+                catch (error) {
+                    if (buffer.length > HTTP_HEADER_MAX_SIZE_BYTES) {
+                        clientSocket.off("data", ondata);
+                        clientSocket.end();
+                    }
+                }
+            });
             return;
         }
-        makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
+        // Delegate to internal HTTP handler.
+        if (options.jump !== false) {
+            makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
+        }
+        else {
+            try {
+                httpsRequestRouter.emit("connection", clientSocket);
+            }
+            catch (error) { }
+        }
     });
     certificateRouter.listen(undefined, () => {
         process.stdout.write(`Certificate router listening on port ${terminal.stylize(getServerPort(certificateRouter), terminal.FG_CYAN)}\n`);
@@ -713,13 +752,23 @@ function makeServer(options) {
                     if (servernameConnectionConfig != null) {
                         let { hostname, port } = Object.assign({}, servernameConnectionConfig);
                         clientSocket.off("data", ondata);
+                        // Delegate to external TLS handler.
                         makeTcpProxyConnection(hostname, port, buffer, clientSocket);
                         return;
                     }
                 }
                 catch (error) { }
                 clientSocket.off("data", ondata);
-                makeTcpProxyConnection("localhost", getServerPort(certificateRouter), buffer, clientSocket);
+                // Delegate to internal TLS handler.
+                if (options.jump !== false) {
+                    makeTcpProxyConnection("localhost", getServerPort(certificateRouter), buffer, clientSocket);
+                }
+                else {
+                    try {
+                        certificateRouter.emit("connection", clientSocket);
+                    }
+                    catch (error) { }
+                }
             }
             catch (error) {
                 if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {

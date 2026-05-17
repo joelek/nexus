@@ -33,4 +33,5 @@ export type ServernameConnectionConfig = {
     port: number;
 };
 export declare function parseServernameConnectionConfig(root: string, defaultPort: number): ServernameConnectionConfig;
+export declare function appendXForwardedForHeader(buffer: Buffer, remoteAddress: string | undefined): Buffer;
 export declare function makeServer(options: Options): void;
