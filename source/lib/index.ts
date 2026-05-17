@@ -508,6 +508,20 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 };
 
 const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
+const HTTP_HEADER_MAX_SIZE_BYTES = 16384;
+
+export function appendXForwardedForHeader(buffer: Buffer, remoteAddress: string | undefined): Buffer {
+	if (remoteAddress == null) {
+		return buffer;
+	}
+	let string = buffer.toString("ascii");
+	let end = string.indexOf("\r\n\r\n");
+	if (end < 0) {
+		throw new Error(`Expected to parse a complete HTTP header!`);
+	}
+	string = string.slice(0, end) + `X-Forwarded-For: ${remoteAddress}\r\n` + string.slice(end);
+	return Buffer.from(string, "ascii");
+};
 
 export function makeServer(options: Options): void {
 	let http = options.http ?? 8080;
@@ -661,8 +675,21 @@ export function makeServer(options: Options): void {
 		let servernameConnectionConfig = handledServernameConnectionConfigs.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1];
 		if (servernameConnectionConfig != null) {
 			let { hostname, port } = { ...servernameConnectionConfig };
-			// Delegate to external HTTP handler.
-			makeTcpProxyConnection(hostname, port, Buffer.alloc(0), clientSocket);
+			let buffer = Buffer.alloc(0);
+			clientSocket.on("data", function ondata(chunk: Buffer) {
+				buffer = Buffer.concat([buffer, chunk]);
+				try {
+					let updatedBuffer = appendXForwardedForHeader(buffer, clientSocket.remoteAddress);
+					clientSocket.off("data", ondata);
+					// Delegate to external HTTP handler.
+					makeTcpProxyConnection(hostname, port, updatedBuffer, clientSocket);
+				} catch (error) {
+					if (buffer.length > HTTP_HEADER_MAX_SIZE_BYTES) {
+						clientSocket.off("data", ondata);
+						clientSocket.end();
+					}
+				}
+			});
 			return;
 		}
 		// Delegate to internal HTTP handler.
