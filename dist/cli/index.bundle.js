@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1779052148273,
+    "timestamp": 1779052970413,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9000,7 +9000,7 @@ define("build/lib/config/index", ["require", "exports", "node_modules/@joelek/au
         "http": autoguard.guards.Number,
         "https": autoguard.guards.Number,
         "sign": autoguard.guards.Boolean,
-        "jump": autoguard.guards.Boolean
+        "tcpr": autoguard.guards.Boolean
     });
     var Autoguard;
     (function (Autoguard) {
@@ -10057,7 +10057,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 return;
             }
             // Delegate to internal HTTP handler.
-            if (options.jump !== false) {
+            if (options.tcpr !== false) {
                 makeTcpProxyConnection("localhost", getServerPort(httpsRequestRouter), Buffer.alloc(0), clientSocket);
             }
             else {
@@ -10097,7 +10097,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                     catch (error) { }
                     clientSocket.off("data", ondata);
                     // Delegate to internal TLS handler.
-                    if (options.jump !== false) {
+                    if (options.tcpr !== false) {
                         makeTcpProxyConnection("localhost", getServerPort(certificateRouter), buffer, clientSocket);
                     }
                     else {
@@ -10208,6 +10208,9 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
                 else if ((parts = /^--sign=(true|false)$/.exec(arg)) !== null) {
                     options.sign = parts[1] === "true";
                 }
+                else if ((parts = /^--tcpr=(true|false)$/.exec(arg)) !== null) {
+                    options.tcpr = parts[1] === "true";
+                }
                 else {
                     unrecognizedArguments.push(arg);
                 }
@@ -10244,6 +10247,8 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
                 process.stderr.write(`		Configure support for client-side routing.\n`);
                 process.stderr.write(`	--sign=boolean\n`);
                 process.stderr.write(`		Configure automatic generation of self-signed certificates.\n`);
+                process.stderr.write(`	--tcpr=boolean\n`);
+                process.stderr.write(`		Configure use of TCP for internal routing.\n`);
                 process.exit(0);
             }
             else {

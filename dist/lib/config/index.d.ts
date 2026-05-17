@@ -18,7 +18,7 @@ export type Options = autoguard.guards.Object<{}, {
     "http": autoguard.guards.Number;
     "https": autoguard.guards.Number;
     "sign": autoguard.guards.Boolean;
-    "jump": autoguard.guards.Boolean;
+    "tcpr": autoguard.guards.Boolean;
 }>;
 export declare namespace Autoguard {
     const Guards: {
@@ -47,7 +47,7 @@ export declare namespace Autoguard {
             http?: number | undefined;
             https?: number | undefined;
             sign?: boolean | undefined;
-            jump?: boolean | undefined;
+            tcpr?: boolean | undefined;
         }>;
     };
     type Guards = {

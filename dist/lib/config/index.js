@@ -19,7 +19,7 @@ exports.Options = autoguard.guards.Object.of({}, {
     "http": autoguard.guards.Number,
     "https": autoguard.guards.Number,
     "sign": autoguard.guards.Boolean,
-    "jump": autoguard.guards.Boolean
+    "tcpr": autoguard.guards.Boolean
 });
 var Autoguard;
 (function (Autoguard) {
