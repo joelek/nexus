@@ -62,9 +62,6 @@ function run() {
             else if ((parts = /^--sign=(true|false)$/.exec(arg)) !== null) {
                 options.sign = parts[1] === "true";
             }
-            else if ((parts = /^--tcpr=(true|false)$/.exec(arg)) !== null) {
-                options.tcpr = parts[1] === "true";
-            }
             else {
                 unrecognizedArguments.push(arg);
             }
@@ -101,8 +98,6 @@ function run() {
             process.stderr.write(`		Configure support for client-side routing.\n`);
             process.stderr.write(`	--sign=boolean\n`);
             process.stderr.write(`		Configure automatic generation of self-signed certificates.\n`);
-            process.stderr.write(`	--tcpr=boolean\n`);
-            process.stderr.write(`		Configure use of TCP for internal routing.\n`);
             process.exit(0);
         }
         else {

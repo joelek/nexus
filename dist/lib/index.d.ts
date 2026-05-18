@@ -34,4 +34,5 @@ export type ServernameConnectionConfig = {
 };
 export declare function parseServernameConnectionConfig(root: string, defaultPort: number): ServernameConnectionConfig;
 export declare function appendXForwardedForHeader(buffer: Buffer, remoteAddress: string | undefined): Buffer;
+export declare function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void): void;
 export declare function makeServer(options: Options): void;
