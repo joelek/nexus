@@ -667,6 +667,14 @@ export function makeServer(options: Options): void {
 			}
 		}
 	}
+	let httpRequestRouter = libhttp.createServer({}, (request, response) => {
+		let hostname = (request.headers.host ?? "localhost").split(":")[0];
+		let requestListener = httpRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
+		return requestListener(request, response);
+	});
+	httpRequestRouter.listen(http, () => {
+		process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpRequestRouter), terminal.FG_CYAN)}\n`);
+	});
 	let httpsRequestRouter = libhttp.createServer({}, (request, response) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
 		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
@@ -739,13 +747,5 @@ export function makeServer(options: Options): void {
 	});
 	servernameRouter.listen(https, () => {
 		process.stdout.write(`Servername router listening on port ${terminal.stylize(getServerPort(servernameRouter), terminal.FG_CYAN)}\n`);
-	});
-	let httpRequestRouter = libhttp.createServer({}, (request, response) => {
-		let hostname = (request.headers.host ?? "localhost").split(":")[0];
-		let requestListener = httpRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
-		return requestListener(request, response);
-	});
-	httpRequestRouter.listen(http, () => {
-		process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpRequestRouter), terminal.FG_CYAN)}\n`);
 	});
 };
