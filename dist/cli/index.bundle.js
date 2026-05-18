@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1779139365130,
+    "timestamp": 1779139972580,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -10033,19 +10033,22 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             let requestListener = (_c = (_b = httpRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))) === null || _b === void 0 ? void 0 : _b[1]) !== null && _c !== void 0 ? _c : defaultRequestListener;
             return requestListener(request, response);
         });
-        httpRequestRouter.listen(http, () => {
-            process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpRequestRouter), terminal.FG_CYAN)}\n`);
-        });
         let httpsRequestRouter = libhttp.createServer({}, (request, response) => {
             var _a, _b, _c;
             let hostname = ((_a = request.headers.host) !== null && _a !== void 0 ? _a : "localhost").split(":")[0];
             let requestListener = (_c = (_b = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))) === null || _b === void 0 ? void 0 : _b[1]) !== null && _c !== void 0 ? _c : defaultRequestListener;
             return requestListener(request, response);
         });
-        httpsRequestRouter.listen(undefined, () => {
-            process.stdout.write(`Request router listening on port ${terminal.stylize(getServerPort(httpsRequestRouter), terminal.FG_CYAN)}\n`);
+        let httpRouter = libnet.createServer({}, (clientSocket) => {
+            clientSocket.on("error", () => {
+                clientSocket.end();
+            });
+            httpRequestRouter.emit("connection", clientSocket);
         });
-        let servernameRouter = libnet.createServer({}, (clientSocket) => {
+        httpRouter.listen(http, () => {
+            process.stdout.write(`HTTP router listening on port ${terminal.stylize(getServerPort(httpRouter), terminal.FG_CYAN)}\n`);
+        });
+        let httpsRouter = libnet.createServer({}, (clientSocket) => {
             clientSocket.on("error", () => {
                 clientSocket.end();
             });
@@ -10114,8 +10117,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 }
             });
         });
-        servernameRouter.listen(https, () => {
-            process.stdout.write(`Servername router listening on port ${terminal.stylize(getServerPort(servernameRouter), terminal.FG_CYAN)}\n`);
+        httpsRouter.listen(https, () => {
+            process.stdout.write(`HTTPS router listening on port ${terminal.stylize(getServerPort(httpsRouter), terminal.FG_CYAN)}\n`);
         });
     }
     exports.makeServer = makeServer;
