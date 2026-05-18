@@ -15,6 +15,5 @@ guard Options: {
 	domains?: Domain[],
 	http?: number,
 	https?: number,
-	sign?: boolean,
-	tcpr?: boolean
+	sign?: boolean
 };
