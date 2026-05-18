@@ -519,7 +519,7 @@ export function appendXForwardedForHeader(buffer: Buffer, remoteAddress: string 
 	if (end < 0) {
 		throw new Error(`Expected to parse a complete HTTP header!`);
 	}
-	string = string.slice(0, end) + `X-Forwarded-For: ${remoteAddress}\r\n` + string.slice(end);
+	string = string.slice(0, end) + `\r\nX-Forwarded-For: ${remoteAddress}` + string.slice(end);
 	return Buffer.from(string, "ascii");
 };
 
