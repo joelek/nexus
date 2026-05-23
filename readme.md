@@ -196,3 +196,4 @@ npm install [-g] joelek/nexus#master
 ## Roadmap
 
 * Write unit tests.
+* Implement PROXY protocol.
