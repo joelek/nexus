@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1779139972580,
+    "timestamp": 1779536655820,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9359,7 +9359,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
     };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.makeServer = exports.handleTLS = exports.appendXForwardedForHeader = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+    exports.makeServer = exports.handleTLS = exports.appendXForwardedForHeader = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeProxyRequestListener = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
     Object.defineProperty(exports, "Domain", { enumerable: true, get: function () { return config_2.Domain; } });
     Object.defineProperty(exports, "Options", { enumerable: true, get: function () { return config_2.Options; } });
     Object.defineProperty(exports, "Handler", { enumerable: true, get: function () { return config_2.Handler; } });
@@ -9720,6 +9720,43 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.makeRedirectRequestListener = makeRedirectRequestListener;
     ;
+    function makeProxyRequestListener(hostname, port) {
+        return (request, response) => {
+            let xff = request.headers["x-forwarded-for"];
+            if (request.socket.remoteAddress != null) {
+                if (xff == null) {
+                    xff = [];
+                }
+                else if (typeof xff === "string") {
+                    xff = [xff];
+                }
+                xff.push(request.socket.remoteAddress);
+            }
+            let proxyRequest = libhttp.request({
+                host: hostname,
+                port: port,
+                method: request.method,
+                path: request.url,
+                headers: Object.assign(Object.assign({}, request.headers), { "x-forwarded-for": xff }),
+                timeout: 30 * 1000
+            }, (proxyResponse) => {
+                var _a;
+                response.writeHead((_a = proxyResponse.statusCode) !== null && _a !== void 0 ? _a : 200, proxyResponse.headers);
+                proxyResponse.pipe(response);
+            });
+            proxyRequest.on("error", (error) => {
+                response.writeHead(502);
+                response.end();
+            });
+            proxyRequest.on("timeout", () => {
+                response.writeHead(504);
+                response.end();
+            });
+            request.pipe(proxyRequest);
+        };
+    }
+    exports.makeProxyRequestListener = makeProxyRequestListener;
+    ;
     function matchesHostnamePattern(subject, pattern) {
         let subjectParts = subject.split(".");
         let patternParts = pattern.split(".");
@@ -9862,7 +9899,6 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     exports.parseServernameConnectionConfig = parseServernameConnectionConfig;
     ;
     const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
-    const HTTP_HEADER_MAX_SIZE_BYTES = 16384;
     function appendXForwardedForHeader(buffer, remoteAddress) {
         if (remoteAddress == null) {
             return buffer;
@@ -9952,6 +9988,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                     process.stdout.write(`Delegating connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
                     let httpRequestListener = makeRedirectRequestListener(https);
                     httpRequestListeners.push([host, httpRequestListener]);
+                    let httpsRequestListener = makeProxyRequestListener(servernameConnectionConfig.hostname, servernameConnectionConfig.port);
+                    httpsRequestListeners.push([host, httpsRequestListener]);
                     continue;
                 }
                 catch (error) { }
@@ -10081,31 +10119,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                         let secureContext = secureContexts.find((pair) => matchesHostnamePattern(servername, pair.host));
                         secureContext === null || secureContext === void 0 ? void 0 : secureContext.load();
                         handleTLS(clientSocket, buffer, (_b = secureContext === null || secureContext === void 0 ? void 0 : secureContext.secureContext) !== null && _b !== void 0 ? _b : defaultSecureContext, (tlsSocket) => {
-                            var _a;
-                            let handledServernameConnectionConfig = (_a = handledServernameConnectionConfigs.find((pair) => {
-                                return matchesHostnamePattern(servername, pair[0]);
-                            })) === null || _a === void 0 ? void 0 : _a[1];
-                            if (handledServernameConnectionConfig != null) {
-                                let { hostname, port } = Object.assign({}, handledServernameConnectionConfig);
-                                let buffer = Buffer.alloc(0);
-                                tlsSocket.on("data", function ondata(chunk) {
-                                    buffer = Buffer.concat([buffer, chunk]);
-                                    try {
-                                        let updatedBuffer = appendXForwardedForHeader(buffer, tlsSocket.remoteAddress);
-                                        tlsSocket.off("data", ondata);
-                                        makeTcpProxyConnection(hostname, port, updatedBuffer, tlsSocket);
-                                    }
-                                    catch (error) {
-                                        if (buffer.length > HTTP_HEADER_MAX_SIZE_BYTES) {
-                                            tlsSocket.off("data", ondata);
-                                            tlsSocket.end();
-                                        }
-                                    }
-                                });
-                            }
-                            else {
-                                httpsRequestRouter.emit("connection", tlsSocket);
-                            }
+                            httpsRequestRouter.emit("connection", tlsSocket);
                         });
                     }
                 }

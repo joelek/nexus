@@ -23,6 +23,7 @@ export declare function makeReadStreamResponse(pathPrefix: string, pathSuffix: s
 };
 export declare function makeRequestListener(pathPrefix: string, handler: Handler | undefined, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener;
 export declare function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener;
+export declare function makeProxyRequestListener(hostname: string, port: number): libhttp.RequestListener;
 export declare function matchesHostnamePattern(subject: string, pattern: string): boolean;
 export declare function connectSockets(serverSocket: libnet.Socket | libtls.TLSSocket, clientSocket: libnet.Socket | libtls.TLSSocket, head: Buffer): void;
 export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libnet.Socket;
