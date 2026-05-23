@@ -368,6 +368,43 @@ export function makeRedirectRequestListener(httpsPort: number): libhttp.RequestL
 	};
 };
 
+export function makeProxyRequestListener(hostname: string, port: number): libhttp.RequestListener {
+	return (request, response) => {
+		let xff = request.headers["x-forwarded-for"];
+		if (request.socket.remoteAddress != null) {
+			if (xff == null) {
+				xff = [];
+			} else if (typeof xff === "string") {
+				xff = [xff];
+			}
+			xff.push(request.socket.remoteAddress);
+		}
+		let proxyRequest = libhttp.request({
+			host: hostname,
+			port: port,
+			method: request.method,
+			path: request.url,
+			headers: {
+				...request.headers,
+				"x-forwarded-for": xff
+			},
+			timeout: 30 * 1000
+		}, (proxyResponse) => {
+			response.writeHead(proxyResponse.statusCode ?? 200, proxyResponse.headers);
+			proxyResponse.pipe(response);
+		});
+		proxyRequest.on("error", (error) => {
+			response.writeHead(502);
+			response.end();
+		});
+		proxyRequest.on("timeout", () => {
+			response.writeHead(504);
+			response.end();
+		});
+		request.pipe(proxyRequest);
+	};
+};
+
 export function matchesHostnamePattern(subject: string, pattern: string): boolean {
 	let subjectParts = subject.split(".");
 	let patternParts = pattern.split(".");
