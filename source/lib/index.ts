@@ -547,7 +547,6 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 };
 
 const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
-const HTTP_HEADER_MAX_SIZE_BYTES = 16384;
 
 export function appendXForwardedForHeader(buffer: Buffer, remoteAddress: string | undefined): Buffer {
 	if (remoteAddress == null) {
@@ -761,19 +760,7 @@ export function makeServer(options: Options): void {
 						if (handledServernameConnectionConfig != null) {
 							let { protocol, hostname, port } = { ...handledServernameConnectionConfig };
 							let buffer = Buffer.alloc(0);
-							tlsSocket.on("data", function ondata(chunk: Buffer) {
-								buffer = Buffer.concat([buffer, chunk]);
-								try {
-									let updatedBuffer = appendXForwardedForHeader(buffer, tlsSocket.remoteAddress);
-									tlsSocket.off("data", ondata);
-									makeTcpProxyConnection(hostname, port, updatedBuffer, tlsSocket);
-								} catch (error) {
-									if (buffer.length > HTTP_HEADER_MAX_SIZE_BYTES) {
-										tlsSocket.off("data", ondata);
-										tlsSocket.end();
-									}
-								}
-							});
+							makeTcpProxyConnection(hostname, port, buffer, tlsSocket);
 						} else {
 							httpsRequestRouter.emit("connection", tlsSocket);
 						}
