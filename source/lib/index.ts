@@ -11,6 +11,7 @@ import * as libserver from "./api/server";
 import { Domain, Options, Handler } from "./config";
 export { Domain, Options, Handler } from "./config";
 import * as tls from "./tls";
+import * as proxy from "./proxy";
 import * as terminal from "./terminal";
 
 export function loadConfig(config: string): Options {
@@ -535,7 +536,7 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 	if (Number.isNaN(port)) {
 		port = undefined;
 	}
-	if (["pipe:"].includes(protocol)) {
+	if (["pipe:", "proxy:"].includes(protocol)) {
 		return {
 			protocol: protocol,
 			hostname,
@@ -715,7 +716,9 @@ export function makeServer(options: Options): void {
 		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
-	let httpRouter = libnet.createServer({}, (clientSocket) => {
+	let httpRouter = proxy.createServer({
+		trustedRemoteAddresses: options.trust
+	}, (clientSocket, proxyHeader) => {
 		clientSocket.on("error", () => {
 			clientSocket.end();
 		});
@@ -724,7 +727,9 @@ export function makeServer(options: Options): void {
 	httpRouter.listen(http, () => {
 		process.stdout.write(`HTTP router listening on port ${terminal.stylize(getServerPort(httpRouter), terminal.FG_CYAN)}\n`);
 	});
-	let httpsRouter = libnet.createServer({}, (clientSocket) => {
+	let httpsRouter = proxy.createServer({
+		trustedRemoteAddresses: options.trust
+	}, (clientSocket, proxyHeader) => {
 		clientSocket.on("error", () => {
 			clientSocket.end();
 		});
@@ -749,6 +754,10 @@ export function makeServer(options: Options): void {
 				})?.[1];
 				if (delegatedServernameConnectionConfig != null) {
 					let { protocol, hostname, port } = { ...delegatedServernameConnectionConfig };
+					if (protocol === "proxy:") {
+						proxyHeader = proxyHeader ?? proxy.createProxyHeader(clientSocket);
+						buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
+					}
 					makeTcpProxyConnection(hostname, port, buffer, clientSocket);
 				} else {
 					let secureContext = secureContexts.find((pair) => matchesHostnamePattern(servername, pair.host));
@@ -760,6 +769,10 @@ export function makeServer(options: Options): void {
 						if (handledServernameConnectionConfig != null) {
 							let { protocol, hostname, port } = { ...handledServernameConnectionConfig };
 							let buffer = Buffer.alloc(0);
+							if (protocol === "proxy:") {
+								proxyHeader = proxyHeader ?? proxy.createProxyHeader(tlsSocket);
+								buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
+							}
 							makeTcpProxyConnection(hostname, port, buffer, tlsSocket);
 						} else {
 							httpsRequestRouter.emit("connection", tlsSocket);

@@ -8,20 +8,25 @@ export type Header = {
 	target_port: number;
 };
 
-export function parseProxyProtocolHeader(buffer: Buffer): { header: Header; buffer: Buffer; } {
+export function parseHeader(buffer: Buffer): { header?: Header; buffer: Buffer; } {
+	if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
+		return {
+			buffer
+		};
+	}
 	let end = buffer.indexOf("\r\n", 0, "ascii");
 	if (end < 0) {
 		throw new Error();
 	}
 	let parts = buffer.subarray(0, end).toString("ascii").split(" ");
-	if (parts.length !== 6) {
+	if (parts.length < 2) {
 		throw new Error();
 	}
 	let [proxy, type, source_address, target_address, source_port, target_port] = parts;
-	if (proxy !== "PROXY") {
-		throw new Error();
-	}
 	if (type === "TCP4") {
+		if (parts.length !== 6) {
+			throw new Error();
+		}
 		if (!libnet.isIPv4(source_address)) {
 			throw new Error();
 		}
@@ -29,12 +34,19 @@ export function parseProxyProtocolHeader(buffer: Buffer): { header: Header; buff
 			throw new Error();
 		}
 	} else if (type === "TCP6") {
+		if (parts.length !== 6) {
+			throw new Error();
+		}
 		if (!libnet.isIPv6(source_address)) {
 			throw new Error();
 		}
 		if (!libnet.isIPv6(target_address)) {
 			throw new Error();
 		}
+	} else if (type === "UNKNOWN") {
+		return {
+			buffer
+		};
 	} else {
 		throw new Error();
 	}
@@ -58,7 +70,7 @@ export function parseProxyProtocolHeader(buffer: Buffer): { header: Header; buff
 	};
 };
 
-export function serializeProxyProtocolHeader(header: Header): Buffer {
+export function serializeHeader(header: Header): Buffer {
 	let string = [
 		"PROXY",
 		header.type,
@@ -68,4 +80,111 @@ export function serializeProxyProtocolHeader(header: Header): Buffer {
 		`${header.target_port}`
 	].join(" ") + "\r\n"
 	return Buffer.from(string, "ascii");
+};
+
+export function getLocalAddress(socket: libnet.Socket): libnet.AddressInfo {
+	let family = socket.localFamily;
+	let address = socket.localAddress;
+	let port = socket.localPort;
+	if (address == null || family == null || port == null) {
+		throw new Error(`Expected socket to have local address info!`);
+	}
+	return {
+		family,
+		address,
+		port
+	};
+};
+
+export function getRemoteAddress(socket: libnet.Socket): libnet.AddressInfo {
+	let family = socket.remoteFamily;
+	let address = socket.remoteAddress;
+	let port = socket.remotePort;
+	if (address == null || family == null || port == null) {
+		throw new Error(`Expected socket to have remote address info!`);
+	}
+	return {
+		family,
+		address,
+		port
+	};
+};
+
+export function normalizeIPv6(ip: string): string {
+	if (!libnet.isIPv6(ip)) {
+		throw new Error(`Expected "${ip}" to be a valid IPv6 address!`);
+	}
+	if (ip.startsWith("[") && ip.endsWith("]")) {
+		ip = ip.slice(1, -1);
+	}
+	let groups = new Array<string>();
+	let position = ip.indexOf("::");
+	if (position >= 0) {
+		let prefixGroups = ip.slice(0, position).split(":");
+		let suffixGroups = ip.slice(position + 2).split(":");
+		let zeroedGroups = new Array(8 - (prefixGroups.length + suffixGroups.length)).fill("0000");
+		groups.push(...prefixGroups);
+		groups.push(...zeroedGroups);
+		groups.push(...suffixGroups);
+	} else {
+		groups.push(...ip.split(":"));
+	}
+	let normalizedIp = `[${groups.map((group) => group.padStart(4, "0")).join(":").toLowerCase()}]`;
+	return normalizedIp;
+};
+
+export function normalizeToIPv6(address: string): string {
+	let ip = address === "localhost" ? "::1" : address;
+	if (libnet.isIPv6(ip)) {
+		return normalizeIPv6(ip);
+	}
+	if (libnet.isIPv4(ip)) {
+		return normalizeIPv6(ip === "127.0.0.1" ? "::1" : `::ffff:${address}`);
+	}
+	throw new Error(`Expected "${address}" to be a valid IPv4 or IPv6 address!`);
+};
+
+export function createProxyHeader(socket: libnet.Socket): Header {
+	let remoteAddress = getRemoteAddress(socket);
+	let localAddress = getLocalAddress(socket);
+	return {
+		type: remoteAddress.family === "IPv4" ? "TCP4" : "TCP6",
+		source_address: remoteAddress.address,
+		target_address: localAddress.address,
+		source_port: remoteAddress.port,
+		target_port: localAddress.port
+	};
+};
+
+export type Server = libnet.Server;
+
+export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
+
+export type Options = {
+	trustedRemoteAddresses: Array<string>;
+};
+
+export function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server {
+	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
+	return libnet.createServer((socket) => {
+		socket.on("data", function ondata(chunk: Buffer): void {
+			socket.off("data", ondata);
+			try {
+				let remoteAddress = getRemoteAddress(socket);
+				let { header, buffer } = parseHeader(chunk);
+				if (header != null) {
+					let matchingTrustedRemoteAddress = trustedRemoteAddresses.find((trustedRemoteAddress) => {
+						return normalizeToIPv6(trustedRemoteAddress) === normalizeToIPv6(remoteAddress.address);
+					});
+					if (matchingTrustedRemoteAddress == null) {
+						header = undefined;
+					}
+				}
+				socket.unshift(buffer);
+				connectionListener(socket, header);
+			} catch (error) {
+				socket.end();
+			}
+		});
+	});
 };

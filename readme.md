@@ -64,7 +64,7 @@ It is important to understand that Nexus will stop accepting requests directed t
 
 Nexus includes support for servername routing for incoming connections made using the TLS protocol. The feature may be enabled by setting the `--root` argument to a valid, protocol-agnostic URI where only protocol, hostname and port may be specified.
 
-Servername routing requires the protocol to be specified as `pipe:` while hostname may be specified as any valid local or remote hostname. Port may optionally be specified and will default as explained below.
+Servername routing requires the protocol to be specified as `pipe:` or `proxy:` while hostname may be specified as any valid local or remote hostname. Port may optionally be specified and will default as explained below. The `pipe:` protocol pipes all data between the client and the target server whereas the `proxy:` protocol implements the PROXY protocol for which support is needed on the target server.
 
 This allows for Nexus to handle encryption on behalf of another host.
 
@@ -153,7 +153,8 @@ Nexus can load configuration files stored using the JSON format shown below. A c
 	],
 	"http"?: number,
 	"https"?: number,
-	"sign"?: booolean
+	"sign"?: booolean,
+	"trust"?: string[]
 }
 ```
 
