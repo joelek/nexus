@@ -519,6 +519,7 @@ export function getServerPort(server: libnet.Server): number {
 };
 
 export type ServernameConnectionConfig = {
+	protocol: string,
 	hostname: string,
 	port: number
 };
@@ -534,8 +535,9 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 	if (Number.isNaN(port)) {
 		port = undefined;
 	}
-	if (protocol === "pipe:") {
+	if (["pipe:"].includes(protocol)) {
 		return {
+			protocol: protocol,
 			hostname,
 			port: port ?? defaultPort
 		};
@@ -747,7 +749,7 @@ export function makeServer(options: Options): void {
 					return matchesHostnamePattern(servername, pair[0]);
 				})?.[1];
 				if (delegatedServernameConnectionConfig != null) {
-					let { hostname, port } = { ...delegatedServernameConnectionConfig };
+					let { protocol, hostname, port } = { ...delegatedServernameConnectionConfig };
 					makeTcpProxyConnection(hostname, port, buffer, clientSocket);
 				} else {
 					let secureContext = secureContexts.find((pair) => matchesHostnamePattern(servername, pair.host));
@@ -757,7 +759,7 @@ export function makeServer(options: Options): void {
 							return matchesHostnamePattern(servername, pair[0]);
 						})?.[1];
 						if (handledServernameConnectionConfig != null) {
-							let { hostname, port } = { ...handledServernameConnectionConfig };
+							let { protocol, hostname, port } = { ...handledServernameConnectionConfig };
 							let buffer = Buffer.alloc(0);
 							tlsSocket.on("data", function ondata(chunk: Buffer) {
 								buffer = Buffer.concat([buffer, chunk]);
