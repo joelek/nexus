@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1779657189756,
+    "timestamp": 1779691645334,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9368,7 +9368,7 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
                 source_port: source_port_number,
                 target_port: target_port_number
             },
-            buffer: buffer.subarray(end)
+            buffer: buffer.subarray(end + 2)
         };
     }
     exports.parseHeader = parseHeader;
