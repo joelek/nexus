@@ -66,7 +66,7 @@ export function parseHeader(buffer: Buffer): { header?: Header; buffer: Buffer; 
 			source_port: source_port_number,
 			target_port: target_port_number
 		},
-		buffer: buffer.subarray(end)
+		buffer: buffer.subarray(end + 2)
 	};
 };
 
