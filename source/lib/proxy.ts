@@ -173,7 +173,7 @@ export function createSocketProxy(socket: libnet.Socket, remoteAddress: libnet.A
 	});
 };
 
-export function createAddressInfoFromHeader(header: Header): libnet.AddressInfo {
+export function createRemoteAddress(header: Header): libnet.AddressInfo {
 	return {
 		family: header.type === "TCP4" ? "IPv4" : "IPv6",
 		address: header.source_address,
@@ -209,7 +209,7 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 				}
 				socket.unshift(buffer);
 				if (overrideSocketRemote && header != null) {
-					socket = createSocketProxy(socket, createAddressInfoFromHeader(header));
+					socket = createSocketProxy(socket, createRemoteAddress(header));
 				};
 				connectionListener(socket, header);
 			} catch (error) {
