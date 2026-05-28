@@ -162,10 +162,12 @@ export type ConnectionListener = (socket: libnet.Socket, header: Header | undefi
 
 export type Options = {
 	trustedRemoteAddresses: Array<string>;
+	overrideSocketRemote: boolean;
 };
 
 export function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
+	let overrideSocketRemote = options?.overrideSocketRemote ?? false;
 	return libnet.createServer((socket) => {
 		socket.on("data", function ondata(chunk: Buffer): void {
 			socket.off("data", ondata);
@@ -181,6 +183,24 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 					}
 				}
 				socket.unshift(buffer);
+				if (overrideSocketRemote) {
+					socket = new Proxy(socket, {
+						get: (target, key, receiver) => {
+							if (header != null) {
+								if (key === "remoteFamily") {
+									return header.type === "TCP4" ? "IPv4" : "IPv6" satisfies libnet.Socket["remoteFamily"];
+								}
+								if (key === "remoteAddress") {
+									return header.source_address satisfies libnet.Socket["remoteAddress"];
+								}
+								if (key === "remotePort") {
+									return header.source_port satisfies libnet.Socket["remotePort"];
+								}
+							}
+							return target[key as keyof libnet.Socket];
+						}
+					})
+				};
 				connectionListener(socket, header);
 			} catch (error) {
 				socket.end();
