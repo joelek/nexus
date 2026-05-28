@@ -156,6 +156,31 @@ export function createProxyHeader(socket: libnet.Socket): Header {
 	};
 };
 
+export function createSocketProxy(socket: libnet.Socket, remoteAddress: libnet.AddressInfo): libnet.Socket {
+	return new Proxy(socket, {
+		get: (target, key, receiver) => {
+			if (key === "remoteFamily") {
+				return remoteAddress.family satisfies libnet.Socket["remoteFamily"];
+			}
+			if (key === "remoteAddress") {
+				return remoteAddress.address satisfies libnet.Socket["remoteAddress"];
+			}
+			if (key === "remotePort") {
+				return remoteAddress.port satisfies libnet.Socket["remotePort"];
+			}
+			return target[key as keyof libnet.Socket];
+		}
+	});
+};
+
+export function createAddressInfoFromHeader(header: Header): libnet.AddressInfo {
+	return {
+		family: header.type === "TCP4" ? "IPv4" : "IPv6",
+		address: header.source_address,
+		port: header.source_port
+	};
+};
+
 export type Server = libnet.Server;
 
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
@@ -183,23 +208,8 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 					}
 				}
 				socket.unshift(buffer);
-				if (overrideSocketRemote) {
-					socket = new Proxy(socket, {
-						get: (target, key, receiver) => {
-							if (header != null) {
-								if (key === "remoteFamily") {
-									return header.type === "TCP4" ? "IPv4" : "IPv6" satisfies libnet.Socket["remoteFamily"];
-								}
-								if (key === "remoteAddress") {
-									return header.source_address satisfies libnet.Socket["remoteAddress"];
-								}
-								if (key === "remotePort") {
-									return header.source_port satisfies libnet.Socket["remotePort"];
-								}
-							}
-							return target[key as keyof libnet.Socket];
-						}
-					})
+				if (overrideSocketRemote && header != null) {
+					socket = createSocketProxy(socket, createAddressInfoFromHeader(header));
 				};
 				connectionListener(socket, header);
 			} catch (error) {
