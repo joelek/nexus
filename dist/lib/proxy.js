@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createServer = exports.createAddressInfoFromHeader = exports.createSocketProxy = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
+exports.createServer = exports.createRemoteAddress = exports.createLocalAddress = exports.createSocketProxy = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
 const libnet = require("net");
 function parseHeader(buffer) {
     if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
@@ -179,14 +179,23 @@ function createSocketProxy(socket, remoteAddress) {
 }
 exports.createSocketProxy = createSocketProxy;
 ;
-function createAddressInfoFromHeader(header) {
+function createLocalAddress(header) {
+    return {
+        family: header.type === "TCP4" ? "IPv4" : "IPv6",
+        address: header.target_address,
+        port: header.target_port
+    };
+}
+exports.createLocalAddress = createLocalAddress;
+;
+function createRemoteAddress(header) {
     return {
         family: header.type === "TCP4" ? "IPv4" : "IPv6",
         address: header.source_address,
         port: header.source_port
     };
 }
-exports.createAddressInfoFromHeader = createAddressInfoFromHeader;
+exports.createRemoteAddress = createRemoteAddress;
 ;
 function createServer(options, connectionListener) {
     var _a, _b;
@@ -208,7 +217,7 @@ function createServer(options, connectionListener) {
                 }
                 socket.unshift(buffer);
                 if (overrideSocketRemote && header != null) {
-                    socket = createSocketProxy(socket, createAddressInfoFromHeader(header));
+                    socket = createSocketProxy(socket, createRemoteAddress(header));
                 }
                 ;
                 connectionListener(socket, header);

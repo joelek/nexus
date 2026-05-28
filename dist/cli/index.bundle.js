@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1779965379419,
+    "timestamp": 1779967442789,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9306,7 +9306,7 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.createServer = exports.createAddressInfoFromHeader = exports.createSocketProxy = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
+    exports.createServer = exports.createRemoteAddress = exports.createLocalAddress = exports.createSocketProxy = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
     function parseHeader(buffer) {
         if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
             return {
@@ -9484,14 +9484,23 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
     }
     exports.createSocketProxy = createSocketProxy;
     ;
-    function createAddressInfoFromHeader(header) {
+    function createLocalAddress(header) {
+        return {
+            family: header.type === "TCP4" ? "IPv4" : "IPv6",
+            address: header.target_address,
+            port: header.target_port
+        };
+    }
+    exports.createLocalAddress = createLocalAddress;
+    ;
+    function createRemoteAddress(header) {
         return {
             family: header.type === "TCP4" ? "IPv4" : "IPv6",
             address: header.source_address,
             port: header.source_port
         };
     }
-    exports.createAddressInfoFromHeader = createAddressInfoFromHeader;
+    exports.createRemoteAddress = createRemoteAddress;
     ;
     function createServer(options, connectionListener) {
         var _a, _b;
@@ -9513,7 +9522,7 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
                     }
                     socket.unshift(buffer);
                     if (overrideSocketRemote && header != null) {
-                        socket = createSocketProxy(socket, createAddressInfoFromHeader(header));
+                        socket = createSocketProxy(socket, createRemoteAddress(header));
                     }
                     ;
                     connectionListener(socket, header);
