@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1779691645334,
+    "timestamp": 1779964980504,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9467,8 +9467,9 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
     exports.createProxyHeader = createProxyHeader;
     ;
     function createServer(options, connectionListener) {
-        var _a;
+        var _a, _b;
         let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
+        let overrideSocketRemote = (_b = options === null || options === void 0 ? void 0 : options.overrideSocketRemote) !== null && _b !== void 0 ? _b : false;
         return libnet.createServer((socket) => {
             socket.on("data", function ondata(chunk) {
                 socket.off("data", ondata);
@@ -9484,6 +9485,25 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
                         }
                     }
                     socket.unshift(buffer);
+                    if (overrideSocketRemote) {
+                        socket = new Proxy(socket, {
+                            get: (target, key, receiver) => {
+                                if (header != null) {
+                                    if (key === "remoteFamily") {
+                                        return header.type === "TCP4" ? "IPv4" : "IPv6";
+                                    }
+                                    if (key === "remoteAddress") {
+                                        return header.source_address;
+                                    }
+                                    if (key === "remotePort") {
+                                        return header.source_port;
+                                    }
+                                }
+                                return target[key];
+                            }
+                        });
+                    }
+                    ;
                     connectionListener(socket, header);
                 }
                 catch (error) {

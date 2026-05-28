@@ -23,5 +23,6 @@ export type Server = libnet.Server;
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 export type Options = {
     trustedRemoteAddresses: Array<string>;
+    overrideSocketRemote: boolean;
 };
 export declare function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server;
