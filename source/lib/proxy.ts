@@ -173,6 +173,14 @@ export function createSocketProxy(socket: libnet.Socket, remoteAddress: libnet.A
 	});
 };
 
+export function createLocalAddress(header: Header): libnet.AddressInfo {
+	return {
+		family: header.type === "TCP4" ? "IPv4" : "IPv6",
+		address: header.target_address,
+		port: header.target_port
+	};
+};
+
 export function createRemoteAddress(header: Header): libnet.AddressInfo {
 	return {
 		family: header.type === "TCP4" ? "IPv4" : "IPv6",
