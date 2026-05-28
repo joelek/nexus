@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1779964980504,
+    "timestamp": 1779965379419,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9306,7 +9306,7 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.createServer = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
+    exports.createServer = exports.createAddressInfoFromHeader = exports.createSocketProxy = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
     function parseHeader(buffer) {
         if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
             return {
@@ -9466,6 +9466,33 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
     }
     exports.createProxyHeader = createProxyHeader;
     ;
+    function createSocketProxy(socket, remoteAddress) {
+        return new Proxy(socket, {
+            get: (target, key, receiver) => {
+                if (key === "remoteFamily") {
+                    return remoteAddress.family;
+                }
+                if (key === "remoteAddress") {
+                    return remoteAddress.address;
+                }
+                if (key === "remotePort") {
+                    return remoteAddress.port;
+                }
+                return target[key];
+            }
+        });
+    }
+    exports.createSocketProxy = createSocketProxy;
+    ;
+    function createAddressInfoFromHeader(header) {
+        return {
+            family: header.type === "TCP4" ? "IPv4" : "IPv6",
+            address: header.source_address,
+            port: header.source_port
+        };
+    }
+    exports.createAddressInfoFromHeader = createAddressInfoFromHeader;
+    ;
     function createServer(options, connectionListener) {
         var _a, _b;
         let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
@@ -9485,23 +9512,8 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
                         }
                     }
                     socket.unshift(buffer);
-                    if (overrideSocketRemote) {
-                        socket = new Proxy(socket, {
-                            get: (target, key, receiver) => {
-                                if (header != null) {
-                                    if (key === "remoteFamily") {
-                                        return header.type === "TCP4" ? "IPv4" : "IPv6";
-                                    }
-                                    if (key === "remoteAddress") {
-                                        return header.source_address;
-                                    }
-                                    if (key === "remotePort") {
-                                        return header.source_port;
-                                    }
-                                }
-                                return target[key];
-                            }
-                        });
+                    if (overrideSocketRemote && header != null) {
+                        socket = createSocketProxy(socket, createAddressInfoFromHeader(header));
                     }
                     ;
                     connectionListener(socket, header);

@@ -19,6 +19,8 @@ export declare function getRemoteAddress(socket: libnet.Socket): libnet.AddressI
 export declare function normalizeIPv6(ip: string): string;
 export declare function normalizeToIPv6(address: string): string;
 export declare function createProxyHeader(socket: libnet.Socket): Header;
+export declare function createSocketProxy(socket: libnet.Socket, remoteAddress: libnet.AddressInfo): libnet.Socket;
+export declare function createAddressInfoFromHeader(header: Header): libnet.AddressInfo;
 export type Server = libnet.Server;
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 export type Options = {
