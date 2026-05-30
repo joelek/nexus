@@ -115,8 +115,16 @@ function normalizeIPv6(ip) {
     if (!libnet.isIPv6(ip)) {
         throw new Error(`Expected "${ip}" to be a valid IPv6 address!`);
     }
-    if (ip.startsWith("[") && ip.endsWith("]")) {
-        ip = ip.slice(1, -1);
+    let lastColonPosition = ip.lastIndexOf(":");
+    if (lastColonPosition >= 0) {
+        let prefix = ip.slice(0, lastColonPosition);
+        let suffix = ip.slice(lastColonPosition + 1);
+        if (libnet.isIPv4(suffix)) {
+            let hex = suffix.split(".").map((part) => Number.parseInt(part, 10).toString(16).padStart(2, "0")).join("");
+            let one = hex.slice(0, 4);
+            let two = hex.slice(4, 8);
+            ip = `${prefix}:${one}:${two}`;
+        }
     }
     let groups = new Array();
     let position = ip.indexOf("::");
@@ -131,7 +139,7 @@ function normalizeIPv6(ip) {
     else {
         groups.push(...ip.split(":"));
     }
-    let normalizedIp = `[${groups.map((group) => group.padStart(4, "0")).join(":").toLowerCase()}]`;
+    let normalizedIp = groups.map((group) => group.padStart(4, "0")).join(":").toLowerCase();
     return normalizedIp;
 }
 exports.normalizeIPv6 = normalizeIPv6;
@@ -142,7 +150,7 @@ function normalizeToIPv6(address) {
         return normalizeIPv6(ip);
     }
     if (libnet.isIPv4(ip)) {
-        return normalizeIPv6(ip === "127.0.0.1" ? "::1" : `::ffff:${address}`);
+        return normalizeIPv6(ip === "127.0.0.1" ? "::1" : `::ffff:${ip}`);
     }
     throw new Error(`Expected "${address}" to be a valid IPv4 or IPv6 address!`);
 }
