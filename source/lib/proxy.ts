@@ -226,7 +226,7 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 				socket.unshift(buffer);
 				if (overrideSocketRemote && header != null) {
 					socket = createSocketProxy(socket, createRemoteAddress(header));
-				};
+				}
 				connectionListener(socket, header);
 			} catch (error) {
 				socket.end();
