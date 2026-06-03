@@ -428,65 +428,12 @@ export function matchesHostnamePattern(subject: string, pattern: string): boolea
 	return true;
 };
 
-export function connectSockets(serverSocket: libnet.Socket | libtls.TLSSocket, clientSocket: libnet.Socket | libtls.TLSSocket, head: Buffer): void {
-	serverSocket.on("error", () => {
-		clientSocket.end();
-	});
-	serverSocket.on("end", () => {
-		clientSocket.end();
-	});
-	clientSocket.on("error", () => {
-		serverSocket.end();
-	});
-	clientSocket.on("end", () => {
-		serverSocket.end();
-	});
-	serverSocket.write(head, () => {
-		serverSocket.on("data", (buffer) => {
-			clientSocket.write(buffer);
-		});
-		clientSocket.on("data", (buffer) => {
-			serverSocket.write(buffer);
-		});
-	});
-};
-
 export function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libnet.Socket {
 	let serverSocket = libnet.connect({
 		host,
 		port
 	});
 	serverSocket.on("connect", () => {
-		clientSocket.on("error", () => {
-			serverSocket.end();
-		});
-		clientSocket.on("end", () => {
-			serverSocket.end();
-		});
-		serverSocket.write(head, () => {
-			serverSocket.on("data", (buffer) => {
-				clientSocket.write(buffer);
-			});
-			clientSocket.on("data", (buffer) => {
-				serverSocket.write(buffer);
-			});
-		});
-	});
-	serverSocket.on("error", () => {
-		clientSocket.end();
-	});
-	serverSocket.on("end", () => {
-		clientSocket.end();
-	});
-	return serverSocket;
-};
-
-export function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libtls.TLSSocket {
-	let serverSocket = libtls.connect({
-		host,
-		port
-	});
-	serverSocket.on("secureConnect", () => {
 		clientSocket.on("error", () => {
 			serverSocket.end();
 		});
