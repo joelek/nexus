@@ -209,7 +209,8 @@ function createServer(options, connectionListener) {
     var _a, _b;
     let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
     let overrideSocketRemote = (_b = options === null || options === void 0 ? void 0 : options.overrideSocketRemote) !== null && _b !== void 0 ? _b : false;
-    return libnet.createServer((socket) => {
+    return libnet.createServer({}, (socket) => {
+        socket.on("error", (error) => { }); // Prevent errors from being thrown. Socket is closed automatically.
         socket.on("data", function ondata(chunk) {
             socket.off("data", ondata);
             try {
@@ -227,7 +228,6 @@ function createServer(options, connectionListener) {
                 if (overrideSocketRemote && header != null) {
                     socket = createSocketProxy(socket, createRemoteAddress(header));
                 }
-                ;
                 connectionListener(socket, header);
             }
             catch (error) {

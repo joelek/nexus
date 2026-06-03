@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeServer = exports.handleTLS = exports.appendXForwardedForHeader = exports.parseServernameConnectionConfig = exports.getServerPort = exports.makeTlsProxyConnection = exports.makeTcpProxyConnection = exports.connectSockets = exports.matchesHostnamePattern = exports.makeProxyRequestListener = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+exports.makeServer = exports.handleTLS = exports.appendXForwardedForHeader = exports.parseServernameConnectionConfig = exports.getServerAddress = exports.makeTcpProxyConnection = exports.matchesHostnamePattern = exports.makeProxyRequestListener = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/autoguard/dist/lib-server");
 const multipass = require("@joelek/multipass/dist/mod");
 const libcp = require("child_process");
@@ -445,30 +445,6 @@ function matchesHostnamePattern(subject, pattern) {
 }
 exports.matchesHostnamePattern = matchesHostnamePattern;
 ;
-function connectSockets(serverSocket, clientSocket, head) {
-    serverSocket.on("error", () => {
-        clientSocket.end();
-    });
-    serverSocket.on("end", () => {
-        clientSocket.end();
-    });
-    clientSocket.on("error", () => {
-        serverSocket.end();
-    });
-    clientSocket.on("end", () => {
-        serverSocket.end();
-    });
-    serverSocket.write(head, () => {
-        serverSocket.on("data", (buffer) => {
-            clientSocket.write(buffer);
-        });
-        clientSocket.on("data", (buffer) => {
-            serverSocket.write(buffer);
-        });
-    });
-}
-exports.connectSockets = connectSockets;
-;
 function makeTcpProxyConnection(host, port, head, clientSocket) {
     let serverSocket = libnet.connect({
         host,
@@ -500,45 +476,14 @@ function makeTcpProxyConnection(host, port, head, clientSocket) {
 }
 exports.makeTcpProxyConnection = makeTcpProxyConnection;
 ;
-function makeTlsProxyConnection(host, port, head, clientSocket) {
-    let serverSocket = libtls.connect({
-        host,
-        port
-    });
-    serverSocket.on("secureConnect", () => {
-        clientSocket.on("error", () => {
-            serverSocket.end();
-        });
-        clientSocket.on("end", () => {
-            serverSocket.end();
-        });
-        serverSocket.write(head, () => {
-            serverSocket.on("data", (buffer) => {
-                clientSocket.write(buffer);
-            });
-            clientSocket.on("data", (buffer) => {
-                serverSocket.write(buffer);
-            });
-        });
-    });
-    serverSocket.on("error", () => {
-        clientSocket.end();
-    });
-    serverSocket.on("end", () => {
-        clientSocket.end();
-    });
-    return serverSocket;
-}
-exports.makeTlsProxyConnection = makeTlsProxyConnection;
-;
-function getServerPort(server) {
+function getServerAddress(server) {
     let address = server.address();
     if (address == null || typeof address === "string") {
         throw `Expected type AddressInfo!`;
     }
-    return address.port;
+    return address;
 }
-exports.getServerPort = getServerPort;
+exports.getServerAddress = getServerAddress;
 ;
 function parseServernameConnectionConfig(root, defaultPort) {
     let url = new liburl.URL(root);
@@ -586,9 +531,7 @@ function handleTLS(clientSocket, buffer, secureContext, callback) {
         isServer: true,
         secureContext
     });
-    tlsSocket.on("error", (error) => {
-        tlsSocket.end();
-    });
+    tlsSocket.on("error", (error) => { }); // Prevent errors from being thrown. Socket is closed automatically.
     tlsSocket.on("secure", () => {
         callback(tlsSocket);
     });
@@ -744,20 +687,19 @@ function makeServer(options) {
     let httpRouter = proxy.createServer({
         trustedRemoteAddresses: options.trust
     }, (clientSocket, proxyHeader) => {
-        clientSocket.on("error", () => {
-            clientSocket.end();
-        });
         httpRequestRouter.emit("connection", clientSocket);
     });
-    httpRouter.listen(http, () => {
-        process.stdout.write(`HTTP router listening on port ${terminal.stylize(getServerPort(httpRouter), terminal.FG_CYAN)}\n`);
+    httpRouter.listen({
+        port: http,
+        host: process.platform === "win32" ? "0.0.0.0" : undefined
+    }, () => {
+        let address = getServerAddress(httpRouter);
+        let string = address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
+        process.stdout.write(`HTTP router listening on ${terminal.stylize(string, terminal.FG_GREEN)}\n`);
     });
     let httpsRouter = proxy.createServer({
         trustedRemoteAddresses: options.trust
     }, (clientSocket, proxyHeader) => {
-        clientSocket.on("error", () => {
-            clientSocket.end();
-        });
         let buffer = Buffer.alloc(0);
         clientSocket.on("data", function ondata(chunk) {
             var _a, _b;
@@ -818,8 +760,13 @@ function makeServer(options) {
             }
         });
     });
-    httpsRouter.listen(https, () => {
-        process.stdout.write(`HTTPS router listening on port ${terminal.stylize(getServerPort(httpsRouter), terminal.FG_CYAN)}\n`);
+    httpsRouter.listen({
+        port: https,
+        host: process.platform === "win32" ? "0.0.0.0" : undefined
+    }, () => {
+        let address = getServerAddress(httpsRouter);
+        let string = address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
+        process.stdout.write(`HTTPS router listening on ${terminal.stylize(string, terminal.FG_GREEN)}\n`);
     });
 }
 exports.makeServer = makeServer;

@@ -25,10 +25,8 @@ export declare function makeRequestListener(pathPrefix: string, handler: Handler
 export declare function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener;
 export declare function makeProxyRequestListener(hostname: string, port: number): libhttp.RequestListener;
 export declare function matchesHostnamePattern(subject: string, pattern: string): boolean;
-export declare function connectSockets(serverSocket: libnet.Socket | libtls.TLSSocket, clientSocket: libnet.Socket | libtls.TLSSocket, head: Buffer): void;
 export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libnet.Socket;
-export declare function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libtls.TLSSocket;
-export declare function getServerPort(server: libnet.Server): number;
+export declare function getServerAddress(server: libnet.Server): libnet.AddressInfo;
 export type ServernameConnectionConfig = {
     protocol: string;
     hostname: string;
