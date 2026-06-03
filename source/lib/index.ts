@@ -458,12 +458,12 @@ export function makeTcpProxyConnection(host: string, port: number, head: Buffer,
 	return serverSocket;
 };
 
-export function getServerPort(server: libnet.Server): number {
+export function getServerAddress(server: libnet.Server): libnet.AddressInfo {
 	let address = server.address();
 	if (address == null || typeof address === "string") {
 		throw `Expected type AddressInfo!`;
 	}
-	return address.port;
+	return address;
 };
 
 export type ServernameConnectionConfig = {
@@ -666,8 +666,12 @@ export function makeServer(options: Options): void {
 	}, (clientSocket, proxyHeader) => {
 		httpRequestRouter.emit("connection", clientSocket);
 	});
-	httpRouter.listen(http, "0.0.0.0", () => {
-		process.stdout.write(`HTTP router listening on port ${terminal.stylize(getServerPort(httpRouter), terminal.FG_CYAN)}\n`);
+	httpRouter.listen({
+		port: http,
+		host: process.platform === "win32" ? "0.0.0.0" : undefined
+	}, () => {
+		let address = getServerAddress(httpRouter);
+		process.stdout.write(`HTTP router listening on ${terminal.stylize(address.address + ":" + address.port, terminal.FG_CYAN)}\n`);
 	});
 	let httpsRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust
@@ -726,7 +730,11 @@ export function makeServer(options: Options): void {
 			}
 		});
 	});
-	httpsRouter.listen(https, "0.0.0.0", () => {
-		process.stdout.write(`HTTPS router listening on port ${terminal.stylize(getServerPort(httpsRouter), terminal.FG_CYAN)}\n`);
+	httpsRouter.listen({
+		port: https,
+		host: process.platform === "win32" ? "0.0.0.0" : undefined
+	}, () => {
+		let address = getServerAddress(httpsRouter);
+		process.stdout.write(`HTTPS router listening on ${terminal.stylize(address.address + ":" + address.port, terminal.FG_CYAN)}\n`);
 	});
 };
