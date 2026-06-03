@@ -209,7 +209,8 @@ export type Options = {
 export function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
 	let overrideSocketRemote = options?.overrideSocketRemote ?? false;
-	return libnet.createServer((socket) => {
+	return libnet.createServer({}, (socket) => {
+		socket.on("error", (error) => {}); // Prevent errors from being thrown. Socket is closed automatically.
 		socket.on("data", function ondata(chunk: Buffer): void {
 			socket.off("data", ondata);
 			try {

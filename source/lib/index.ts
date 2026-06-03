@@ -569,9 +569,7 @@ export function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureCon
 		isServer: true,
 		secureContext
 	});
-	tlsSocket.on("error", (error) => {
-		tlsSocket.end();
-	});
+	tlsSocket.on("error", (error) => {}); // Prevent errors from being thrown. Socket is closed automatically.
 	tlsSocket.on("secure", () => {
 		callback(tlsSocket);
 	});
@@ -719,9 +717,6 @@ export function makeServer(options: Options): void {
 	let httpRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust
 	}, (clientSocket, proxyHeader) => {
-		clientSocket.on("error", () => {
-			clientSocket.end();
-		});
 		httpRequestRouter.emit("connection", clientSocket);
 	});
 	httpRouter.listen(http, "0.0.0.0", () => {
@@ -730,9 +725,6 @@ export function makeServer(options: Options): void {
 	let httpsRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust
 	}, (clientSocket, proxyHeader) => {
-		clientSocket.on("error", () => {
-			clientSocket.end();
-		});
 		let buffer = Buffer.alloc(0);
 		clientSocket.on("data", function ondata(chunk: Buffer): void {
 			buffer = Buffer.concat([buffer, chunk]);
