@@ -724,7 +724,7 @@ export function makeServer(options: Options): void {
 		});
 		httpRequestRouter.emit("connection", clientSocket);
 	});
-	httpRouter.listen(http, () => {
+	httpRouter.listen(http, "0.0.0.0", () => {
 		process.stdout.write(`HTTP router listening on port ${terminal.stylize(getServerPort(httpRouter), terminal.FG_CYAN)}\n`);
 	});
 	let httpsRouter = proxy.createServer({
@@ -787,7 +787,7 @@ export function makeServer(options: Options): void {
 			}
 		});
 	});
-	httpsRouter.listen(https, () => {
+	httpsRouter.listen(https, "0.0.0.0", () => {
 		process.stdout.write(`HTTPS router listening on port ${terminal.stylize(getServerPort(httpsRouter), terminal.FG_CYAN)}\n`);
 	});
 };
