@@ -671,7 +671,8 @@ export function makeServer(options: Options): void {
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = getServerAddress(httpRouter);
-		process.stdout.write(`HTTP router listening on ${terminal.stylize(address.address + ":" + address.port, terminal.FG_CYAN)}\n`);
+		let string = address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
+		process.stdout.write(`HTTP router listening on ${terminal.stylize(string, terminal.FG_GREEN)}\n`);
 	});
 	let httpsRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust
@@ -735,6 +736,7 @@ export function makeServer(options: Options): void {
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = getServerAddress(httpsRouter);
-		process.stdout.write(`HTTPS router listening on ${terminal.stylize(address.address + ":" + address.port, terminal.FG_CYAN)}\n`);
+		let string = address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
+		process.stdout.write(`HTTPS router listening on ${terminal.stylize(string, terminal.FG_GREEN)}\n`);
 	});
 };
