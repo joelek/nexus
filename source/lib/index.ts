@@ -522,15 +522,99 @@ export function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureCon
 	});
 };
 
+export type DeferredSecureContext = {
+	host: string;
+	secureContext: libtls.SecureContext;
+	dirty: boolean;
+	load: () => void;
+};
+
+export function createDeferredSecureContext(options: {
+	host: string;
+	key?: string;
+	cert?: string;
+	pass?: string;
+	sign: boolean;
+	defaultSecureContext: libtls.SecureContext;
+}): DeferredSecureContext | undefined {
+	if (options.key || options.cert) {
+		let deferredSecureContext: DeferredSecureContext = {
+			host: options.host,
+			secureContext: options.defaultSecureContext,
+			dirty: true,
+			load() {
+				if (this.dirty) {
+					process.stdout.write(`Loading certificate for ${terminal.stylize(options.host, terminal.FG_YELLOW)}\n`);
+					this.secureContext = libtls.createSecureContext({
+						key: options.key ? libfs.readFileSync(options.key) : undefined,
+						cert:options.cert ? libfs.readFileSync(options.cert) : undefined,
+						passphrase: options.pass
+					});
+					this.dirty = false;
+				}
+			}
+		};
+		if (options.key) {
+			libfs.watch(options.key, () => {
+				deferredSecureContext.dirty = true;
+			});
+		}
+		if (options.cert) {
+			libfs.watch(options.cert, () => {
+				deferredSecureContext.dirty = true;
+			});
+		}
+		return deferredSecureContext;
+	} else if (options.sign) {
+		let days = 1;
+		let deferredSecureContext: DeferredSecureContext = {
+			host: options.host,
+			secureContext: options.defaultSecureContext,
+			dirty: true,
+			load() {
+				if (this.dirty) {
+					process.stdout.write(`Generating certificate for ${terminal.stylize(options.host, terminal.FG_YELLOW)}\n`);
+					let key = multipass.rsa.generatePrivateKey();
+					let cert = multipass.pem.serialize({
+						sections: [
+							{
+								label: "CERTIFICATE",
+								buffer: multipass.x509.generateSelfSignedCertificate([options.host], key, {
+									validityPeriod: {
+										days: days
+									}
+								})
+							}
+						]
+					});
+					this.secureContext = libtls.createSecureContext({
+						key: key.export({
+							format: "pem",
+							type: "pkcs1"
+						}),
+						cert: cert
+					});
+					this.dirty = false;
+					setTimeout(() => {
+						this.dirty = true;
+					}, days * 24 * 60 * 60 * 1000);
+				}
+			}
+		};
+		return deferredSecureContext;
+	}
+};
+
 export function makeServer(options: Options): void {
 	let http = options.http ?? 8080;
 	let https = options.https ?? 8443;
+	let sign = options.sign ?? false;
 	let defaultSecureContext = libtls.createSecureContext();
 	let defaultRequestListener: libhttp.RequestListener = (request, response) => {
 		response.writeHead(404);
 		response.end();
 	};
-	let secureContexts = new Array<{ host: string, secureContext: libtls.SecureContext, dirty: boolean, load: () => void }>();
+	let secureContexts = new Array<DeferredSecureContext>();
 	let httpRequestListeners = new Array<[string, libhttp.RequestListener]>();
 	let httpsRequestListeners = new Array<[string, libhttp.RequestListener]>();
 	let handledServernameConnectionConfigs = new Array<[string, ServernameConnectionConfig]>();
@@ -546,33 +630,15 @@ export function makeServer(options: Options): void {
 		let indices = domain.indices ?? false;
 		let httpHost = `http://${host}:${http}`;
 		let httpsHost = `https://${host}:${https}`;
-		if (key || cert) {
-			let secureContext = {
-				host,
-				secureContext: defaultSecureContext,
-				dirty: true,
-				load() {
-					if (this.dirty) {
-						process.stdout.write(`Loading certificate for ${terminal.stylize(host, terminal.FG_YELLOW)}\n`);
-						this.secureContext = libtls.createSecureContext({
-							key: key ? libfs.readFileSync(key) : undefined,
-							cert: cert ? libfs.readFileSync(cert) : undefined,
-							passphrase: pass
-						});
-						this.dirty = false;
-					}
-				}
-			};
-			if (key) {
-				libfs.watch(key, () => {
-					secureContext.dirty = true;
-				});
-			}
-			if (cert) {
-				libfs.watch(cert, () => {
-					secureContext.dirty = true;
-				});
-			}
+		let secureContext = createDeferredSecureContext({
+			host,
+			key,
+			cert,
+			pass,
+			sign,
+			defaultSecureContext
+		});
+		if (secureContext != null) {
 			secureContexts.push(secureContext);
 			try {
 				let servernameConnectionConfig = parseServernameConnectionConfig(root, 80);
@@ -602,53 +668,9 @@ export function makeServer(options: Options): void {
 			if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
 				throw `Expected "${root}" to exist and be a directory!`;
 			}
-			if (options.sign) {
-				let days = 1;
-				let secureContext = {
-					host,
-					secureContext: defaultSecureContext,
-					dirty: true,
-					load() {
-						if (this.dirty) {
-							process.stdout.write(`Generating certificate for ${terminal.stylize(host, terminal.FG_YELLOW)}\n`);
-							let key = multipass.rsa.generatePrivateKey();
-							let cert = multipass.pem.serialize({
-								sections: [
-									{
-										label: "CERTIFICATE",
-										buffer: multipass.x509.generateSelfSignedCertificate([host], key, {
-											validityPeriod: {
-												days: days
-											}
-										})
-									}
-								]
-							});
-							this.secureContext = libtls.createSecureContext({
-								key: key.export({
-									format: "pem",
-									type: "pkcs1"
-								}),
-								cert: cert
-							});
-							this.dirty = false;
-							setTimeout(() => {
-								this.dirty = true;
-							}, days * 24 * 60 * 60 * 1000);
-						}
-					}
-				};
-				secureContexts.push(secureContext);
-				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
-				let httpRequestListener = makeRedirectRequestListener(https);
-				httpRequestListeners.push([host, httpRequestListener]);
-				let httpsRequestListener = makeRequestListener(root, handler, routing, indices);
-				httpsRequestListeners.push([host, httpsRequestListener]);
-			} else {
-				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
-				let httpRequestListener = makeRequestListener(root, handler, routing, indices);
-				httpRequestListeners.push([host, httpRequestListener]);
-			}
+			process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
+			let httpRequestListener = makeRequestListener(root, handler, routing, indices);
+			httpRequestListeners.push([host, httpRequestListener]);
 		}
 	}
 	let httpRequestRouter = libhttp.createServer({}, (request, response) => {
