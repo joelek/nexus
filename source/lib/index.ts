@@ -472,6 +472,11 @@ export type ServernameConnectionConfig = {
 	port: number
 };
 
+export const SUPPORTED_PROTOCLS = [
+	"pipe:",
+	"proxy:"
+];
+
 export function parseServernameConnectionConfig(root: string, defaultPort: number): ServernameConnectionConfig {
 	let url = new liburl.URL(root);
 	if (url.username !== "" || url.password !== "" || url.pathname !== "" || url.search !== "" || url.hash !== "") {
@@ -483,7 +488,7 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 	if (Number.isNaN(port)) {
 		port = undefined;
 	}
-	if (["pipe:", "proxy:"].includes(protocol)) {
+	if (SUPPORTED_PROTOCLS.includes(protocol)) {
 		return {
 			protocol: protocol,
 			hostname,
