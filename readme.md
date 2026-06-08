@@ -62,7 +62,7 @@ It is important to understand that Nexus will stop accepting requests directed t
 
 ### Servername routing
 
-Nexus includes support for servername routing for incoming connections made using the TLS protocol. The feature may be enabled by setting the `--root` argument to a valid, protocol-agnostic URI where only protocol, hostname and port may be specified.
+Nexus includes support for servername routing for incoming connections made using the TLS protocol. The feature may be enabled by setting the `--root` argument to a valid URI where only protocol, hostname and port may be specified.
 
 Servername routing requires the protocol to be specified as `pipe:` or `proxy:` while hostname may be specified as any valid local or remote hostname. Port may optionally be specified and will default as explained below. The `pipe:` protocol pipes all data between the client and the target server whereas the `proxy:` protocol implements the PROXY protocol for which support is needed on the target server.
 
@@ -91,6 +91,10 @@ nexus --root=pipe://hostname --host=domain.com
 ```
 
 Servername routing is implemented using the TLS servername extension and is therefore served over the HTTPS port of Nexus. The port may be configured using the `--https=<number>` argument. An HTTP to HTTPS redirect will be served over regular HTTP.
+
+### Reverse HTTP proxy
+
+Nexus can be configured as a reverse HTTP proxy. The feature may be enabled by setting the `--root` argument to a valid URI where only protocol, hostname and port may be specified and where protocol is either `http:` or `https`, depending on protocol preference.
 
 ### Multiple hosts
 
