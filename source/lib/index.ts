@@ -501,19 +501,6 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 
 const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
 
-export function appendXForwardedForHeader(buffer: Buffer, remoteAddress: string | undefined): Buffer {
-	if (remoteAddress == null) {
-		return buffer;
-	}
-	let string = buffer.toString("ascii");
-	let end = string.indexOf("\r\n\r\n");
-	if (end < 0) {
-		throw new Error(`Expected to parse a complete HTTP header!`);
-	}
-	string = string.slice(0, end) + `\r\nX-Forwarded-For: ${remoteAddress}` + string.slice(end);
-	return Buffer.from(string, "ascii");
-};
-
 export function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void) {
 	clientSocket.pause(); // The socket has to be paused in order to properly delegate parsing to the TLS socket.
 	clientSocket.unshift(buffer);
