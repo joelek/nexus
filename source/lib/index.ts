@@ -601,6 +601,8 @@ export function createDeferredSecureContext(options: {
 	}
 };
 
+type UpgradeListener = (request: libhttp.IncomingMessage, socket: libnet.Socket, head: Buffer) => void;
+
 export function makeServer(options: Options): void {
 	let http = options.http ?? 8080;
 	let https = options.https ?? 8443;
@@ -610,9 +612,14 @@ export function makeServer(options: Options): void {
 		response.writeHead(404);
 		response.end();
 	};
+	let defaultUpgradeListener: UpgradeListener = (request, socket, head) => {
+		socket.end();
+	};
 	let secureContexts = new Array<DeferredSecureContext>();
 	let httpRequestListeners = new Array<[string, libhttp.RequestListener]>();
+	let httpUpgradeListeners = new Array<[string, UpgradeListener]>();
 	let httpsRequestListeners = new Array<[string, libhttp.RequestListener]>();
+	let httpsUpgradeListeners = new Array<[string, UpgradeListener]>();
 	let handledServernameConnectionConfigs = new Array<[string, ServernameConnectionConfig]>();
 	let delegatedServernameConnectionConfigs = new Array<[string, ServernameConnectionConfig]>();
 	for (let domain of options.domains ?? []) {
@@ -674,10 +681,20 @@ export function makeServer(options: Options): void {
 		let requestListener = httpRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
+	httpRequestRouter.on("upgrade", (request, socket, head) => {
+		let hostname = (request.headers.host ?? "localhost").split(":")[0];
+		let upgradeListener = httpUpgradeListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultUpgradeListener;
+		return upgradeListener(request, socket as libnet.Socket, head);
+	});
 	let httpsRequestRouter = libhttp.createServer({}, (request, response) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
 		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
+	});
+	httpsRequestRouter.on("upgrade", (request, socket, head) => {
+		let hostname = (request.headers.host ?? "localhost").split(":")[0];
+		let upgradeListener = httpsUpgradeListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultUpgradeListener;
+		return upgradeListener(request, socket as libnet.Socket, head);
 	});
 	// NOTE: Sockets have allowHalfOpen set to false.
 	let httpRouter = proxy.createServer({
