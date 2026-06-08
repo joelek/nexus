@@ -15,6 +15,8 @@ import * as proxy from "./proxy";
 import * as terminal from "./terminal";
 
 const CONNECTION_DEBUG = false;
+const TCP_DEBUG = false;
+const TIMEOUT_SECONDS = 10;
 
 export function loadConfig(config: string): Options {
 	let string = libfs.readFileSync(config, "utf-8");
@@ -430,36 +432,6 @@ export function matchesHostnamePattern(subject: string, pattern: string): boolea
 	return true;
 };
 
-export function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libnet.Socket {
-	let serverSocket = libnet.connect({
-		host,
-		port
-	});
-	serverSocket.on("connect", () => {
-		clientSocket.on("error", () => {
-			serverSocket.end();
-		});
-		clientSocket.on("end", () => {
-			serverSocket.end();
-		});
-		serverSocket.write(head, () => {
-			serverSocket.on("data", (buffer) => {
-				clientSocket.write(buffer);
-			});
-			clientSocket.on("data", (buffer) => {
-				serverSocket.write(buffer);
-			});
-		});
-	});
-	serverSocket.on("error", () => {
-		clientSocket.end();
-	});
-	serverSocket.on("end", () => {
-		clientSocket.end();
-	});
-	return serverSocket;
-};
-
 export function getServerAddress(server: libnet.Server): libnet.AddressInfo {
 	let address = server.address();
 	if (address == null || typeof address === "string") {
@@ -501,6 +473,112 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 	} else {
 		throw `Expected a supported protocol!`;
 	}
+};
+
+export class TimeoutError extends Error {
+	protected timeout_seconds: number;
+
+	constructor(timeout_seconds: number) {
+		super();
+		this.timeout_seconds = timeout_seconds;
+	}
+
+	get message(): string {
+		return `Expected action to succeed within ${this.timeout_seconds} seconds!`;
+	}
+};
+
+export function endSocket(socket: libnet.Socket | libtls.TLSSocket, timeout_seconds: number): void {
+	let timeout = setTimeout(() => {
+		socket.destroy(new TimeoutError(timeout_seconds));
+	}, timeout_seconds * 1000);
+	socket.end(() => {
+		clearTimeout(timeout);
+	});
+};
+
+export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void {
+	serverSocket.on("data", (buffer) => {
+		clientSocket.write(buffer);
+	});
+	clientSocket.on("data", (buffer) => {
+		serverSocket.write(buffer);
+	});
+	serverSocket.on("close", (had_error) => {
+		if (TCP_DEBUG) process.stdout.write(`TCP server emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+		endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with client.
+	});
+	clientSocket.on("close", (had_error) => {
+		if (TCP_DEBUG) process.stdout.write(`TCP client emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+		endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with server.
+	});
+	serverSocket.on("error", (error) => {
+		if (TCP_DEBUG) process.stdout.write(`TCP server emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+	});
+	clientSocket.on("error", (error) => {
+		if (TCP_DEBUG) process.stdout.write(`TCP client emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+	});
+	clientSocket.on("end", () => {
+		if (TCP_DEBUG) process.stdout.write(`TCP client emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+		endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by client for half-open connections.
+	});
+	serverSocket.on("end", () => {
+		if (TCP_DEBUG) process.stdout.write(`TCP server emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+		endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by server for half-open connections.
+	});
+};
+
+export function connectTls(options: libtls.ConnectionOptions, timeout_seconds: number): libtls.TLSSocket {
+	let serverSocket = libtls.connect(options);
+	let timeout = setTimeout(() => {
+		serverSocket.destroy(new TimeoutError(timeout_seconds));
+	}, timeout_seconds * 1000);
+	serverSocket.on("secureConnect", () => {
+		clearTimeout(timeout);
+		let address = proxy.getRemoteAddress(serverSocket);
+		if (CONNECTION_DEBUG) process.stderr.write(`Outgoing ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
+		serverSocket.on("close", (had_error) => {
+			if (CONNECTION_DEBUG) process.stderr.write(`Outgoing ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+		});
+
+	});
+	return serverSocket;
+};
+
+export function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libtls.TLSSocket {
+	let serverSocket = connectTls({
+		host,
+		port
+	}, TIMEOUT_SECONDS);
+	serverSocket.write(head);
+	connectProxySockets(clientSocket, serverSocket);
+	return serverSocket;
+};
+
+export function connectTcp(options: libnet.NetConnectOpts, timeout_seconds: number): libnet.Socket {
+	let serverSocket = libnet.connect(options);
+	let timeout = setTimeout(() => {
+		serverSocket.destroy(new TimeoutError(timeout_seconds));
+	}, timeout_seconds * 1000);
+	serverSocket.on("connect", () => {
+		clearTimeout(timeout);
+		let address = proxy.getRemoteAddress(serverSocket);
+		if (CONNECTION_DEBUG) process.stderr.write(`Outgoing ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
+		serverSocket.on("close", (had_error) => {
+			if (CONNECTION_DEBUG) process.stderr.write(`Outgoing ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+		});
+	});
+	return serverSocket;
+};
+
+export function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libnet.Socket {
+	let serverSocket = connectTcp({
+		host,
+		port
+	}, TIMEOUT_SECONDS);
+	serverSocket.write(head);
+	connectProxySockets(clientSocket, serverSocket);
+	return serverSocket;
 };
 
 const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
