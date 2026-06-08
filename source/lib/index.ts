@@ -514,6 +514,10 @@ export function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureCon
 	});
 };
 
+export function formatAddress(address: libnet.AddressInfo): string {
+	return address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
+};
+
 export type DeferredSecureContext = {
 	host: string;
 	secureContext: libtls.SecureContext;
@@ -685,8 +689,7 @@ export function makeServer(options: Options): void {
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = getServerAddress(httpRouter);
-		let string = address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
-		process.stdout.write(`HTTP router listening on ${terminal.stylize(string, terminal.FG_GREEN)}\n`);
+		process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
 	let httpsRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust
@@ -750,7 +753,6 @@ export function makeServer(options: Options): void {
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = getServerAddress(httpsRouter);
-		let string = address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
-		process.stdout.write(`HTTPS router listening on ${terminal.stylize(string, terminal.FG_GREEN)}\n`);
+		process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
 };
