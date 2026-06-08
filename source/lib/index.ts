@@ -3,6 +3,7 @@ import * as multipass from "@joelek/multipass/dist/mod";
 import * as libcp from "child_process";
 import * as libfs from "fs";
 import * as libhttp from "http";
+import * as libhttps from "https";
 import * as libnet from "net";
 import * as libpath from "path";
 import * as libtls from "tls";
@@ -15,6 +16,7 @@ import * as proxy from "./proxy";
 import * as terminal from "./terminal";
 
 const CONNECTION_DEBUG = false;
+const PROXY_DEBUG = false;
 const TCP_DEBUG = false;
 const TIMEOUT_SECONDS = 10;
 
@@ -373,40 +375,75 @@ export function makeRedirectRequestListener(httpsPort: number): libhttp.RequestL
 	};
 };
 
-export function makeProxyRequestListener(hostname: string, port: number): libhttp.RequestListener {
-	return (request, response) => {
-		let xff = request.headers["x-forwarded-for"];
-		if (request.socket.remoteAddress != null) {
-			if (xff == null) {
-				xff = [];
-			} else if (typeof xff === "string") {
-				xff = [xff];
-			}
-			xff.push(request.socket.remoteAddress);
+export function createProxyRawHeaders(request: libhttp.IncomingMessage, overrides: Record<string, string>): Array<string> {
+	let headers = new Array<string>();
+	for (let i = 0; i < request.rawHeaders.length; i += 2) {
+		let key = request.rawHeaders[i + 0];
+		let value = request.rawHeaders[i + 1];
+		if (key.toLowerCase() in overrides) {
+			value = overrides[key.toLowerCase()];
 		}
-		let proxyRequest = libhttp.request({
-			host: hostname,
-			port: port,
-			method: request.method,
-			path: request.url,
-			headers: {
-				...request.headers,
-				"x-forwarded-for": xff
-			},
-			timeout: 30 * 1000
-		}, (proxyResponse) => {
-			response.writeHead(proxyResponse.statusCode ?? 200, proxyResponse.headers);
-			proxyResponse.pipe(response);
+		headers.push(key, value);
+	}
+	if (request.socket.remoteAddress != null) {
+		headers.push("X-Forwarded-For", request.socket.remoteAddress);
+	}
+	return headers;
+};
+
+export function makeProxyRequest(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, scc: ServernameConnectionConfig): libhttp.ClientRequest {
+	let rawHeaders = createProxyRawHeaders(clientRequest, {});
+	let proxyRequest = (scc.protocol === "https:" ? libhttps : libhttp).request({
+		host: scc.hostname,
+		port: scc.port,
+		timeout: 0, // NOTE: The global agent uses a default socket idle timeout of 5 seconds when timeout is unspecified.
+		method: clientRequest.method,
+		path: clientRequest.url,
+		headers: rawHeaders as any
+	});
+	let timeout = setTimeout(() => {
+		proxyRequest.emit("timeout");
+	}, TIMEOUT_SECONDS * 1000);
+	proxyRequest.on("response", (proxyResponse) => {
+		clearTimeout(timeout);
+		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("response", terminal.FG_CYAN)} event` + "\n");
+		clientResponse.writeHead(proxyResponse.statusCode ?? 200, proxyResponse.rawHeaders);
+		proxyResponse.pipe(clientResponse);
+	});
+	proxyRequest.on("timeout", () => {
+		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("timeout", terminal.FG_CYAN)} event` + "\n");
+		proxyRequest.destroy(new TimeoutError(TIMEOUT_SECONDS));
+	});
+	proxyRequest.on("error", (error) => {
+		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+		clientResponse.writeHead(error instanceof TimeoutError || (error as any).code === "ETIMEDOUT" ? 504 : 502);
+		clientResponse.end();
+	});
+	proxyRequest.on("close", () => {
+		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("close", terminal.FG_CYAN)} event` + "\n");
+	});
+	clientRequest.pipe(proxyRequest);
+	return proxyRequest;
+};
+
+export function makeProxyRequestListener(scc: ServernameConnectionConfig): libhttp.RequestListener {
+	return (request, response) => {
+		makeProxyRequest(request, response, scc);
+	};
+};
+
+export function makeProxyUpgradeListener(scc: ServernameConnectionConfig): UpgradeListener {
+	return (clientRequest, clientSocket, clientHead) => {
+		let clientResponse = new libhttp.ServerResponse(clientRequest);
+		clientResponse.assignSocket(clientSocket);
+		let proxyRequest = makeProxyRequest(clientRequest, clientResponse, scc);
+		proxyRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
+			clientResponse.writeHead(serverResponse.statusCode ?? 200, serverResponse.rawHeaders);
+			clientResponse.end();
+			connectProxySockets(clientSocket, serverSocket);
+			serverSocket.write(clientHead);
+			clientSocket.write(serverHead);
 		});
-		proxyRequest.on("error", (error) => {
-			response.writeHead(502);
-			response.end();
-		});
-		proxyRequest.on("timeout", () => {
-			response.writeHead(504);
-			response.end();
-		});
-		request.pipe(proxyRequest);
 	};
 };
 
@@ -446,9 +483,14 @@ export type ServernameConnectionConfig = {
 	port: number
 };
 
-export const SUPPORTED_PROTOCLS = [
+export const TCP_PROTOCOLS = [
 	"pipe:",
 	"proxy:"
+];
+
+export const HTTP_PROTOCOLS = [
+	"http:",
+	"https:"
 ];
 
 export function parseServernameConnectionConfig(root: string, defaultPort: number): ServernameConnectionConfig | undefined {
@@ -464,7 +506,13 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 	if (Number.isNaN(port)) {
 		port = undefined;
 	}
-	if (SUPPORTED_PROTOCLS.includes(protocol)) {
+	if (TCP_PROTOCOLS.includes(protocol)) {
+		return {
+			protocol: protocol,
+			hostname,
+			port: port ?? defaultPort
+		};
+	} else if (HTTP_PROTOCOLS.includes(protocol)) {
 		return {
 			protocol: protocol,
 			hostname,
@@ -730,7 +778,15 @@ export function makeServer(options: Options): void {
 			let servernameConnectionConfig = parseServernameConnectionConfig(root, 80);
 			if (servernameConnectionConfig != null) {
 				handledServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-				process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
+				if (HTTP_PROTOCOLS.includes(servernameConnectionConfig.protocol)) {
+					process.stdout.write(`Proxying ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
+					let httpsRequestListener = makeProxyRequestListener(servernameConnectionConfig);
+					httpsRequestListeners.push([host, httpsRequestListener]);;
+					let httpsUpgradeListener = makeProxyUpgradeListener(servernameConnectionConfig);
+					httpsUpgradeListeners.push([host, httpsUpgradeListener]);
+				} else {
+					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
+				}
 			} else {
 				if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
 					throw `Expected "${root}" to exist and be a directory!`;
@@ -743,9 +799,17 @@ export function makeServer(options: Options): void {
 			let servernameConnectionConfig = parseServernameConnectionConfig(root, 443);
 			if (servernameConnectionConfig != null) {
 				delegatedServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-				process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
-				let httpRequestListener = makeRedirectRequestListener(https);
-				httpRequestListeners.push([host, httpRequestListener]);
+				if (HTTP_PROTOCOLS.includes(servernameConnectionConfig.protocol)) {
+					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
+					let httpsRequestListener = makeProxyRequestListener(servernameConnectionConfig);
+					httpRequestListeners.push([host, httpsRequestListener]);;
+					let httpsUpgradeListener = makeProxyUpgradeListener(servernameConnectionConfig);
+					httpUpgradeListeners.push([host, httpsUpgradeListener]);
+				} else {
+					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
+					let httpRequestListener = makeRedirectRequestListener(https);
+					httpRequestListeners.push([host, httpRequestListener]);
+				}
 			} else {
 				if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
 					throw `Expected "${root}" to exist and be a directory!`;
@@ -844,12 +908,16 @@ export function makeServer(options: Options): void {
 						})?.[1];
 						if (handledServernameConnectionConfig != null) {
 							let { protocol, hostname, port } = { ...handledServernameConnectionConfig };
-							let buffer = Buffer.alloc(0);
-							if (protocol === "proxy:") {
-								proxyHeader = proxyHeader ?? proxy.createProxyHeader(tlsSocket);
-								buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
+							if (TCP_PROTOCOLS.includes(protocol)) {
+								let buffer = Buffer.alloc(0);
+								if (protocol === "proxy:") {
+									proxyHeader = proxyHeader ?? proxy.createProxyHeader(tlsSocket);
+									buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
+								}
+								makeTcpProxyConnection(hostname, port, buffer, tlsSocket);
+							} else {
+								httpsRequestRouter.emit("connection", tlsSocket);
 							}
-							makeTcpProxyConnection(hostname, port, buffer, tlsSocket);
 						} else {
 							httpsRequestRouter.emit("connection", tlsSocket);
 						}
