@@ -681,6 +681,7 @@ export function makeServer(options: Options): void {
 		let requestListener = httpRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
+	httpRequestRouter.keepAliveTimeout = 60 * 1000;
 	httpRequestRouter.on("upgrade", (request, socket, head) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
 		let upgradeListener = httpUpgradeListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultUpgradeListener;
@@ -691,6 +692,7 @@ export function makeServer(options: Options): void {
 		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
+	httpsRequestRouter.keepAliveTimeout = 60 * 1000;
 	httpsRequestRouter.on("upgrade", (request, socket, head) => {
 		let hostname = (request.headers.host ?? "localhost").split(":")[0];
 		let upgradeListener = httpsUpgradeListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultUpgradeListener;
