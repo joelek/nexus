@@ -14,6 +14,8 @@ import * as tls from "./tls";
 import * as proxy from "./proxy";
 import * as terminal from "./terminal";
 
+const CONNECTION_DEBUG = false;
+
 export function loadConfig(config: string): Options {
 	let string = libfs.readFileSync(config, "utf-8");
 	let json = JSON.parse(string);
@@ -702,6 +704,13 @@ export function makeServer(options: Options): void {
 	let httpRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust
 	}, (clientSocket, proxyHeader) => {
+		let address = proxy.getRemoteAddress(clientSocket);
+		if (CONNECTION_DEBUG) {
+			process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
+			clientSocket.on("close", (had_error) => {
+				process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+			});
+		}
 		httpRequestRouter.emit("connection", clientSocket);
 	});
 	httpRouter.listen({
@@ -715,6 +724,13 @@ export function makeServer(options: Options): void {
 	let httpsRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust
 	}, (clientSocket, proxyHeader) => {
+		let address = proxy.getRemoteAddress(clientSocket);
+		if (CONNECTION_DEBUG) {
+			process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
+			clientSocket.on("close", (had_error) => {
+				process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+			});
+		}
 		let buffer = Buffer.alloc(0);
 		clientSocket.on("data", function ondata(chunk: Buffer): void {
 			buffer = Buffer.concat([buffer, chunk]);
