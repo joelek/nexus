@@ -679,6 +679,7 @@ export function makeServer(options: Options): void {
 		let requestListener = httpsRequestListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))?.[1] ?? defaultRequestListener;
 		return requestListener(request, response);
 	});
+	// NOTE: Sockets have allowHalfOpen set to false.
 	let httpRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust
 	}, (clientSocket, proxyHeader) => {
@@ -691,6 +692,7 @@ export function makeServer(options: Options): void {
 		let address = getServerAddress(httpRouter);
 		process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
+	// NOTE: Sockets have allowHalfOpen set to false.
 	let httpsRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust
 	}, (clientSocket, proxyHeader) => {
