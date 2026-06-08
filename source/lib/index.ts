@@ -479,10 +479,12 @@ export const SUPPORTED_PROTOCLS = [
 	"proxy:"
 ];
 
-export function parseServernameConnectionConfig(root: string, defaultPort: number): ServernameConnectionConfig {
-	let url = new liburl.URL(root);
-	if (url.username !== "" || url.password !== "" || url.pathname !== "" || url.search !== "" || url.hash !== "") {
-		throw `Expected a protocol-agnostic URI!`;
+export function parseServernameConnectionConfig(root: string, defaultPort: number): ServernameConnectionConfig | undefined {
+	let url!: liburl.URL;
+	try {
+		url = new liburl.URL(root);
+	} catch (error) {
+		return;
 	}
 	let protocol = url.protocol;
 	let hostname = url.hostname;
@@ -645,37 +647,35 @@ export function makeServer(options: Options): void {
 		});
 		if (secureContext != null) {
 			secureContexts.push(secureContext);
-			try {
-				let servernameConnectionConfig = parseServernameConnectionConfig(root, 80);
-				handledServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-				process.stdout.write(`Delegating connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-				let httpRequestListener = makeRedirectRequestListener(https);
-				httpRequestListeners.push([host, httpRequestListener]);
-				continue;
-			} catch (error) {}
-			if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
-				throw `Expected "${root}" to exist and be a directory!`;
-			}
-			process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
 			let httpRequestListener = makeRedirectRequestListener(https);
 			httpRequestListeners.push([host, httpRequestListener]);
-			let httpsRequestListener = makeRequestListener(root, handler, routing, indices);
-			httpsRequestListeners.push([host, httpsRequestListener]);
+			let servernameConnectionConfig = parseServernameConnectionConfig(root, 80);
+			if (servernameConnectionConfig != null) {
+				handledServernameConnectionConfigs.push([host, servernameConnectionConfig]);
+				process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
+			} else {
+				if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
+					throw `Expected "${root}" to exist and be a directory!`;
+				}
+				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
+				let httpsRequestListener = makeRequestListener(root, handler, routing, indices);
+				httpsRequestListeners.push([host, httpsRequestListener]);
+			}
 		} else {
-			try {
-				let servernameConnectionConfig = parseServernameConnectionConfig(root, 443);
+			let servernameConnectionConfig = parseServernameConnectionConfig(root, 443);
+			if (servernameConnectionConfig != null) {
 				delegatedServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-				process.stdout.write(`Delegating connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
+				process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
 				let httpRequestListener = makeRedirectRequestListener(https);
 				httpRequestListeners.push([host, httpRequestListener]);
-				continue;
-			} catch (error) {}
-			if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
-				throw `Expected "${root}" to exist and be a directory!`;
+			} else {
+				if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
+					throw `Expected "${root}" to exist and be a directory!`;
+				}
+				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
+				let httpRequestListener = makeRequestListener(root, handler, routing, indices);
+				httpRequestListeners.push([host, httpRequestListener]);
 			}
-			process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
-			let httpRequestListener = makeRequestListener(root, handler, routing, indices);
-			httpRequestListeners.push([host, httpRequestListener]);
 		}
 	}
 	let httpRequestRouter = libhttp.createServer({}, (request, response) => {
