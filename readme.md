@@ -96,6 +96,10 @@ Servername routing is implemented using the TLS servername extension and is ther
 
 Nexus can be configured as a reverse HTTP proxy. The feature may be enabled by setting the `--root` argument to a valid URI where only protocol, hostname and port may be specified and where protocol is either `http:` or `https`, depending on protocol preference.
 
+All HTTP headers will be forwarded to the target server without being modified. The following headers will be appended to the request:
+
+* An `X-Forwarded-For` header for which the value is set to the remote address of the incoming TCP connection by default. The value is set to the source address of the connection when the PROXY protocol is used and when coming from a trusted remote address.
+
 ### Multiple hosts
 
 Nexus can be configured with multiple hosts and each host may have its distinct configuration. Every time the `--host=<string>` argument is passed, a domain configuration is created using the previously configured settings.
