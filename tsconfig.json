@@ -15,9 +15,6 @@
 		},
 		{
 			"path": "./source/lib/"
-		},
-		{
-			"path": "./source/test/"
 		}
 	]
 }
