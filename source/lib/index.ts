@@ -385,9 +385,8 @@ export function createProxyRawHeaders(request: libhttp.IncomingMessage, override
 		}
 		headers.push(key, value);
 	}
-	if (request.socket.remoteAddress != null) {
-		headers.push("X-Forwarded-For", request.socket.remoteAddress);
-	}
+	let sourceAddress = proxy.getSourceAddress(request.socket) ?? proxy.getRemoteAddress(request.socket);
+	headers.push("X-Forwarded-For", sourceAddress.address);
 	return headers;
 };
 
