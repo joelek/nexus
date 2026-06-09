@@ -164,23 +164,6 @@ export function createProxyHeader(socket: libnet.Socket): Header {
 	};
 };
 
-export function createSocketProxy(socket: libnet.Socket, remoteAddress: libnet.AddressInfo): libnet.Socket {
-	return new Proxy(socket, {
-		get: (target, key, receiver) => {
-			if (key === "remoteFamily") {
-				return remoteAddress.family satisfies libnet.Socket["remoteFamily"];
-			}
-			if (key === "remoteAddress") {
-				return remoteAddress.address satisfies libnet.Socket["remoteAddress"];
-			}
-			if (key === "remotePort") {
-				return remoteAddress.port satisfies libnet.Socket["remotePort"];
-			}
-			return target[key as keyof libnet.Socket];
-		}
-	});
-};
-
 export function createTargetAddress(header: Header): libnet.AddressInfo {
 	return {
 		family: header.type === "TCP4" ? "IPv4" : "IPv6",
@@ -232,12 +215,10 @@ export type ConnectionListener = (socket: libnet.Socket, header: Header | undefi
 
 export type Options = {
 	trustedRemoteAddresses: Array<string>;
-	overrideSocketRemote: boolean;
 };
 
 export function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
-	let overrideSocketRemote = options?.overrideSocketRemote ?? false;
 	return libnet.createServer({}, (socket) => {
 		socket.on("error", (error) => {}); // Prevent errors from being thrown. Socket is closed automatically.
 		socket.on("data", function ondata(chunk: Buffer): void {
@@ -257,9 +238,6 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 				if (header != null) {
 					setSourceAddress(socket, header);
 					setTargetAddress(socket, header);
-					if (overrideSocketRemote) {
-						socket = createSocketProxy(socket, createSourceAddress(header));
-					}
 				}
 				connectionListener(socket, header);
 			} catch (error) {
