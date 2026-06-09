@@ -181,7 +181,7 @@ export function createSocketProxy(socket: libnet.Socket, remoteAddress: libnet.A
 	});
 };
 
-export function createLocalAddress(header: Header): libnet.AddressInfo {
+export function createTargetAddress(header: Header): libnet.AddressInfo {
 	return {
 		family: header.type === "TCP4" ? "IPv4" : "IPv6",
 		address: header.target_address,
@@ -189,12 +189,41 @@ export function createLocalAddress(header: Header): libnet.AddressInfo {
 	};
 };
 
-export function createRemoteAddress(header: Header): libnet.AddressInfo {
+export function createSourceAddress(header: Header): libnet.AddressInfo {
 	return {
 		family: header.type === "TCP4" ? "IPv4" : "IPv6",
 		address: header.source_address,
 		port: header.source_port
 	};
+};
+
+const SOURCE_KEY = Symbol();
+const TARGET_KEY = Symbol();
+
+export function getSourceAddress(socket: libnet.Socket): libnet.AddressInfo | undefined {
+	if (SOURCE_KEY in socket) {
+		return socket[SOURCE_KEY] as libnet.AddressInfo;
+	}
+};
+
+export function getTargetAddress(socket: libnet.Socket): libnet.AddressInfo | undefined {
+	if (TARGET_KEY in socket) {
+		return socket[TARGET_KEY] as libnet.AddressInfo;
+	}
+};
+
+export function setSourceAddress(socket: libnet.Socket, header: Header): void {
+	let sourceAddress = createSourceAddress(header);
+	Object.defineProperty(socket, SOURCE_KEY, {
+		value: sourceAddress
+	});
+};
+
+export function setTargetAddress(socket: libnet.Socket, header: Header): void {
+	let targetAddress = createTargetAddress(header);
+	Object.defineProperty(socket, TARGET_KEY, {
+		value: targetAddress
+	});
 };
 
 export type Server = libnet.Server;
@@ -225,8 +254,12 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 					}
 				}
 				socket.unshift(buffer);
-				if (overrideSocketRemote && header != null) {
-					socket = createSocketProxy(socket, createRemoteAddress(header));
+				if (header != null) {
+					setSourceAddress(socket, header);
+					setTargetAddress(socket, header);
+					if (overrideSocketRemote) {
+						socket = createSocketProxy(socket, createSourceAddress(header));
+					}
 				}
 				connectionListener(socket, header);
 			} catch (error) {

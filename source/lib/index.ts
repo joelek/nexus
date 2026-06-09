@@ -907,6 +907,10 @@ export function makeServer(options: Options): void {
 					let secureContext = secureContexts.find((pair) => matchesHostnamePattern(servername, pair.host));
 					secureContext?.load();
 					handleTLS(clientSocket, buffer, secureContext?.secureContext ?? defaultSecureContext, (tlsSocket) => {
+						if (proxyHeader != null) {
+							proxy.setSourceAddress(tlsSocket, proxyHeader);
+							proxy.setTargetAddress(tlsSocket, proxyHeader);
+						}
 						let handledServernameConnectionConfig = handledServernameConnectionConfigs.find((pair) => {
 							return matchesHostnamePattern(servername, pair[0]);
 						})?.[1];
