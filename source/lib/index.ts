@@ -890,7 +890,7 @@ export function makeServer(options: Options): void {
 				try {
 					servername = tls.getServername(tlsPlaintext);
 				} catch (error) {
-					clientSocket.end();
+					endSocket(clientSocket, TIMEOUT_SECONDS);
 					return;
 				}
 				let delegatedServernameConnectionConfig = delegatedServernameConnectionConfigs.find((pair) => {
@@ -930,7 +930,7 @@ export function makeServer(options: Options): void {
 			} catch (error) {
 				if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
 					clientSocket.off("data", ondata);
-					clientSocket.end();
+					endSocket(clientSocket, TIMEOUT_SECONDS);
 				}
 			}
 		});
