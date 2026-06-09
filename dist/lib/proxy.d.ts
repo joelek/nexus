@@ -19,13 +19,15 @@ export declare function getRemoteAddress(socket: libnet.Socket): libnet.AddressI
 export declare function normalizeIPv6(ip: string): string;
 export declare function normalizeToIPv6(address: string): string;
 export declare function createProxyHeader(socket: libnet.Socket): Header;
-export declare function createSocketProxy(socket: libnet.Socket, remoteAddress: libnet.AddressInfo): libnet.Socket;
-export declare function createLocalAddress(header: Header): libnet.AddressInfo;
-export declare function createRemoteAddress(header: Header): libnet.AddressInfo;
+export declare function createTargetAddress(header: Header): libnet.AddressInfo;
+export declare function createSourceAddress(header: Header): libnet.AddressInfo;
+export declare function getSourceAddress(socket: libnet.Socket): libnet.AddressInfo | undefined;
+export declare function getTargetAddress(socket: libnet.Socket): libnet.AddressInfo | undefined;
+export declare function setSourceAddress(socket: libnet.Socket, header: Header): void;
+export declare function setTargetAddress(socket: libnet.Socket, header: Header): void;
 export type Server = libnet.Server;
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 export type Options = {
     trustedRemoteAddresses: Array<string>;
-    overrideSocketRemote: boolean;
 };
 export declare function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server;

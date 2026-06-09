@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createServer = exports.createRemoteAddress = exports.createLocalAddress = exports.createSocketProxy = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
+exports.createServer = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
 const libnet = require("net");
 function parseHeader(buffer) {
     if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
@@ -169,46 +169,59 @@ function createProxyHeader(socket) {
 }
 exports.createProxyHeader = createProxyHeader;
 ;
-function createSocketProxy(socket, remoteAddress) {
-    return new Proxy(socket, {
-        get: (target, key, receiver) => {
-            if (key === "remoteFamily") {
-                return remoteAddress.family;
-            }
-            if (key === "remoteAddress") {
-                return remoteAddress.address;
-            }
-            if (key === "remotePort") {
-                return remoteAddress.port;
-            }
-            return target[key];
-        }
-    });
-}
-exports.createSocketProxy = createSocketProxy;
-;
-function createLocalAddress(header) {
+function createTargetAddress(header) {
     return {
         family: header.type === "TCP4" ? "IPv4" : "IPv6",
         address: header.target_address,
         port: header.target_port
     };
 }
-exports.createLocalAddress = createLocalAddress;
+exports.createTargetAddress = createTargetAddress;
 ;
-function createRemoteAddress(header) {
+function createSourceAddress(header) {
     return {
         family: header.type === "TCP4" ? "IPv4" : "IPv6",
         address: header.source_address,
         port: header.source_port
     };
 }
-exports.createRemoteAddress = createRemoteAddress;
+exports.createSourceAddress = createSourceAddress;
+;
+const SOURCE_KEY = Symbol();
+const TARGET_KEY = Symbol();
+function getSourceAddress(socket) {
+    if (SOURCE_KEY in socket) {
+        return socket[SOURCE_KEY];
+    }
+}
+exports.getSourceAddress = getSourceAddress;
+;
+function getTargetAddress(socket) {
+    if (TARGET_KEY in socket) {
+        return socket[TARGET_KEY];
+    }
+}
+exports.getTargetAddress = getTargetAddress;
+;
+function setSourceAddress(socket, header) {
+    let sourceAddress = createSourceAddress(header);
+    Object.defineProperty(socket, SOURCE_KEY, {
+        value: sourceAddress
+    });
+}
+exports.setSourceAddress = setSourceAddress;
+;
+function setTargetAddress(socket, header) {
+    let targetAddress = createTargetAddress(header);
+    Object.defineProperty(socket, TARGET_KEY, {
+        value: targetAddress
+    });
+}
+exports.setTargetAddress = setTargetAddress;
 ;
 function createServer(options, connectionListener) {
-    var _a, _b;
+    var _a;
     let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
-    let overrideSocketRemote = (_b = options === null || options === void 0 ? void 0 : options.overrideSocketRemote) !== null && _b !== void 0 ? _b : false;
     return libnet.createServer({}, (socket) => {
         socket.on("error", (error) => { }); // Prevent errors from being thrown. Socket is closed automatically.
         socket.on("data", function ondata(chunk) {
@@ -225,8 +238,9 @@ function createServer(options, connectionListener) {
                     }
                 }
                 socket.unshift(buffer);
-                if (overrideSocketRemote && header != null) {
-                    socket = createSocketProxy(socket, createRemoteAddress(header));
+                if (header != null) {
+                    setSourceAddress(socket, header);
+                    setTargetAddress(socket, header);
                 }
                 connectionListener(socket, header);
             }

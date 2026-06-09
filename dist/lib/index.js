@@ -391,6 +391,7 @@ function makeRedirectRequestListener(httpsPort) {
 exports.makeRedirectRequestListener = makeRedirectRequestListener;
 ;
 function createProxyRawHeaders(request, overrides) {
+    var _a;
     let headers = new Array();
     for (let i = 0; i < request.rawHeaders.length; i += 2) {
         let key = request.rawHeaders[i + 0];
@@ -400,9 +401,8 @@ function createProxyRawHeaders(request, overrides) {
         }
         headers.push(key, value);
     }
-    if (request.socket.remoteAddress != null) {
-        headers.push("X-Forwarded-For", request.socket.remoteAddress);
-    }
+    let sourceAddress = (_a = proxy.getSourceAddress(request.socket)) !== null && _a !== void 0 ? _a : proxy.getRemoteAddress(request.socket);
+    headers.push("X-Forwarded-For", sourceAddress.address);
     return headers;
 }
 exports.createProxyRawHeaders = createProxyRawHeaders;
@@ -908,6 +908,9 @@ function makeServer(options) {
                 process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
             });
         }
+        let timeout = setTimeout(() => {
+            endSocket(clientSocket, TIMEOUT_SECONDS);
+        }, TIMEOUT_SECONDS * 1000);
         let buffer = Buffer.alloc(0);
         clientSocket.on("data", function ondata(chunk) {
             var _a, _b;
@@ -917,13 +920,14 @@ function makeServer(options) {
                     buffer: buffer,
                     offset: 0
                 });
+                clearTimeout(timeout);
                 clientSocket.off("data", ondata);
                 let servername;
                 try {
                     servername = tls.getServername(tlsPlaintext);
                 }
                 catch (error) {
-                    clientSocket.end();
+                    endSocket(clientSocket, TIMEOUT_SECONDS);
                     return;
                 }
                 let delegatedServernameConnectionConfig = (_a = delegatedServernameConnectionConfigs.find((pair) => {
@@ -942,6 +946,10 @@ function makeServer(options) {
                     secureContext === null || secureContext === void 0 ? void 0 : secureContext.load();
                     handleTLS(clientSocket, buffer, (_b = secureContext === null || secureContext === void 0 ? void 0 : secureContext.secureContext) !== null && _b !== void 0 ? _b : defaultSecureContext, (tlsSocket) => {
                         var _a;
+                        if (proxyHeader != null) {
+                            proxy.setSourceAddress(tlsSocket, proxyHeader);
+                            proxy.setTargetAddress(tlsSocket, proxyHeader);
+                        }
                         let handledServernameConnectionConfig = (_a = handledServernameConnectionConfigs.find((pair) => {
                             return matchesHostnamePattern(servername, pair[0]);
                         })) === null || _a === void 0 ? void 0 : _a[1];
@@ -968,7 +976,7 @@ function makeServer(options) {
             catch (error) {
                 if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
                     clientSocket.off("data", ondata);
-                    clientSocket.end();
+                    endSocket(clientSocket, TIMEOUT_SECONDS);
                 }
             }
         });
