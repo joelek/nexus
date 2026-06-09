@@ -873,6 +873,9 @@ export function makeServer(options: Options): void {
 				process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
 			});
 		}
+		let timeout = setTimeout(() => {
+			endSocket(clientSocket, TIMEOUT_SECONDS);
+		}, TIMEOUT_SECONDS * 1000);
 		let buffer = Buffer.alloc(0);
 		clientSocket.on("data", function ondata(chunk: Buffer): void {
 			buffer = Buffer.concat([buffer, chunk]);
@@ -881,6 +884,7 @@ export function makeServer(options: Options): void {
 					buffer: buffer,
 					offset: 0
 				});
+				clearTimeout(timeout);
 				clientSocket.off("data", ondata);
 				let servername!: string;
 				try {
