@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781034427256,
+    "timestamp": 1781106522518,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -10160,10 +10160,22 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     ;
     function connectProxySockets(clientSocket, serverSocket) {
         serverSocket.on("data", (buffer) => {
-            clientSocket.write(buffer);
+            let doContinue = clientSocket.write(buffer);
+            if (!doContinue) {
+                serverSocket.pause();
+            }
+        });
+        clientSocket.on("drain", () => {
+            serverSocket.resume();
         });
         clientSocket.on("data", (buffer) => {
-            serverSocket.write(buffer);
+            let doContinue = serverSocket.write(buffer);
+            if (!doContinue) {
+                clientSocket.pause();
+            }
+        });
+        serverSocket.on("drain", () => {
+            clientSocket.resume();
         });
         serverSocket.on("close", (had_error) => {
             if (TCP_DEBUG)

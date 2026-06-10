@@ -569,10 +569,22 @@ exports.endSocket = endSocket;
 ;
 function connectProxySockets(clientSocket, serverSocket) {
     serverSocket.on("data", (buffer) => {
-        clientSocket.write(buffer);
+        let doContinue = clientSocket.write(buffer);
+        if (!doContinue) {
+            serverSocket.pause();
+        }
+    });
+    clientSocket.on("drain", () => {
+        serverSocket.resume();
     });
     clientSocket.on("data", (buffer) => {
-        serverSocket.write(buffer);
+        let doContinue = serverSocket.write(buffer);
+        if (!doContinue) {
+            clientSocket.pause();
+        }
+    });
+    serverSocket.on("drain", () => {
+        clientSocket.resume();
     });
     serverSocket.on("close", (had_error) => {
         if (TCP_DEBUG)
