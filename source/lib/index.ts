@@ -546,10 +546,22 @@ export function endSocket(socket: libnet.Socket | libtls.TLSSocket, timeout_seco
 
 export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void {
 	serverSocket.on("data", (buffer) => {
-		clientSocket.write(buffer);
+		let doContinue = clientSocket.write(buffer);
+		if (!doContinue) {
+			serverSocket.pause();
+		}
+	});
+	clientSocket.on("drain", () => {
+		serverSocket.resume();
 	});
 	clientSocket.on("data", (buffer) => {
-		serverSocket.write(buffer);
+		let doContinue = serverSocket.write(buffer);
+		if (!doContinue) {
+			clientSocket.pause();
+		}
+	});
+	serverSocket.on("drain", () => {
+		clientSocket.resume();
 	});
 	serverSocket.on("close", (had_error) => {
 		if (TCP_DEBUG) process.stdout.write(`TCP server emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
