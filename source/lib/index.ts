@@ -566,25 +566,25 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 		clientSocket.resume();
 	});
 	serverSocket.on("close", (had_error) => {
-		if (TCP_DEBUG) process.stdout.write(`TCP server emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
 		endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with client.
 	});
 	clientSocket.on("close", (had_error) => {
-		if (TCP_DEBUG) process.stdout.write(`TCP client emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
 		endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with server.
 	});
 	serverSocket.on("error", (error) => {
-		if (TCP_DEBUG) process.stdout.write(`TCP server emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
 	});
 	clientSocket.on("error", (error) => {
-		if (TCP_DEBUG) process.stdout.write(`TCP client emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
 	});
 	clientSocket.on("end", () => {
-		if (TCP_DEBUG) process.stdout.write(`TCP client emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
 		endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by client for half-open connections.
 	});
 	serverSocket.on("end", () => {
-		if (TCP_DEBUG) process.stdout.write(`TCP server emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connectionr ${serverSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
 		endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by server for half-open connections.
 	});
 };
