@@ -411,7 +411,7 @@ export function makeProxyRequest(clientRequest: libhttp.IncomingMessage, clientR
 	});
 	proxyRequest.on("timeout", () => {
 		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("timeout", terminal.FG_CYAN)} event` + "\n");
-		proxyRequest.destroy(new TimeoutError(TIMEOUT_SECONDS));
+		proxyRequest.destroy(new TimeoutError("destroy", TIMEOUT_SECONDS));
 	});
 	proxyRequest.on("error", (error) => {
 		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
@@ -523,21 +523,23 @@ export function parseServernameConnectionConfig(root: string, defaultPort: numbe
 };
 
 export class TimeoutError extends Error {
+	protected action: string;
 	protected timeout_seconds: number;
 
-	constructor(timeout_seconds: number) {
+	constructor(action: string, timeout_seconds: number) {
 		super();
+		this.action = action;
 		this.timeout_seconds = timeout_seconds;
 	}
 
 	get message(): string {
-		return `Expected action to succeed within ${this.timeout_seconds} seconds!`;
+		return `Expected ${this.action} to succeed within ${this.timeout_seconds} seconds!`;
 	}
 };
 
 export function endSocket(socket: libnet.Socket | libtls.TLSSocket, timeout_seconds: number): void {
 	let timeout = setTimeout(() => {
-		socket.destroy(new TimeoutError(timeout_seconds));
+		socket.destroy(new TimeoutError("end", timeout_seconds));
 	}, timeout_seconds * 1000);
 	socket.end(() => {
 		clearTimeout(timeout);
@@ -590,7 +592,7 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 export function connectTls(options: libtls.ConnectionOptions, timeout_seconds: number): libtls.TLSSocket {
 	let serverSocket = libtls.connect(options);
 	let timeout = setTimeout(() => {
-		serverSocket.destroy(new TimeoutError(timeout_seconds));
+		serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
 	}, timeout_seconds * 1000);
 	serverSocket.on("secureConnect", () => {
 		clearTimeout(timeout);
@@ -617,7 +619,7 @@ export function makeTlsProxyConnection(host: string, port: number, head: Buffer,
 export function connectTcp(options: libnet.NetConnectOpts, timeout_seconds: number): libnet.Socket {
 	let serverSocket = libnet.connect(options);
 	let timeout = setTimeout(() => {
-		serverSocket.destroy(new TimeoutError(timeout_seconds));
+		serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
 	}, timeout_seconds * 1000);
 	serverSocket.on("connect", () => {
 		clearTimeout(timeout);
