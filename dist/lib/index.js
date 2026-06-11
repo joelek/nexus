@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeServer = exports.createDeferredSecureContext = exports.formatAddress = exports.handleTLS = exports.makeTcpProxyConnection = exports.connectTcp = exports.makeTlsProxyConnection = exports.connectTls = exports.connectProxySockets = exports.TimeoutError = exports.parseServernameConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.getServerAddress = exports.matchesHostnamePattern = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeProxyRequest = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+exports.makeServer = exports.createDeferredSecureContext = exports.formatAddress = exports.handleTLS = exports.setSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.makeTlsProxyConnection = exports.connectTls = exports.connectProxySockets = exports.destroySocket = exports.TimeoutError = exports.parseServernameConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.getServerAddress = exports.matchesHostnamePattern = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeProxyRequest = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/autoguard/dist/lib-server");
 const multipass = require("@joelek/multipass/dist/mod");
 const libcp = require("child_process");
@@ -558,6 +558,22 @@ class TimeoutError extends Error {
 }
 exports.TimeoutError = TimeoutError;
 ;
+function destroySocket(socket) {
+    if (socket instanceof libtls.TLSSocket) {
+        let underlying = getSocket(socket);
+        if (underlying != null) {
+            underlying.resetAndDestroy();
+        }
+        else {
+            socket.destroy();
+        }
+    }
+    else {
+        socket.resetAndDestroy();
+    }
+}
+exports.destroySocket = destroySocket;
+;
 // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful FIN close in several situations. Using resetAndDestroy() always sends a RST close and works when there is large backpressure.
 function connectProxySockets(clientSocket, serverSocket) {
     let clientID;
@@ -599,12 +615,12 @@ function connectProxySockets(clientSocket, serverSocket) {
     serverSocket.on("close", (had_error) => {
         if (TCP_DEBUG)
             process.stdout.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
-        clientSocket.resetAndDestroy();
+        destroySocket(clientSocket);
     });
     clientSocket.on("close", (had_error) => {
         if (TCP_DEBUG)
             process.stdout.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
-        serverSocket.resetAndDestroy();
+        destroySocket(serverSocket);
     });
     serverSocket.on("error", (error) => {
         if (TCP_DEBUG)
@@ -617,12 +633,12 @@ function connectProxySockets(clientSocket, serverSocket) {
     clientSocket.on("end", () => {
         if (TCP_DEBUG)
             process.stdout.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
-        clientSocket.resetAndDestroy();
+        destroySocket(clientSocket);
     });
     serverSocket.on("end", () => {
         if (TCP_DEBUG)
             process.stdout.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
-        serverSocket.resetAndDestroy();
+        destroySocket(serverSocket);
     });
 }
 exports.connectProxySockets = connectProxySockets;
@@ -688,6 +704,20 @@ function makeTcpProxyConnection(host, port, head, clientSocket) {
 exports.makeTcpProxyConnection = makeTcpProxyConnection;
 ;
 const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
+const SOCKET_KEY = Symbol();
+function getSocket(tlsSocket) {
+    if (SOCKET_KEY in tlsSocket) {
+        return tlsSocket[SOCKET_KEY];
+    }
+}
+;
+function setSocket(tlsSocket, socket) {
+    Object.defineProperty(tlsSocket, SOCKET_KEY, {
+        value: socket
+    });
+}
+exports.setSocket = setSocket;
+;
 function handleTLS(clientSocket, buffer, secureContext, callback) {
     clientSocket.pause(); // The socket has to be paused in order to properly delegate parsing to the TLS socket.
     clientSocket.unshift(buffer);
@@ -695,6 +725,7 @@ function handleTLS(clientSocket, buffer, secureContext, callback) {
         isServer: true,
         secureContext
     });
+    setSocket(tlsSocket, clientSocket);
     tlsSocket.on("error", (error) => { }); // Prevent errors from being thrown. Socket is closed automatically.
     tlsSocket.on("secure", () => {
         callback(tlsSocket);

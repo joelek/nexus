@@ -43,11 +43,13 @@ export declare class TimeoutError extends Error {
     constructor(action: string, timeout_seconds: number);
     get message(): string;
 }
+export declare function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void;
 export declare function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void;
 export declare function connectTls(options: libtls.ConnectionOptions, timeout_seconds: number): libtls.TLSSocket;
 export declare function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libtls.TLSSocket;
 export declare function connectTcp(options: libnet.NetConnectOpts, timeout_seconds: number): libnet.Socket;
 export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libnet.Socket;
+export declare function setSocket(tlsSocket: libtls.TLSSocket, socket: libnet.Socket): void;
 export declare function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void): void;
 export declare function formatAddress(address: libnet.AddressInfo): string;
 export type DeferredSecureContext = {
