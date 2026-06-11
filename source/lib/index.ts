@@ -539,7 +539,7 @@ export class TimeoutError extends Error {
 
 export function endSocket(socket: libnet.Socket | libtls.TLSSocket, timeout_seconds: number): void {
 	let timeout = setTimeout(() => {
-		socket.destroy(new TimeoutError("end", timeout_seconds));
+		socket.resetAndDestroy(); // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful close.
 	}, timeout_seconds * 1000);
 	socket.end(() => {
 		clearTimeout(timeout);
