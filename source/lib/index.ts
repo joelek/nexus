@@ -537,6 +537,19 @@ export class TimeoutError extends Error {
 	}
 };
 
+export function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void {
+	if (socket instanceof libtls.TLSSocket) {
+		let underlying = getSocket(socket);
+		if (underlying != null) {
+			underlying.resetAndDestroy();
+		} else {
+			socket.destroy();
+		}
+	} else {
+		socket.resetAndDestroy();
+	}
+};
+
 // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful FIN close in several situations. Using resetAndDestroy() always sends a RST close and works when there is large backpressure.
 export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void {
 	let clientID: number | undefined;
@@ -575,11 +588,11 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 	serverSocket.on("close", (had_error) => {
 		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverID ?? "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
-		clientSocket.resetAndDestroy();
+		destroySocket(clientSocket);
 	});
 	clientSocket.on("close", (had_error) => {
 		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientID ?? "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
-		serverSocket.resetAndDestroy();
+		destroySocket(serverSocket);
 	});
 	serverSocket.on("error", (error) => {
 		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverID ?? "?"} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
@@ -589,11 +602,11 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 	clientSocket.on("end", () => {
 		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientID ?? "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
-		clientSocket.resetAndDestroy();
+		destroySocket(clientSocket);
 	});
 	serverSocket.on("end", () => {
 		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverID ?? "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
-		serverSocket.resetAndDestroy();
+		destroySocket(serverSocket);
 	});
 };
 
@@ -652,6 +665,20 @@ export function makeTcpProxyConnection(host: string, port: number, head: Buffer,
 
 const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
 
+const SOCKET_KEY = Symbol();
+
+function getSocket(tlsSocket: libtls.TLSSocket): libnet.Socket | undefined {
+	if (SOCKET_KEY in tlsSocket) {
+		return tlsSocket[SOCKET_KEY] as libnet.Socket;
+	}
+};
+
+export function setSocket(tlsSocket: libtls.TLSSocket, socket: libnet.Socket): void {
+	Object.defineProperty(tlsSocket, SOCKET_KEY, {
+		value: socket
+	});
+};
+
 export function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void) {
 	clientSocket.pause(); // The socket has to be paused in order to properly delegate parsing to the TLS socket.
 	clientSocket.unshift(buffer);
@@ -659,6 +686,7 @@ export function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureCon
 		isServer: true,
 		secureContext
 	});
+	setSocket(tlsSocket, clientSocket);
 	tlsSocket.on("error", (error) => {}); // Prevent errors from being thrown. Socket is closed automatically.
 	tlsSocket.on("secure", () => {
 		callback(tlsSocket);
