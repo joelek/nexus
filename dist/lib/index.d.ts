@@ -38,8 +38,9 @@ export declare const TCP_PROTOCOLS: string[];
 export declare const HTTP_PROTOCOLS: string[];
 export declare function parseServernameConnectionConfig(root: string, defaultPort: number): ServernameConnectionConfig | undefined;
 export declare class TimeoutError extends Error {
+    protected action: string;
     protected timeout_seconds: number;
-    constructor(timeout_seconds: number);
+    constructor(action: string, timeout_seconds: number);
     get message(): string;
 }
 export declare function endSocket(socket: libnet.Socket | libtls.TLSSocket, timeout_seconds: number): void;

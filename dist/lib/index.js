@@ -431,7 +431,7 @@ function makeProxyRequest(clientRequest, clientResponse, scc) {
     proxyRequest.on("timeout", () => {
         if (PROXY_DEBUG)
             process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("timeout", terminal.FG_CYAN)} event` + "\n");
-        proxyRequest.destroy(new TimeoutError(TIMEOUT_SECONDS));
+        proxyRequest.destroy(new TimeoutError("destroy", TIMEOUT_SECONDS));
     });
     proxyRequest.on("error", (error) => {
         if (PROXY_DEBUG)
@@ -547,19 +547,20 @@ function parseServernameConnectionConfig(root, defaultPort) {
 exports.parseServernameConnectionConfig = parseServernameConnectionConfig;
 ;
 class TimeoutError extends Error {
-    constructor(timeout_seconds) {
+    constructor(action, timeout_seconds) {
         super();
+        this.action = action;
         this.timeout_seconds = timeout_seconds;
     }
     get message() {
-        return `Expected action to succeed within ${this.timeout_seconds} seconds!`;
+        return `Expected ${this.action} to succeed within ${this.timeout_seconds} seconds!`;
     }
 }
 exports.TimeoutError = TimeoutError;
 ;
 function endSocket(socket, timeout_seconds) {
     let timeout = setTimeout(() => {
-        socket.destroy(new TimeoutError(timeout_seconds));
+        socket.destroy(new TimeoutError("end", timeout_seconds));
     }, timeout_seconds * 1000);
     socket.end(() => {
         clearTimeout(timeout);
@@ -620,7 +621,7 @@ exports.connectProxySockets = connectProxySockets;
 function connectTls(options, timeout_seconds) {
     let serverSocket = libtls.connect(options);
     let timeout = setTimeout(() => {
-        serverSocket.destroy(new TimeoutError(timeout_seconds));
+        serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
     }, timeout_seconds * 1000);
     serverSocket.on("secureConnect", () => {
         clearTimeout(timeout);
@@ -650,7 +651,7 @@ exports.makeTlsProxyConnection = makeTlsProxyConnection;
 function connectTcp(options, timeout_seconds) {
     let serverSocket = libnet.connect(options);
     let timeout = setTimeout(() => {
-        serverSocket.destroy(new TimeoutError(timeout_seconds));
+        serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
     }, timeout_seconds * 1000);
     serverSocket.on("connect", () => {
         clearTimeout(timeout);
