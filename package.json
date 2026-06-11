@@ -8,7 +8,7 @@
 	},
 	"devDependencies": {
 		"@joelek/tsb": "github:joelek/tsb#semver:^1.3",
-		"@types/node": "^16.7",
+		"@types/node": "^22",
 		"typescript": "^4.0"
 	},
 	"license": "MIT",
