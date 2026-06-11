@@ -539,6 +539,22 @@ export class TimeoutError extends Error {
 
 // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful FIN close in several situations. Using resetAndDestroy() always sends a RST close and works when there is large backpressure.
 export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void {
+	let clientID: number | undefined;
+	let serverID: number | undefined;
+	if (serverSocket.connecting) {
+		serverSocket.once("connect", () => {
+			serverID = serverSocket.localPort;
+		});
+	} else {
+		serverID = serverSocket.localPort;
+	}
+	if (clientSocket.connecting) {
+		clientSocket.once("connect", () => {
+			clientID = clientSocket.remotePort;
+		});
+	} else {
+		clientID = clientSocket.remotePort;
+	}
 	serverSocket.on("data", (buffer) => {
 		let doContinue = clientSocket.write(buffer);
 		if (!doContinue) {
@@ -558,25 +574,25 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 		clientSocket.resume();
 	});
 	serverSocket.on("close", (had_error) => {
-		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverID ?? "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
 		clientSocket.resetAndDestroy();
 	});
 	clientSocket.on("close", (had_error) => {
-		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientID ?? "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
 		serverSocket.resetAndDestroy();
 	});
 	serverSocket.on("error", (error) => {
-		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverID ?? "?"} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
 	});
 	clientSocket.on("error", (error) => {
-		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientID ?? "?"} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
 	});
 	clientSocket.on("end", () => {
-		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientID ?? "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
 		clientSocket.resetAndDestroy();
 	});
 	serverSocket.on("end", () => {
-		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverID ?? "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
 		serverSocket.resetAndDestroy();
 	});
 };
@@ -853,9 +869,9 @@ export function makeServer(options: Options): void {
 	}, (clientSocket, proxyHeader) => {
 		let address = proxy.getRemoteAddress(clientSocket);
 		if (CONNECTION_DEBUG) {
-			process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
+			process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
 			clientSocket.on("close", (had_error) => {
-				process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+				process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
 			});
 		}
 		httpRequestRouter.emit("connection", clientSocket);
@@ -873,9 +889,9 @@ export function makeServer(options: Options): void {
 	}, (clientSocket, proxyHeader) => {
 		let address = proxy.getRemoteAddress(clientSocket);
 		if (CONNECTION_DEBUG) {
-			process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
+			process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
 			clientSocket.on("close", (had_error) => {
-				process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+				process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
 			});
 		}
 		let timeout = setTimeout(() => {
