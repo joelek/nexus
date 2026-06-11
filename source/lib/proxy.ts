@@ -241,7 +241,7 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 				}
 				connectionListener(socket, header);
 			} catch (error) {
-				socket.end();
+				socket.resetAndDestroy();
 			}
 		});
 	});

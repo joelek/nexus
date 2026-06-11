@@ -537,15 +537,7 @@ export class TimeoutError extends Error {
 	}
 };
 
-export function endSocket(socket: libnet.Socket | libtls.TLSSocket, timeout_seconds: number): void {
-	let timeout = setTimeout(() => {
-		socket.resetAndDestroy(); // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful close.
-	}, timeout_seconds * 1000);
-	socket.end(() => {
-		clearTimeout(timeout);
-	});
-};
-
+// NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful FIN close in several situations. Using resetAndDestroy() always sends a RST close and works when there is large backpressure.
 export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void {
 	serverSocket.on("data", (buffer) => {
 		let doContinue = clientSocket.write(buffer);
@@ -567,11 +559,11 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 	serverSocket.on("close", (had_error) => {
 		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
-		endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with client.
+		clientSocket.resetAndDestroy();
 	});
 	clientSocket.on("close", (had_error) => {
 		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
-		endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with server.
+		serverSocket.resetAndDestroy();
 	});
 	serverSocket.on("error", (error) => {
 		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
@@ -581,11 +573,11 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 	clientSocket.on("end", () => {
 		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
-		endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by client for half-open connections.
+		clientSocket.resetAndDestroy();
 	});
 	serverSocket.on("end", () => {
-		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connectionr ${serverSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
-		endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by server for half-open connections.
+		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+		serverSocket.resetAndDestroy();
 	});
 };
 
@@ -887,7 +879,7 @@ export function makeServer(options: Options): void {
 			});
 		}
 		let timeout = setTimeout(() => {
-			endSocket(clientSocket, TIMEOUT_SECONDS);
+			clientSocket.resetAndDestroy();
 		}, TIMEOUT_SECONDS * 1000);
 		let buffer = Buffer.alloc(0);
 		clientSocket.on("data", function ondata(chunk: Buffer): void {
@@ -903,7 +895,7 @@ export function makeServer(options: Options): void {
 				try {
 					servername = tls.getServername(tlsPlaintext);
 				} catch (error) {
-					endSocket(clientSocket, TIMEOUT_SECONDS);
+					clientSocket.resetAndDestroy();
 					return;
 				}
 				let delegatedServernameConnectionConfig = delegatedServernameConnectionConfigs.find((pair) => {
@@ -947,7 +939,7 @@ export function makeServer(options: Options): void {
 			} catch (error) {
 				if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
 					clientSocket.off("data", ondata);
-					endSocket(clientSocket, TIMEOUT_SECONDS);
+					clientSocket.resetAndDestroy();
 				}
 			}
 		});
