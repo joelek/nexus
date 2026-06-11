@@ -43,7 +43,6 @@ export declare class TimeoutError extends Error {
     constructor(action: string, timeout_seconds: number);
     get message(): string;
 }
-export declare function endSocket(socket: libnet.Socket | libtls.TLSSocket, timeout_seconds: number): void;
 export declare function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void;
 export declare function connectTls(options: libtls.ConnectionOptions, timeout_seconds: number): libtls.TLSSocket;
 export declare function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket): libtls.TLSSocket;

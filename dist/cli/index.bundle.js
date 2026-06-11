@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781210932042,
+    "timestamp": 1781213723383,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9550,7 +9550,7 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
                     connectionListener(socket, header);
                 }
                 catch (error) {
-                    socket.end();
+                    socket.resetAndDestroy();
                 }
             });
         });
@@ -9616,7 +9616,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
     };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.makeServer = exports.createDeferredSecureContext = exports.formatAddress = exports.handleTLS = exports.makeTcpProxyConnection = exports.connectTcp = exports.makeTlsProxyConnection = exports.connectTls = exports.connectProxySockets = exports.endSocket = exports.TimeoutError = exports.parseServernameConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.getServerAddress = exports.matchesHostnamePattern = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeProxyRequest = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+    exports.makeServer = exports.createDeferredSecureContext = exports.formatAddress = exports.handleTLS = exports.makeTcpProxyConnection = exports.connectTcp = exports.makeTlsProxyConnection = exports.connectTls = exports.connectProxySockets = exports.TimeoutError = exports.parseServernameConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.getServerAddress = exports.matchesHostnamePattern = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeProxyRequest = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
     Object.defineProperty(exports, "Domain", { enumerable: true, get: function () { return config_2.Domain; } });
     Object.defineProperty(exports, "Options", { enumerable: true, get: function () { return config_2.Options; } });
     Object.defineProperty(exports, "Handler", { enumerable: true, get: function () { return config_2.Handler; } });
@@ -10149,17 +10149,26 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.TimeoutError = TimeoutError;
     ;
-    function endSocket(socket, timeout_seconds) {
-        let timeout = setTimeout(() => {
-            socket.resetAndDestroy(); // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful close.
-        }, timeout_seconds * 1000);
-        socket.end(() => {
-            clearTimeout(timeout);
-        });
-    }
-    exports.endSocket = endSocket;
-    ;
+    // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful FIN close in several situations. Using resetAndDestroy() always sends a RST close and works when there is large backpressure.
     function connectProxySockets(clientSocket, serverSocket) {
+        let clientID;
+        let serverID;
+        if (serverSocket.connecting) {
+            serverSocket.once("connect", () => {
+                serverID = serverSocket.localPort;
+            });
+        }
+        else {
+            serverID = serverSocket.localPort;
+        }
+        if (clientSocket.connecting) {
+            clientSocket.once("connect", () => {
+                clientID = clientSocket.remotePort;
+            });
+        }
+        else {
+            clientID = clientSocket.remotePort;
+        }
         serverSocket.on("data", (buffer) => {
             let doContinue = clientSocket.write(buffer);
             if (!doContinue) {
@@ -10180,31 +10189,31 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
         serverSocket.on("close", (had_error) => {
             if (TCP_DEBUG)
-                process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
-            endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with client.
+                process.stdout.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+            clientSocket.resetAndDestroy();
         });
         clientSocket.on("close", (had_error) => {
             if (TCP_DEBUG)
-                process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
-            endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with server.
+                process.stdout.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+            serverSocket.resetAndDestroy();
         });
         serverSocket.on("error", (error) => {
             if (TCP_DEBUG)
-                process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+                process.stdout.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
         });
         clientSocket.on("error", (error) => {
             if (TCP_DEBUG)
-                process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+                process.stdout.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
         });
         clientSocket.on("end", () => {
             if (TCP_DEBUG)
-                process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
-            endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by client for half-open connections.
+                process.stdout.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+            clientSocket.resetAndDestroy();
         });
         serverSocket.on("end", () => {
             if (TCP_DEBUG)
-                process.stdout.write(`Outgoing TCP connectionr ${serverSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
-            endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by server for half-open connections.
+                process.stdout.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+            serverSocket.resetAndDestroy();
         });
     }
     exports.connectProxySockets = connectProxySockets;
@@ -10487,9 +10496,9 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         }, (clientSocket, proxyHeader) => {
             let address = proxy.getRemoteAddress(clientSocket);
             if (CONNECTION_DEBUG) {
-                process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
+                process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
                 clientSocket.on("close", (had_error) => {
-                    process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                    process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
                 });
             }
             httpRequestRouter.emit("connection", clientSocket);
@@ -10507,13 +10516,13 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         }, (clientSocket, proxyHeader) => {
             let address = proxy.getRemoteAddress(clientSocket);
             if (CONNECTION_DEBUG) {
-                process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
+                process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
                 clientSocket.on("close", (had_error) => {
-                    process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                    process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
                 });
             }
             let timeout = setTimeout(() => {
-                endSocket(clientSocket, TIMEOUT_SECONDS);
+                clientSocket.resetAndDestroy();
             }, TIMEOUT_SECONDS * 1000);
             let buffer = Buffer.alloc(0);
             clientSocket.on("data", function ondata(chunk) {
@@ -10531,7 +10540,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                         servername = tls.getServername(tlsPlaintext);
                     }
                     catch (error) {
-                        endSocket(clientSocket, TIMEOUT_SECONDS);
+                        clientSocket.resetAndDestroy();
                         return;
                     }
                     let delegatedServernameConnectionConfig = (_a = delegatedServernameConnectionConfigs.find((pair) => {
@@ -10580,7 +10589,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 catch (error) {
                     if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
                         clientSocket.off("data", ondata);
-                        endSocket(clientSocket, TIMEOUT_SECONDS);
+                        clientSocket.resetAndDestroy();
                     }
                 }
             });

@@ -245,7 +245,7 @@ function createServer(options, connectionListener) {
                 connectionListener(socket, header);
             }
             catch (error) {
-                socket.end();
+                socket.resetAndDestroy();
             }
         });
     });
