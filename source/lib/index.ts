@@ -16,7 +16,7 @@ import * as proxy from "./proxy";
 import * as terminal from "./terminal";
 
 const CONNECTION_DEBUG = false;
-const PROXY_DEBUG = false;
+const HTTP_DEBUG = false;
 const TCP_DEBUG = false;
 const TIMEOUT_SECONDS = 10;
 
@@ -405,21 +405,21 @@ export function makeProxyRequest(clientRequest: libhttp.IncomingMessage, clientR
 	}, TIMEOUT_SECONDS * 1000);
 	proxyRequest.on("response", (proxyResponse) => {
 		clearTimeout(timeout);
-		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("response", terminal.FG_CYAN)} event` + "\n");
+		if (HTTP_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("response", terminal.FG_CYAN)} event` + "\n");
 		clientResponse.writeHead(proxyResponse.statusCode ?? 200, proxyResponse.rawHeaders);
 		proxyResponse.pipe(clientResponse);
 	});
 	proxyRequest.on("timeout", () => {
-		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("timeout", terminal.FG_CYAN)} event` + "\n");
+		if (HTTP_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("timeout", terminal.FG_CYAN)} event` + "\n");
 		proxyRequest.destroy(new TimeoutError("destroy", TIMEOUT_SECONDS));
 	});
 	proxyRequest.on("error", (error) => {
-		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+		if (HTTP_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
 		clientResponse.writeHead(error instanceof TimeoutError || (error as any).code === "ETIMEDOUT" ? 504 : 502);
 		clientResponse.end();
 	});
 	proxyRequest.on("close", () => {
-		if (PROXY_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("close", terminal.FG_CYAN)} event` + "\n");
+		if (HTTP_DEBUG) process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("close", terminal.FG_CYAN)} event` + "\n");
 	});
 	clientRequest.pipe(proxyRequest);
 	return proxyRequest;
