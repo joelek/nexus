@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781209179409,
+    "timestamp": 1781210932042,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -10151,7 +10151,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     ;
     function endSocket(socket, timeout_seconds) {
         let timeout = setTimeout(() => {
-            socket.destroy(new TimeoutError("end", timeout_seconds));
+            socket.resetAndDestroy(); // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful close.
         }, timeout_seconds * 1000);
         socket.end(() => {
             clearTimeout(timeout);
@@ -10728,4 +10728,9 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
     ;
     run().catch((error) => console.log(String(error)));
 });
+define("undici-types", [], function () {});
+define("undici-types", [], function () {});
+define("undici-types", [], function () {});
+define("undici-types", [], function () {});
+define("undici-types", [], function () {});
 function define(e,t,n){let l=define;function u(e){return require(e)}null==l.moduleStates&&(l.moduleStates=new Map),null==l.dependentsMap&&(l.dependentsMap=new Map);let i=l.moduleStates.get(e);if(null!=i)throw new Error("Duplicate module found with name "+e+"!");i={initializer:n,dependencies:t,module:null},l.moduleStates.set(e,i);for(let n of t){let t=l.dependentsMap.get(n);null==t&&(t=new Set,l.dependentsMap.set(n,t)),t.add(e)}!function e(t){let n=l.moduleStates.get(t);if(null==n||null!=n.module)return;let i=Array(),o={exports:{}};for(let e of n.dependencies){if("require"===e){i.push(u);continue}if("module"===e){i.push(o);continue}if("exports"===e){i.push(o.exports);continue}try{i.push(u(e));continue}catch(e){}let t=l.moduleStates.get(e);if(null==t||null==t.module)return;i.push(t.module.exports)}"function"==typeof n.initializer?n.initializer(...i):o.exports=n.initializer,n.module=o;let d=l.dependentsMap.get(t);if(null!=d)for(let t of d)e(t)}(e)}

@@ -560,7 +560,7 @@ exports.TimeoutError = TimeoutError;
 ;
 function endSocket(socket, timeout_seconds) {
     let timeout = setTimeout(() => {
-        socket.destroy(new TimeoutError("end", timeout_seconds));
+        socket.resetAndDestroy(); // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful close.
     }, timeout_seconds * 1000);
     socket.end(() => {
         clearTimeout(timeout);
