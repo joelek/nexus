@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781166798272,
+    "timestamp": 1781209179409,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9621,7 +9621,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     Object.defineProperty(exports, "Options", { enumerable: true, get: function () { return config_2.Options; } });
     Object.defineProperty(exports, "Handler", { enumerable: true, get: function () { return config_2.Handler; } });
     const CONNECTION_DEBUG = false;
-    const PROXY_DEBUG = false;
+    const HTTP_DEBUG = false;
     const TCP_DEBUG = false;
     const TIMEOUT_SECONDS = 10;
     function loadConfig(config) {
@@ -10014,24 +10014,24 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         proxyRequest.on("response", (proxyResponse) => {
             var _a;
             clearTimeout(timeout);
-            if (PROXY_DEBUG)
+            if (HTTP_DEBUG)
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("response", terminal.FG_CYAN)} event` + "\n");
             clientResponse.writeHead((_a = proxyResponse.statusCode) !== null && _a !== void 0 ? _a : 200, proxyResponse.rawHeaders);
             proxyResponse.pipe(clientResponse);
         });
         proxyRequest.on("timeout", () => {
-            if (PROXY_DEBUG)
+            if (HTTP_DEBUG)
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("timeout", terminal.FG_CYAN)} event` + "\n");
             proxyRequest.destroy(new TimeoutError("destroy", TIMEOUT_SECONDS));
         });
         proxyRequest.on("error", (error) => {
-            if (PROXY_DEBUG)
+            if (HTTP_DEBUG)
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
             clientResponse.writeHead(error instanceof TimeoutError || error.code === "ETIMEDOUT" ? 504 : 502);
             clientResponse.end();
         });
         proxyRequest.on("close", () => {
-            if (PROXY_DEBUG)
+            if (HTTP_DEBUG)
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("close", terminal.FG_CYAN)} event` + "\n");
         });
         clientRequest.pipe(proxyRequest);
@@ -10180,30 +10180,30 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
         serverSocket.on("close", (had_error) => {
             if (TCP_DEBUG)
-                process.stdout.write(`TCP server emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+                process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
             endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with client.
         });
         clientSocket.on("close", (had_error) => {
             if (TCP_DEBUG)
-                process.stdout.write(`TCP client emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+                process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
             endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Initiate graceful close with server.
         });
         serverSocket.on("error", (error) => {
             if (TCP_DEBUG)
-                process.stdout.write(`TCP server emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+                process.stdout.write(`Outgoing TCP connection ${serverSocket.localPort} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
         });
         clientSocket.on("error", (error) => {
             if (TCP_DEBUG)
-                process.stdout.write(`TCP client emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+                process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
         });
         clientSocket.on("end", () => {
             if (TCP_DEBUG)
-                process.stdout.write(`TCP client emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+                process.stdout.write(`Incoming TCP connection ${clientSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
             endSocket(clientSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by client for half-open connections.
         });
         serverSocket.on("end", () => {
             if (TCP_DEBUG)
-                process.stdout.write(`TCP server emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+                process.stdout.write(`Outgoing TCP connectionr ${serverSocket.localPort} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
             endSocket(serverSocket, TIMEOUT_SECONDS); // NOTE: Finalize graceful close initiated by server for half-open connections.
         });
     }
