@@ -601,11 +601,11 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientID ?? "?"} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
 	});
 	clientSocket.on("end", () => {
-		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientID ?? "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Incoming TCP connection ${clientID ?? "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event signaling that no more data will be sent to proxy` + "\n");
 		destroySocket(clientSocket);
 	});
 	serverSocket.on("end", () => {
-		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverID ?? "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+		if (TCP_DEBUG) process.stdout.write(`Outgoing TCP connection ${serverID ?? "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event signaling that no more data will be sent to proxy` + "\n");
 		destroySocket(serverSocket);
 	});
 };
