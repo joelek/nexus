@@ -197,16 +197,36 @@ export function getTargetAddress(socket: libnet.Socket): libnet.AddressInfo | un
 };
 
 export function setSourceAddress(socket: libnet.Socket, header: Header): void {
+	delete (socket as any)[SOURCE_KEY];
 	let sourceAddress = createSourceAddress(header);
 	Object.defineProperty(socket, SOURCE_KEY, {
-		value: sourceAddress
+		value: sourceAddress,
+		configurable: true
 	});
 };
 
 export function setTargetAddress(socket: libnet.Socket, header: Header): void {
+	delete (socket as any)[TARGET_KEY];
 	let targetAddress = createTargetAddress(header);
 	Object.defineProperty(socket, TARGET_KEY, {
-		value: targetAddress
+		value: targetAddress,
+		configurable: true
+	});
+};
+
+const CONNECTION_ID_KEY = Symbol();
+
+export function getConnectionId(socket: libnet.Socket): string | undefined {
+	if (CONNECTION_ID_KEY in socket) {
+		return socket[CONNECTION_ID_KEY] as string;
+	}
+};
+
+export function setConnectionId(socket: libnet.Socket, connectionId: string | undefined): void {
+	delete (socket as any)[CONNECTION_ID_KEY];
+	Object.defineProperty(socket, CONNECTION_ID_KEY, {
+		value: connectionId,
+		configurable: true
 	});
 };
 
@@ -229,19 +249,20 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 	return libnet.createServer({
 		allowHalfOpen: true
 	}, (socket) => {
-		let remoteAdress = getRemoteAddress(socket);
+		let remoteAddress = getRemoteAddress(socket);
 		let localAddress = getLocalAddress(socket);
+		setConnectionId(socket, `${remoteAddress.port}`);
 		if (debug) {
-			process.stderr.write(`Client connection ${remoteAdress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+			process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
 			socket.once("close", (had_error) => {
 				process.nextTick(() => {
-					process.stderr.write(`Client connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+					process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
 				});
 			});
 		}
 		socket.on("error", (error) => {
 			if (debug) {
-				process.stderr.write(`Client connection ${remoteAdress.port} emitted error event with message "${error.message}"` + "\n");
+				process.stderr.write(`Client connection ${getConnectionId(socket) ?? "-"} emitted error event with message "${error.message}"` + "\n");
 			}
 		});
 		socket.on("data", function ondata(chunk: Buffer): void {
