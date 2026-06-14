@@ -3,7 +3,7 @@
 		"nexus": "./dist/cli/index.bundle.js"
 	},
 	"dependencies": {
-		"@joelek/autoguard": "github:joelek/autoguard#semver:^5.15",
+		"@joelek/autoguard": "github:joelek/autoguard#semver:^5.16",
 		"@joelek/multipass": "github:joelek/multipass#semver:^1.1"
 	},
 	"devDependencies": {
