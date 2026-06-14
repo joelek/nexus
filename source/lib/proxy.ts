@@ -1,4 +1,5 @@
 import * as libnet from "net";
+import * as terminal from "./terminal";
 
 export type Header = {
 	type: "TCP4" | "TCP6";
@@ -209,18 +210,35 @@ export function setTargetAddress(socket: libnet.Socket, header: Header): void {
 	});
 };
 
+export function formatAddress(address: libnet.AddressInfo): string {
+	return address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
+};
+
 export type Server = libnet.Server;
 
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 
 export type Options = {
 	trustedRemoteAddresses: Array<string>;
+	tcpDebug: boolean;
 };
 
+// NOTE: Sockets have allowHalfOpen set to false.
 export function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
+	let tcpDebug = options.tcpDebug ?? false;
 	return libnet.createServer({}, (socket) => {
-		socket.on("error", (error) => {}); // Prevent errors from being thrown. Socket is closed automatically.
+		let remoteAdress = getRemoteAddress(socket);
+		let localAddress = getLocalAddress(socket);
+		if (tcpDebug) {
+			process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+			socket.once("close", (had_error) => {
+				process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+			});
+		}
+		socket.on("error", (error) => {
+			if (tcpDebug) process.stderr.write(`Incoming TCP connection ${remoteAdress.port} emitted error event with message "${error.message}"` + "\n");
+		});
 		socket.on("data", function ondata(chunk: Buffer): void {
 			socket.off("data", ondata);
 			try {
