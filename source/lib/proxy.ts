@@ -223,11 +223,12 @@ export type Options = {
 	tcpDebug: boolean;
 };
 
-// NOTE: Sockets have allowHalfOpen set to false.
 export function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
 	let tcpDebug = options.tcpDebug ?? false;
-	return libnet.createServer({}, (socket) => {
+	return libnet.createServer({
+		allowHalfOpen: true
+	}, (socket) => {
 		let remoteAdress = getRemoteAddress(socket);
 		let localAddress = getLocalAddress(socket);
 		if (tcpDebug) {

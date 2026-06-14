@@ -534,6 +534,7 @@ export class TimeoutError extends Error {
 	}
 };
 
+// NOTE: Using resetAndDestroy() sends a RST close and sets SO_LINGER to 0 allowing immediate port re-use.
 export function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void {
 	if (socket instanceof libtls.TLSSocket) {
 		let underlying = getSocket(socket);
@@ -547,7 +548,6 @@ export function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void {
 	}
 };
 
-// NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful FIN close in several situations. Using resetAndDestroy() always sends a RST close and works when there is large backpressure.
 export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): void {
 	let clientID: number | undefined;
 	let serverID: number | undefined;
@@ -583,21 +583,55 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	serverSocket.on("drain", () => {
 		clientSocket.resume();
 	});
+	let serverSocketDestroyTimeout: NodeJS.Timeout | undefined;
+	let clientSocketDestroyTimeout: NodeJS.Timeout | undefined;
+	function closeServer() {
+		if (serverSocket.writable) {
+			if (debug) process.stderr.write(`Outgoing TCP connection ${serverID ?? "?"} closing...` + "\n");
+			serverSocketDestroyTimeout = setTimeout(() => {
+				destroySocket(serverSocket);
+			}, TIMEOUT_SECONDS * 1000);
+			serverSocket.end();
+		} else {
+			destroySocket(serverSocket);
+		}
+	}
+	function closeClient() {
+		if (clientSocket.writable) {
+			if (debug) process.stderr.write(`Incoming TCP connection ${clientID ?? "?"} closing...` + "\n");
+			clientSocketDestroyTimeout = setTimeout(() => {
+				destroySocket(clientSocket);
+			}, TIMEOUT_SECONDS * 1000);
+			clientSocket.end();
+		} else {
+			destroySocket(clientSocket);
+		}
+	}
 	serverSocket.on("close", (had_error) => {
 		if (debug) process.stderr.write(`Outgoing TCP connection ${serverID ?? "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
-		destroySocket(clientSocket);
+		clearTimeout(serverSocketDestroyTimeout);
+		if (had_error) {
+			destroySocket(clientSocket);
+		} else {
+			closeClient();
+		}
 	});
 	clientSocket.on("close", (had_error) => {
 		if (debug) process.stderr.write(`Incoming TCP connection ${clientID ?? "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
-		destroySocket(serverSocket);
+		clearTimeout(clientSocketDestroyTimeout);
+		if (had_error) {
+			destroySocket(serverSocket);
+		} else {
+			closeServer();
+		}
 	});
 	clientSocket.on("end", () => {
-		if (debug) process.stderr.write(`Incoming TCP connection ${clientID ?? "?"} emitted end event signaling that no more data will be sent to proxy` + "\n");
-		destroySocket(clientSocket);
+		if (debug) process.stderr.write(`Incoming TCP connection ${clientID ?? "?"} emitted end event` + "\n");
+		closeServer();
 	});
 	serverSocket.on("end", () => {
-		if (debug) process.stderr.write(`Outgoing TCP connection ${serverID ?? "?"} emitted end event signaling that no more data will be sent to proxy` + "\n");
-		destroySocket(serverSocket);
+		if (debug) process.stderr.write(`Outgoing TCP connection ${serverID ?? "?"} emitted end event` + "\n");
+		closeClient();
 	});
 };
 
