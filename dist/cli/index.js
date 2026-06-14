@@ -13,7 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const app = require("../app.json");
 const lib = require("../lib");
 function run() {
-    var _a;
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         let domain = {};
         let domains = new Array();
@@ -66,6 +66,9 @@ function run() {
             else if ((parts = /^--trust=(.*)$/.exec(arg)) !== null) {
                 options.trust = [...((_a = options.trust) !== null && _a !== void 0 ? _a : []), parts[1]];
             }
+            else if ((parts = /^--debug=(.*)$/.exec(arg)) !== null) {
+                options.debug = [...((_b = options.debug) !== null && _b !== void 0 ? _b : []), parts[1]];
+            }
             else {
                 unrecognizedArguments.push(arg);
             }
@@ -104,6 +107,8 @@ function run() {
             process.stderr.write(`		Configure automatic generation of self-signed certificates.\n`);
             process.stderr.write(`	--trust=string\n`);
             process.stderr.write(`		Add trusted remote address for PROXY protocol.\n`);
+            process.stderr.write(`	--debug=string\n`);
+            process.stderr.write(`		Add debug option.\n`);
             process.exit(0);
         }
         else {

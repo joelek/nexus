@@ -25,9 +25,11 @@ export declare function getSourceAddress(socket: libnet.Socket): libnet.AddressI
 export declare function getTargetAddress(socket: libnet.Socket): libnet.AddressInfo | undefined;
 export declare function setSourceAddress(socket: libnet.Socket, header: Header): void;
 export declare function setTargetAddress(socket: libnet.Socket, header: Header): void;
+export declare function formatAddress(address: libnet.AddressInfo): string;
 export type Server = libnet.Server;
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 export type Options = {
     trustedRemoteAddresses: Array<string>;
+    tcpDebug: boolean;
 };
 export declare function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server;

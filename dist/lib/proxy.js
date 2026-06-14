@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createServer = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
+exports.createServer = exports.formatAddress = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
 const libnet = require("net");
+const terminal = require("./terminal");
 function parseHeader(buffer) {
     if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
         return {
@@ -219,11 +220,29 @@ function setTargetAddress(socket, header) {
 }
 exports.setTargetAddress = setTargetAddress;
 ;
+function formatAddress(address) {
+    return address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
+}
+exports.formatAddress = formatAddress;
+;
+// NOTE: Sockets have allowHalfOpen set to false.
 function createServer(options, connectionListener) {
-    var _a;
+    var _a, _b;
     let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
+    let tcpDebug = (_b = options.tcpDebug) !== null && _b !== void 0 ? _b : false;
     return libnet.createServer({}, (socket) => {
-        socket.on("error", (error) => { }); // Prevent errors from being thrown. Socket is closed automatically.
+        let remoteAdress = getRemoteAddress(socket);
+        let localAddress = getLocalAddress(socket);
+        if (tcpDebug) {
+            process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+            socket.once("close", (had_error) => {
+                process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+            });
+        }
+        socket.on("error", (error) => {
+            if (tcpDebug)
+                process.stderr.write(`Incoming TCP connection ${remoteAdress.port} emitted error event with message "${error.message}"` + "\n");
+        });
         socket.on("data", function ondata(chunk) {
             socket.off("data", ondata);
             try {

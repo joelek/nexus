@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781215107852,
+    "timestamp": 1781439630976,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -98,13 +98,16 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Union = exports.UnionGuard = exports.Undefined = exports.UndefinedGuard = exports.Tuple = exports.TupleGuard = exports.StringLiteral = exports.StringLiteralGuard = exports.String = exports.StringGuard = exports.Reference = exports.ReferenceGuard = exports.Key = exports.KeyGuard = exports.Record = exports.RecordGuard = exports.Object = exports.ObjectGuard = exports.NumberLiteral = exports.NumberLiteralGuard = exports.Number = exports.NumberGuard = exports.Null = exports.NullGuard = exports.Intersection = exports.IntersectionGuard = exports.IntegerLiteral = exports.IntegerLiteralGuard = exports.Integer = exports.IntegerGuard = exports.Group = exports.GroupGuard = exports.BooleanLiteral = exports.BooleanLiteralGuard = exports.Boolean = exports.BooleanGuard = exports.Binary = exports.BinaryGuard = exports.BigInt = exports.BigIntGuard = exports.Array = exports.ArrayGuard = exports.Any = exports.AnyGuard = void 0;
+    exports.Union = exports.UnionGuard = exports.Undefined = exports.UndefinedGuard = exports.Tuple = exports.TupleGuard = exports.StringLiteral = exports.StringLiteralGuard = exports.String = exports.StringGuard = exports.Reference = exports.ReferenceGuard = exports.Key = exports.KeyGuard = exports.Record = exports.RecordGuard = exports.Object = exports.ObjectGuard = exports.NumberLiteral = exports.NumberLiteralGuard = exports.Number = exports.NumberGuard = exports.Null = exports.NullGuard = exports.Intersection = exports.IntersectionGuard = exports.IntegerLiteral = exports.IntegerLiteralGuard = exports.Integer = exports.IntegerGuard = exports.Group = exports.GroupGuard = exports.Date = exports.DateGuard = exports.BooleanLiteral = exports.BooleanLiteralGuard = exports.Boolean = exports.BooleanGuard = exports.Binary = exports.BinaryGuard = exports.BigInt = exports.BigIntGuard = exports.Array = exports.ArrayGuard = exports.Any = exports.AnyGuard = void 0;
     class AnyGuard extends serialization.MessageGuardBase {
         constructor() {
             super();
         }
         as(subject, path = "") {
             return subject;
+        }
+        to(subject, path = "") {
+            return this.as(subject, path);
         }
         ts(eol = "\n") {
             return "any";
@@ -124,6 +127,16 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
                     this.guard.as(subject[i], path + "[" + i + "]");
                 }
                 return subject;
+            }
+            throw new serialization.MessageGuardError(this, subject, path);
+        }
+        to(subject, path = "") {
+            if ((subject != null) && (subject.constructor === globalThis.Array)) {
+                let clone = [];
+                for (let i = 0; i < subject.length; i++) {
+                    clone.push(this.guard.to(subject[i], path + "[" + i + "]"));
+                }
+                return clone;
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
@@ -148,6 +161,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
         ts(eol = "\n") {
             return "bigint";
         }
@@ -165,6 +181,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path).slice();
+        }
         ts(eol = "\n") {
             return "binary";
         }
@@ -181,6 +200,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
                 return subject;
             }
             throw new serialization.MessageGuardError(this, subject, path);
+        }
+        to(subject, path = "") {
+            return this.as(subject, path);
         }
         ts(eol = "\n") {
             return "boolean";
@@ -200,6 +222,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
         ts(eol = "\n") {
             return `${this.value}`;
         }
@@ -211,6 +236,26 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             return new BooleanLiteralGuard(value);
         }
     };
+    class DateGuard extends serialization.MessageGuardBase {
+        constructor() {
+            super();
+        }
+        as(subject, path = "") {
+            if ((subject != null) && (subject.constructor === globalThis.Date)) {
+                return subject;
+            }
+            throw new serialization.MessageGuardError(this, subject, path);
+        }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
+        ts(eol = "\n") {
+            return "date";
+        }
+    }
+    exports.DateGuard = DateGuard;
+    ;
+    exports.Date = new DateGuard();
     class GroupGuard extends serialization.MessageGuardBase {
         constructor(guard, name) {
             super();
@@ -219,6 +264,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
         }
         as(subject, path = "") {
             return this.guard.as(subject, path);
+        }
+        to(subject, path = "") {
+            return this.guard.to(subject, path);
         }
         ts(eol = "\n") {
             var _a;
@@ -251,6 +299,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
         ts(eol = "\n") {
             var _a, _b;
             if (this.min == null && this.max == null) {
@@ -275,6 +326,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
         ts(eol = "\n") {
             return `${this.value}`;
         }
@@ -296,6 +350,13 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
                 guard.as(subject, path);
             }
             return subject;
+        }
+        to(subject, path = "") {
+            let clone = {};
+            for (let guard of this.guards) {
+                clone = Object.assign(Object.assign({}, clone), guard.to(subject, path));
+            }
+            return clone;
         }
         ts(eol = "\n") {
             let lines = new globalThis.Array();
@@ -321,6 +382,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
                 return subject;
             }
             throw new serialization.MessageGuardError(this, subject, path);
+        }
+        to(subject, path = "") {
+            return this.as(subject, path);
         }
         ts(eol = "\n") {
             return "null";
@@ -348,6 +412,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
         ts(eol = "\n") {
             var _a, _b;
             if (this.min == null && this.max == null) {
@@ -371,6 +438,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
                 return subject;
             }
             throw new serialization.MessageGuardError(this, subject, path);
+        }
+        to(subject, path = "") {
+            return this.as(subject, path);
         }
         ts(eol = "\n") {
             return `${this.value}`;
@@ -400,6 +470,21 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
                     }
                 }
                 return subject;
+            }
+            throw new serialization.MessageGuardError(this, subject, path);
+        }
+        to(subject, path = "") {
+            if ((subject != null) && (subject.constructor === globalThis.Object)) {
+                let clone = {};
+                for (let key in this.required) {
+                    clone[key] = this.required[key].to(subject[key], path + (/^([a-z][a-z0-9_]*)$/isu.test(key) ? "." + key : "[\"" + key + "\"]"));
+                }
+                for (let key in this.optional) {
+                    if (key in subject && subject[key] !== undefined) {
+                        clone[key] = this.optional[key].to(subject[key], path + (/^([a-z][a-z0-9_]*)$/isu.test(key) ? "." + key : "[\"" + key + "\"]"));
+                    }
+                }
+                return clone;
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
@@ -436,6 +521,17 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            if ((subject != null) && (subject.constructor === globalThis.Object)) {
+                let clone = {};
+                let wrapped = exports.Union.of(exports.Undefined, this.guard);
+                for (let key of globalThis.Object.keys(subject)) {
+                    clone[key] = wrapped.to(subject[key], path + "[\"" + key + "\"]");
+                }
+                return clone;
+            }
+            throw new serialization.MessageGuardError(this, subject, path);
+        }
         ts(eol = "\n") {
             return `record<${this.guard.ts(eol)}>`;
         }
@@ -461,6 +557,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
         ts(eol = "\n") {
             let lines = new globalThis.Array();
             for (let key of globalThis.Object.keys(this.record)) {
@@ -483,6 +582,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
         }
         as(subject, path = "") {
             return this.guard().as(subject, path);
+        }
+        to(subject, path = "") {
+            return this.guard().to(subject, path);
         }
         ts(eol = "\n") {
             return this.guard().ts(eol);
@@ -510,6 +612,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
         ts(eol = "\n") {
             if (this.pattern == null) {
                 return "string";
@@ -534,6 +639,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
         ts(eol = "\n") {
             return `"${this.value}"`;
         }
@@ -556,6 +664,16 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
                     this.guards[i].as(subject[i], path + "[" + i + "]");
                 }
                 return subject;
+            }
+            throw new serialization.MessageGuardError(this, subject, path);
+        }
+        to(subject, path = "") {
+            if ((subject != null) && (subject.constructor === globalThis.Array)) {
+                let clone = [];
+                for (let i = 0; i < this.guards.length; i++) {
+                    clone[i] = this.guards[i].to(subject[i], path + "[" + i + "]");
+                }
+                return clone;
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
@@ -584,6 +702,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             }
             throw new serialization.MessageGuardError(this, subject, path);
         }
+        to(subject, path = "") {
+            return this.as(subject, path);
+        }
         ts(eol = "\n") {
             return "undefined";
         }
@@ -600,6 +721,15 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/guards", ["require", "exp
             for (let guard of this.guards) {
                 try {
                     return guard.as(subject, path);
+                }
+                catch (error) { }
+            }
+            throw new serialization.MessageGuardError(this, subject, path);
+        }
+        to(subject, path = "") {
+            for (let guard of this.guards) {
+                try {
+                    return guard.to(subject, path);
                 }
                 catch (error) { }
             }
@@ -656,7 +786,32 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/api", ["require", "export
         function settle(resolve, reject, d, v) { Promise.resolve(v).then(function (v) { resolve({ value: v, done: d }); }, reject); }
     };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.wrapMessageGuard = exports.deserializePayload = exports.deserializeStringPayload = exports.compareArrays = exports.serializePayload = exports.serializeStringPayload = exports.collectPayload = exports.deserializeValue = exports.serializeValue = exports.Headers = exports.Options = exports.JSON = exports.Primitive = exports.Binary = exports.SyncBinary = exports.AsyncBinary = exports.decodeUndeclaredHeaders = exports.decodeHeaderValue = exports.decodeHeaderValues = exports.decodeUndeclaredParameters = exports.decodeParameterValue = exports.decodeParameterValues = exports.encodeUndeclaredParameterPairs = exports.encodeParameterPairs = exports.escapeParameterValue = exports.escapeParameterKey = exports.encodeComponents = exports.escapeComponent = exports.encodeUndeclaredHeaderPairs = exports.encodeHeaderPairs = exports.escapeHeaderValue = exports.escapeHeaderKey = exports.splitHeaders = exports.combineParameters = exports.splitParameters = exports.combineComponents = exports.splitComponents = exports.decodeURIComponent = void 0;
+    exports.makeRetryAfterRequestHandler = exports.makeRetryRequestHandler = exports.wrapMessageGuard = exports.deserializePayload = exports.deserializeStringPayload = exports.compareArrays = exports.serializePayload = exports.serializeStringPayload = exports.collectPayload = exports.deserializeValue = exports.serializeValue = exports.Headers = exports.Options = exports.JSON = exports.Primitive = exports.Binary = exports.SyncBinary = exports.AsyncBinary = exports.decodeUndeclaredHeaders = exports.decodeHeaderValue = exports.decodeHeaderValues = exports.decodeUndeclaredParameters = exports.decodeParameterValue = exports.decodeParameterValues = exports.encodeUndeclaredParameterPairs = exports.encodeParameterPairs = exports.escapeParameterValue = exports.escapeParameterKey = exports.encodeComponents = exports.escapeComponent = exports.encodeUndeclaredHeaderPairs = exports.encodeHeaderPairs = exports.escapeHeaderValue = exports.escapeHeaderKey = exports.splitHeaders = exports.combineParameters = exports.splitParameters = exports.combineComponents = exports.splitComponents = exports.decodeURIComponent = exports.createRequestDelay = exports.parseRetryAfterTimestamp = void 0;
+    function parseRetryAfterTimestamp(headers) {
+        let header = headers.slice().reverse().find((header) => header[0].toLowerCase() === "retry-after");
+        if (header != null) {
+            let value = header[1];
+            let seconds = Number.parseInt(value);
+            if (!Number.isNaN(seconds)) {
+                return Date.now() + (seconds * 1000);
+            }
+            else {
+                let timestamp = new Date(value).getTime();
+                if (!Number.isNaN(timestamp)) {
+                    return timestamp;
+                }
+            }
+        }
+    }
+    exports.parseRetryAfterTimestamp = parseRetryAfterTimestamp;
+    ;
+    function createRequestDelay(ms, maxRequestDelaySeconds) {
+        return new Promise((resolve, reject) => {
+            setTimeout(resolve, Math.max(0, Math.min(ms, maxRequestDelaySeconds * 1000)));
+        });
+    }
+    exports.createRequestDelay = createRequestDelay;
+    ;
     function decodeURIComponent(string) {
         try {
             return globalThis.decodeURIComponent(string);
@@ -995,6 +1150,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/api", ["require", "export
             }
             return true;
         },
+        to(subject, path = "") {
+            return this.as(subject, path);
+        },
         ts(eol = "\n") {
             return `AsyncBinary`;
         }
@@ -1017,6 +1175,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/api", ["require", "export
                 return false;
             }
             return true;
+        },
+        to(subject, path = "") {
+            return this.as(subject, path);
         },
         ts(eol = "\n") {
             return `SyncBinary`;
@@ -1165,6 +1326,36 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/api", ["require", "export
             } });
     }
     exports.wrapMessageGuard = wrapMessageGuard;
+    ;
+    function makeRetryRequestHandler(handler, statuses, maxRetryAttempts) {
+        return (...args) => __awaiter(this, void 0, void 0, function* () {
+            let response = yield handler(...args);
+            for (let retryAttempt = 0; retryAttempt < maxRetryAttempts; retryAttempt += 1) {
+                if (statuses.includes(response.status)) {
+                    let avgMs = (Math.pow(2, retryAttempt)) * 1000;
+                    let minMs = avgMs * 0.75;
+                    let maxMs = avgMs * 1.25;
+                    let ms = minMs + Math.random() * (maxMs - minMs);
+                    yield createRequestDelay(ms, Infinity);
+                    response = yield handler(...args);
+                }
+            }
+            return response;
+        });
+    }
+    exports.makeRetryRequestHandler = makeRetryRequestHandler;
+    ;
+    function makeRetryAfterRequestHandler(handler, maxRequestDelaySeconds) {
+        let retryAfterTimestamp = Date.now();
+        return (...args) => __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            yield createRequestDelay(retryAfterTimestamp - Date.now(), maxRequestDelaySeconds);
+            let response = yield handler(...args);
+            retryAfterTimestamp = (_a = parseRetryAfterTimestamp(response.headers)) !== null && _a !== void 0 ? _a : Date.now();
+            return response;
+        });
+    }
+    exports.makeRetryAfterRequestHandler = makeRetryAfterRequestHandler;
     ;
 });
 define("node_modules/@joelek/stdlib/dist/lib/asserts/integer", ["require", "exports"], function (require, exports) {
@@ -1362,12 +1553,14 @@ define("node_modules/@joelek/stdlib/dist/lib/data/parser", ["require", "exports"
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Parser = void 0;
     class Parser {
+        buffer;
+        offset;
         constructor(buffer, offset) {
             this.buffer = buffer;
-            this.offset = offset !== null && offset !== void 0 ? offset : 0;
+            this.offset = offset ?? 0;
         }
         chunk(length) {
-            length = length !== null && length !== void 0 ? length : this.buffer.length - this.offset;
+            length = length ?? this.buffer.length - this.offset;
             if (this.offset + length > this.buffer.length) {
                 throw new Error(`Expected to read at least ${length} bytes!`);
             }
@@ -1386,7 +1579,7 @@ define("node_modules/@joelek/stdlib/dist/lib/data/parser", ["require", "exports"
         }
         signed(length, endian) {
             let value = this.unsigned(length, endian);
-            let bias = Math.pow(2, (length * 8 - 1));
+            let bias = 2 ** (length * 8 - 1);
             if (value >= bias) {
                 value -= bias + bias;
             }
@@ -1659,7 +1852,7 @@ define("node_modules/@joelek/bedrock/dist/lib/codecs", ["require", "exports", "n
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BooleanLiteral = exports.BooleanLiteralCodec = exports.BigIntLiteral = exports.BigIntLiteralCodec = exports.NumberLiteral = exports.NumberLiteralCodec = exports.StringLiteral = exports.StringLiteralCodec = exports.Integer = exports.IntegerCodec = exports.Intersection = exports.IntersectionCodec = exports.Union = exports.UnionCodec = exports.Object = exports.ObjectCodec = exports.Tuple = exports.TupleCodec = exports.Record = exports.RecordCodec = exports.Array = exports.ArrayCodec = exports.Boolean = exports.BooleanCodec = exports.Unknown = exports.UnknownCodec = exports.UnknownValue = exports.Map = exports.MapCodec = exports.List = exports.ListCodec = exports.BigInt = exports.BigIntCodec = exports.Binary = exports.BinaryCodec = exports.String = exports.StringCodec = exports.Number = exports.NumberCodec = exports.True = exports.TrueCodec = exports.False = exports.FalseCodec = exports.Null = exports.NullCodec = exports.Any = exports.AnyCodec = exports.Codec = exports.Tag = exports.Packet = void 0;
-    exports.IntegerLiteral = exports.IntegerLiteralCodec = void 0;
+    exports.Date = exports.DateCodec = exports.IntegerLiteral = exports.IntegerLiteralCodec = void 0;
     class Packet {
         constructor() { }
         static decode(parser) {
@@ -2544,6 +2737,21 @@ define("node_modules/@joelek/bedrock/dist/lib/codecs", ["require", "exports", "n
             return new IntegerLiteralCodec(value);
         }
     };
+    class DateCodec extends Codec {
+        constructor() {
+            super();
+        }
+        decodePayload(parser, path = "") {
+            let subject = exports.Integer.decodePayload(parser, path);
+            return new globalThis.Date(subject);
+        }
+        encodePayload(subject, path = "") {
+            return exports.Integer.encodePayload(subject.getTime(), path);
+        }
+    }
+    exports.DateCodec = DateCodec;
+    ;
+    exports.Date = new DateCodec();
 });
 define("node_modules/@joelek/bedrock/dist/lib/index", ["require", "exports", "node_modules/@joelek/bedrock/dist/lib/codecs", "node_modules/@joelek/bedrock/dist/lib/utils"], function (require, exports, codecs, utils) {
     "use strict";
@@ -2585,6 +2793,10 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/codecs/json", ["require",
         type: guards.StringLiteral.of("@binary"),
         data: guards.String
     });
+    const DATE_GUARD = guards.Object.of({
+        type: guards.StringLiteral.of("@date"),
+        data: guards.String
+    });
     class JSONCodec {
         constructor() { }
         decode(buffer) {
@@ -2595,6 +2807,9 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/codecs/json", ["require",
                 }
                 if (BINARY_GUARD.is(subject)) {
                     return bedrock.utils.Chunk.fromString(subject.data, "base64url");
+                }
+                if (DATE_GUARD.is(subject)) {
+                    return new Date(subject.data);
                 }
                 return subject;
             });
@@ -2612,6 +2827,12 @@ define("node_modules/@joelek/autoguard/dist/lib-shared/codecs/json", ["require",
                     return {
                         type: "@binary",
                         data: bedrock.utils.Chunk.toString(subject, "base64url")
+                    };
+                }
+                if (guards.Date.is(subject)) {
+                    return {
+                        type: "@date",
+                        data: subject.toISOString()
                     };
                 }
                 return subject;
@@ -2723,7 +2944,7 @@ define("node_modules/@joelek/autoguard/dist/lib-server/api", ["require", "export
         function settle(resolve, reject, d, v) { Promise.resolve(v).then(function (v) { resolve({ value: v, done: d }); }, reject); }
     };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.makeReadStreamResponse = exports.makeDirectoryListing = exports.getContentTypeFromExtension = exports.parseRangeHeader = exports.route = exports.respond = exports.finalizeResponse = exports.acceptsMethod = exports.acceptsComponents = exports.makeNodeRequestHandler = exports.combineNodeRawHeaders = exports.DynamicRouteMatcher = exports.StaticRouteMatcher = exports.ClientRequest = exports.EndpointError = void 0;
+    exports.makeReadStreamResponse = exports.makeDirectoryListing = exports.getContentTypeFromExtension = exports.parseRangeHeader = exports.route = exports.respond = exports.finalizeResponse = exports.acceptsMethod = exports.acceptsComponents = exports.makeNodeRequestHandler = exports.createAuxillary = exports.createRawRequest = exports.combineNodeRawHeaders = exports.DynamicRouteMatcher = exports.StaticRouteMatcher = exports.ClientRequest = exports.EndpointError = void 0;
     __exportStar(api_1, exports);
     class EndpointError {
         constructor(response) {
@@ -2854,6 +3075,40 @@ define("node_modules/@joelek/autoguard/dist/lib-server/api", ["require", "export
     }
     exports.combineNodeRawHeaders = combineNodeRawHeaders;
     ;
+    function createRawRequest(httpRequest, urlPrefix = "") {
+        var _a, _b;
+        let method = (_a = httpRequest.method) !== null && _a !== void 0 ? _a : "GET";
+        let url = (_b = httpRequest.url) !== null && _b !== void 0 ? _b : "";
+        if (!url.startsWith(urlPrefix)) {
+            throw `Expected url "${url}" to have prefix "${urlPrefix}"!`;
+        }
+        url = url.slice(urlPrefix.length);
+        let components = shared.api.splitComponents(url);
+        let parameters = shared.api.splitParameters(url);
+        let headers = shared.api.splitHeaders(combineNodeRawHeaders(httpRequest.rawHeaders));
+        let payload = {
+            [Symbol.asyncIterator]: () => httpRequest[Symbol.asyncIterator]()
+        };
+        let raw = {
+            method,
+            components,
+            parameters,
+            headers,
+            payload
+        };
+        return raw;
+    }
+    exports.createRawRequest = createRawRequest;
+    ;
+    function createAuxillary(httpRequest) {
+        let socket = httpRequest.socket;
+        let auxillary = {
+            socket
+        };
+        return auxillary;
+    }
+    exports.createAuxillary = createAuxillary;
+    ;
     function makeNodeRequestHandler(options) {
         return (raw, clientOptions, requestOptions) => {
             var _a;
@@ -2981,37 +3236,55 @@ define("node_modules/@joelek/autoguard/dist/lib-server/api", ["require", "export
                 rawHeaders.push(...header);
             }
             httpResponse.writeHead((_e = raw.status) !== null && _e !== void 0 ? _e : 200, rawHeaders);
+            if (raw.payload instanceof libfs.ReadStream) {
+                let readStream = raw.payload;
+                httpResponse.once("close", function onclose() {
+                    readStream.destroy();
+                });
+            }
             try {
-                for (var _g = true, _h = __asyncValues((_f = raw.payload) !== null && _f !== void 0 ? _f : []), _j; _j = yield _h.next(), _a = _j.done, !_a;) {
-                    _c = _j.value;
-                    _g = false;
-                    try {
-                        let chunk = _c;
-                        if (!httpResponse.write(chunk)) {
-                            yield new Promise((resolve, reject) => {
-                                httpResponse.once("drain", resolve);
-                            });
+                try {
+                    for (var _g = true, _h = __asyncValues((_f = raw.payload) !== null && _f !== void 0 ? _f : []), _j; _j = yield _h.next(), _a = _j.done, !_a;) {
+                        _c = _j.value;
+                        _g = false;
+                        try {
+                            let chunk = _c;
+                            if (!httpResponse.write(chunk)) {
+                                yield new Promise((resolve, reject) => {
+                                    function onclose() {
+                                        httpResponse.off("drain", ondrain);
+                                        reject();
+                                    }
+                                    function ondrain() {
+                                        httpResponse.off("close", onclose);
+                                        resolve();
+                                    }
+                                    httpResponse.once("drain", ondrain);
+                                    httpResponse.once("close", onclose);
+                                });
+                            }
+                        }
+                        finally {
+                            _g = true;
                         }
                     }
-                    finally {
-                        _g = true;
-                    }
                 }
-            }
-            catch (e_1_1) {
-                e_1 = { error: e_1_1 };
-            }
-            finally {
-                try {
-                    if (!_g && !_a && (_b = _h.return))
-                        yield _b.call(_h);
+                catch (e_1_1) {
+                    e_1 = { error: e_1_1 };
                 }
                 finally {
-                    if (e_1)
-                        throw e_1.error;
+                    try {
+                        if (!_g && !_a && (_b = _h.return))
+                            yield _b.call(_h);
+                    }
+                    finally {
+                        if (e_1)
+                            throw e_1.error;
+                    }
                 }
+                httpResponse.end();
             }
-            httpResponse.end();
+            catch (error) { }
             yield new Promise((resolve, reject) => {
                 httpResponse.once("finish", resolve);
             });
@@ -3020,33 +3293,10 @@ define("node_modules/@joelek/autoguard/dist/lib-server/api", ["require", "export
     exports.respond = respond;
     ;
     function route(endpoints, httpRequest, httpResponse, serverOptions) {
-        var _a, _b, _c;
         return __awaiter(this, void 0, void 0, function* () {
-            let urlPrefix = (_a = serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.urlPrefix) !== null && _a !== void 0 ? _a : "";
-            let method = (_b = httpRequest.method) !== null && _b !== void 0 ? _b : "GET";
-            let url = (_c = httpRequest.url) !== null && _c !== void 0 ? _c : "";
-            if (!url.startsWith(urlPrefix)) {
-                throw `Expected url "${url}" to have prefix "${urlPrefix}"!`;
-            }
-            url = url.slice(urlPrefix.length);
             try {
-                let components = shared.api.splitComponents(url);
-                let parameters = shared.api.splitParameters(url);
-                let headers = shared.api.splitHeaders(combineNodeRawHeaders(httpRequest.rawHeaders));
-                let payload = {
-                    [Symbol.asyncIterator]: () => httpRequest[Symbol.asyncIterator]()
-                };
-                let socket = httpRequest.socket;
-                let raw = {
-                    method,
-                    components,
-                    parameters,
-                    headers,
-                    payload
-                };
-                let auxillary = {
-                    socket
-                };
+                let raw = createRawRequest(httpRequest, serverOptions === null || serverOptions === void 0 ? void 0 : serverOptions.urlPrefix);
+                let auxillary = createAuxillary(httpRequest);
                 let allEndpoints = endpoints.map((endpoint) => endpoint(raw, auxillary));
                 let endpointsAcceptingComponents = allEndpoints.filter((endpoint) => endpoint.acceptsComponents());
                 if (endpointsAcceptingComponents.length === 0) {
@@ -5737,7 +5987,7 @@ define("node_modules/@joelek/autoguard/dist/lib-client/api", ["require", "export
         });
     };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.finalizeRequest = exports.xhr = exports.ServerResponse = void 0;
+    exports.finalizeRequest = exports.xhr = exports.makeXHRRequestHandler = exports.ServerResponse = void 0;
     __exportStar(api_2, exports);
     class ServerResponse {
         constructor(response, collect) {
@@ -5766,55 +6016,58 @@ define("node_modules/@joelek/autoguard/dist/lib-client/api", ["require", "export
     }
     exports.ServerResponse = ServerResponse;
     ;
-    function xhr(raw, clientOptions, requestOptions) {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            // @ts-ignore
-            let xhr = new XMLHttpRequest();
-            xhr.onerror = reject;
-            xhr.onabort = reject;
-            xhr.onload = () => {
-                let status = xhr.status;
-                // Header values for the same header name are joined by he XHR implementation.
-                let headers = shared.api.splitHeaders(xhr.getAllResponseHeaders().split("\r\n").slice(0, -1));
-                let payload = [new Uint8Array(xhr.response)];
-                let raw = {
-                    status,
-                    headers,
-                    payload
+    function makeXHRRequestHandler(options) {
+        return (raw, clientOptions, requestOptions) => {
+            return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+                var _a;
+                // @ts-ignore
+                let xhr = new XMLHttpRequest();
+                xhr.onerror = reject;
+                xhr.onabort = reject;
+                xhr.onload = () => {
+                    let status = xhr.status;
+                    // Header values for the same header name are joined by he XHR implementation.
+                    let headers = shared.api.splitHeaders(xhr.getAllResponseHeaders().split("\r\n").slice(0, -1));
+                    let payload = [new Uint8Array(xhr.response)];
+                    let raw = {
+                        status,
+                        headers,
+                        payload
+                    };
+                    resolve(raw);
                 };
-                resolve(raw);
-            };
-            if ((requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.onresponseprogess) !== undefined) {
-                xhr.onprogress = (event) => {
-                    var _a;
-                    if (event.lengthComputable) {
-                        (_a = requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.onresponseprogess) === null || _a === void 0 ? void 0 : _a.call(requestOptions, event.loaded / event.total);
-                    }
-                };
-            }
-            if ((requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.onrequestprogress) !== undefined) {
-                xhr.upload.onprogress = (event) => {
-                    var _a;
-                    if (event.lengthComputable) {
-                        (_a = requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.onrequestprogress) === null || _a === void 0 ? void 0 : _a.call(requestOptions, event.loaded / event.total);
-                    }
-                };
-            }
-            let url = (_a = clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.urlPrefix) !== null && _a !== void 0 ? _a : "";
-            url += shared.api.combineComponents(raw.components);
-            url += shared.api.combineParameters(raw.parameters);
-            xhr.open(raw.method, url, true);
-            xhr.responseType = "arraybuffer";
-            for (let header of raw.headers) {
-                // Header values for the same header name are joined by he XHR implementation.
-                xhr.setRequestHeader(header[0], header[1]);
-            }
-            xhr.send(yield shared.api.collectPayload(raw.payload));
-        }));
+                if ((requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.onresponseprogess) !== undefined) {
+                    xhr.onprogress = (event) => {
+                        var _a;
+                        if (event.lengthComputable) {
+                            (_a = requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.onresponseprogess) === null || _a === void 0 ? void 0 : _a.call(requestOptions, event.loaded / event.total);
+                        }
+                    };
+                }
+                if ((requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.onrequestprogress) !== undefined) {
+                    xhr.upload.onprogress = (event) => {
+                        var _a;
+                        if (event.lengthComputable) {
+                            (_a = requestOptions === null || requestOptions === void 0 ? void 0 : requestOptions.onrequestprogress) === null || _a === void 0 ? void 0 : _a.call(requestOptions, event.loaded / event.total);
+                        }
+                    };
+                }
+                let url = (_a = clientOptions === null || clientOptions === void 0 ? void 0 : clientOptions.urlPrefix) !== null && _a !== void 0 ? _a : "";
+                url += shared.api.combineComponents(raw.components);
+                url += shared.api.combineParameters(raw.parameters);
+                xhr.open(raw.method, url, true);
+                xhr.responseType = "arraybuffer";
+                for (let header of raw.headers) {
+                    // Header values for the same header name are joined by he XHR implementation.
+                    xhr.setRequestHeader(header[0], header[1]);
+                }
+                xhr.send(yield shared.api.collectPayload(raw.payload));
+            }));
+        };
     }
-    exports.xhr = xhr;
+    exports.makeXHRRequestHandler = makeXHRRequestHandler;
     ;
+    exports.xhr = makeXHRRequestHandler();
     function finalizeRequest(raw, defaultHeaders) {
         let headersToAppend = defaultHeaders.filter((defaultHeader) => {
             let found = raw.headers.find((header) => header[0].toLowerCase() === defaultHeader[0].toLowerCase());
@@ -9000,7 +9253,8 @@ define("build/lib/config/index", ["require", "exports", "node_modules/@joelek/au
         "http": autoguard.guards.Number,
         "https": autoguard.guards.Number,
         "sign": autoguard.guards.Boolean,
-        "trust": autoguard.guards.Array.of(autoguard.guards.String)
+        "trust": autoguard.guards.Array.of(autoguard.guards.String),
+        "debug": autoguard.guards.Array.of(autoguard.guards.String)
     });
     var Autoguard;
     (function (Autoguard) {
@@ -9302,11 +9556,42 @@ define("build/lib/tls", ["require", "exports"], function (require, exports) {
     exports.getServername = getServername;
     ;
 });
-define("build/lib/proxy", ["require", "exports", "net"], function (require, exports, libnet) {
+define("build/lib/terminal", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.stylize = exports.BG_WHITE = exports.BG_CYAN = exports.BG_MAGENTA = exports.BG_BLUE = exports.BG_YELLOW = exports.BG_GREEN = exports.BG_RED = exports.BG_BLACK = exports.FG_WHITE = exports.FG_CYAN = exports.FG_MAGENTA = exports.FG_BLUE = exports.FG_YELLOW = exports.FG_GREEN = exports.FG_RED = exports.FG_BLACK = exports.UNDERLINE = exports.ITALIC = exports.FAINT = exports.BOLD = exports.RESET = void 0;
+    exports.RESET = 0;
+    exports.BOLD = 1;
+    exports.FAINT = 2;
+    exports.ITALIC = 3;
+    exports.UNDERLINE = 4;
+    exports.FG_BLACK = 30;
+    exports.FG_RED = 31;
+    exports.FG_GREEN = 32;
+    exports.FG_YELLOW = 33;
+    exports.FG_BLUE = 34;
+    exports.FG_MAGENTA = 35;
+    exports.FG_CYAN = 36;
+    exports.FG_WHITE = 37;
+    exports.BG_BLACK = 40;
+    exports.BG_RED = 41;
+    exports.BG_GREEN = 42;
+    exports.BG_YELLOW = 43;
+    exports.BG_BLUE = 44;
+    exports.BG_MAGENTA = 45;
+    exports.BG_CYAN = 46;
+    exports.BG_WHITE = 47;
+    function stylize(string, ...parameters) {
+        return `\x1B[${parameters.join(";")}m` + string + `\x1B[${exports.RESET}m`;
+    }
+    exports.stylize = stylize;
+    ;
+});
+define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal"], function (require, exports, libnet, terminal) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.createServer = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
+    exports.createServer = exports.formatAddress = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
     function parseHeader(buffer) {
         if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
             return {
@@ -9524,11 +9809,29 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
     }
     exports.setTargetAddress = setTargetAddress;
     ;
+    function formatAddress(address) {
+        return address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
+    }
+    exports.formatAddress = formatAddress;
+    ;
+    // NOTE: Sockets have allowHalfOpen set to false.
     function createServer(options, connectionListener) {
-        var _a;
+        var _a, _b;
         let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
+        let tcpDebug = (_b = options.tcpDebug) !== null && _b !== void 0 ? _b : false;
         return libnet.createServer({}, (socket) => {
-            socket.on("error", (error) => { }); // Prevent errors from being thrown. Socket is closed automatically.
+            let remoteAdress = getRemoteAddress(socket);
+            let localAddress = getLocalAddress(socket);
+            if (tcpDebug) {
+                process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+                socket.once("close", (had_error) => {
+                    process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                });
+            }
+            socket.on("error", (error) => {
+                if (tcpDebug)
+                    process.stderr.write(`Incoming TCP connection ${remoteAdress.port} emitted error event with message "${error.message}"` + "\n");
+            });
             socket.on("data", function ondata(chunk) {
                 socket.off("data", ondata);
                 try {
@@ -9558,37 +9861,6 @@ define("build/lib/proxy", ["require", "exports", "net"], function (require, expo
     exports.createServer = createServer;
     ;
 });
-define("build/lib/terminal", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.stylize = exports.BG_WHITE = exports.BG_CYAN = exports.BG_MAGENTA = exports.BG_BLUE = exports.BG_YELLOW = exports.BG_GREEN = exports.BG_RED = exports.BG_BLACK = exports.FG_WHITE = exports.FG_CYAN = exports.FG_MAGENTA = exports.FG_BLUE = exports.FG_YELLOW = exports.FG_GREEN = exports.FG_RED = exports.FG_BLACK = exports.UNDERLINE = exports.ITALIC = exports.FAINT = exports.BOLD = exports.RESET = void 0;
-    exports.RESET = 0;
-    exports.BOLD = 1;
-    exports.FAINT = 2;
-    exports.ITALIC = 3;
-    exports.UNDERLINE = 4;
-    exports.FG_BLACK = 30;
-    exports.FG_RED = 31;
-    exports.FG_GREEN = 32;
-    exports.FG_YELLOW = 33;
-    exports.FG_BLUE = 34;
-    exports.FG_MAGENTA = 35;
-    exports.FG_CYAN = 36;
-    exports.FG_WHITE = 37;
-    exports.BG_BLACK = 40;
-    exports.BG_RED = 41;
-    exports.BG_GREEN = 42;
-    exports.BG_YELLOW = 43;
-    exports.BG_BLUE = 44;
-    exports.BG_MAGENTA = 45;
-    exports.BG_CYAN = 46;
-    exports.BG_WHITE = 47;
-    function stylize(string, ...parameters) {
-        return `\x1B[${parameters.join(";")}m` + string + `\x1B[${exports.RESET}m`;
-    }
-    exports.stylize = stylize;
-    ;
-});
 define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard/dist/lib-server/index", "node_modules/@joelek/multipass/dist/mod/index", "child_process", "fs", "http", "https", "net", "path", "tls", "url", "build/lib/api/server", "build/lib/config/index", "build/lib/config/index", "build/lib/tls", "build/lib/proxy", "build/lib/terminal"], function (require, exports, autoguard, multipass, libcp, libfs, libhttp, libhttps, libnet, libpath, libtls, liburl, libserver, config_1, config_2, tls, proxy, terminal) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -9616,13 +9888,10 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
     };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.makeServer = exports.createDeferredSecureContext = exports.formatAddress = exports.handleTLS = exports.setSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.makeTlsProxyConnection = exports.connectTls = exports.connectProxySockets = exports.destroySocket = exports.TimeoutError = exports.parseServernameConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.getServerAddress = exports.matchesHostnamePattern = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeProxyRequest = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+    exports.makeServer = exports.createDeferredSecureContext = exports.handleTLS = exports.setSocket = exports.getSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.makeTlsProxyConnection = exports.connectTls = exports.connectProxySockets = exports.destroySocket = exports.TimeoutError = exports.parseServernameConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.getServerAddress = exports.matchesHostnamePattern = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeProxyRequest = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
     Object.defineProperty(exports, "Domain", { enumerable: true, get: function () { return config_2.Domain; } });
     Object.defineProperty(exports, "Options", { enumerable: true, get: function () { return config_2.Options; } });
     Object.defineProperty(exports, "Handler", { enumerable: true, get: function () { return config_2.Handler; } });
-    const CONNECTION_DEBUG = false;
-    const HTTP_DEBUG = false;
-    const TCP_DEBUG = false;
     const TIMEOUT_SECONDS = 10;
     function loadConfig(config) {
         let string = libfs.readFileSync(config, "utf-8");
@@ -9998,7 +10267,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.createProxyRawHeaders = createProxyRawHeaders;
     ;
-    function makeProxyRequest(clientRequest, clientResponse, scc) {
+    function makeProxyRequest(clientRequest, clientResponse, scc, debug) {
         let rawHeaders = createProxyRawHeaders(clientRequest, {});
         let proxyRequest = (scc.protocol === "https:" ? libhttps : libhttp).request({
             host: scc.hostname,
@@ -10014,24 +10283,24 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         proxyRequest.on("response", (proxyResponse) => {
             var _a;
             clearTimeout(timeout);
-            if (HTTP_DEBUG)
+            if (debug)
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("response", terminal.FG_CYAN)} event` + "\n");
             clientResponse.writeHead((_a = proxyResponse.statusCode) !== null && _a !== void 0 ? _a : 200, proxyResponse.rawHeaders);
             proxyResponse.pipe(clientResponse);
         });
         proxyRequest.on("timeout", () => {
-            if (HTTP_DEBUG)
+            if (debug)
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("timeout", terminal.FG_CYAN)} event` + "\n");
             proxyRequest.destroy(new TimeoutError("destroy", TIMEOUT_SECONDS));
         });
         proxyRequest.on("error", (error) => {
-            if (HTTP_DEBUG)
+            if (debug)
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
             clientResponse.writeHead(error instanceof TimeoutError || error.code === "ETIMEDOUT" ? 504 : 502);
             clientResponse.end();
         });
         proxyRequest.on("close", () => {
-            if (HTTP_DEBUG)
+            if (debug)
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("close", terminal.FG_CYAN)} event` + "\n");
         });
         clientRequest.pipe(proxyRequest);
@@ -10039,23 +10308,23 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.makeProxyRequest = makeProxyRequest;
     ;
-    function makeProxyRequestListener(scc) {
+    function makeProxyRequestListener(scc, debug) {
         return (request, response) => {
-            makeProxyRequest(request, response, scc);
+            makeProxyRequest(request, response, scc, debug);
         };
     }
     exports.makeProxyRequestListener = makeProxyRequestListener;
     ;
-    function makeProxyUpgradeListener(scc) {
+    function makeProxyUpgradeListener(scc, debug) {
         return (clientRequest, clientSocket, clientHead) => {
             let clientResponse = new libhttp.ServerResponse(clientRequest);
             clientResponse.assignSocket(clientSocket);
-            let proxyRequest = makeProxyRequest(clientRequest, clientResponse, scc);
+            let proxyRequest = makeProxyRequest(clientRequest, clientResponse, scc, debug);
             proxyRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
                 var _a;
                 clientResponse.writeHead((_a = serverResponse.statusCode) !== null && _a !== void 0 ? _a : 200, serverResponse.rawHeaders);
                 clientResponse.end();
-                connectProxySockets(clientSocket, serverSocket);
+                connectProxySockets(clientSocket, serverSocket, debug);
                 serverSocket.write(clientHead);
                 clientSocket.write(serverHead);
             });
@@ -10166,7 +10435,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     exports.destroySocket = destroySocket;
     ;
     // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful FIN close in several situations. Using resetAndDestroy() always sends a RST close and works when there is large backpressure.
-    function connectProxySockets(clientSocket, serverSocket) {
+    function connectProxySockets(clientSocket, serverSocket, debug) {
         let clientID;
         let serverID;
         if (serverSocket.connecting) {
@@ -10204,92 +10473,96 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             clientSocket.resume();
         });
         serverSocket.on("close", (had_error) => {
-            if (TCP_DEBUG)
-                process.stdout.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+            if (debug)
+                process.stderr.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
             destroySocket(clientSocket);
         });
         clientSocket.on("close", (had_error) => {
-            if (TCP_DEBUG)
-                process.stdout.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted ${terminal.stylize("close", terminal.FG_CYAN)} event ${had_error ? "with error" : "without error"}` + "\n");
+            if (debug)
+                process.stderr.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
             destroySocket(serverSocket);
         });
-        serverSocket.on("error", (error) => {
-            if (TCP_DEBUG)
-                process.stdout.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
-        });
-        clientSocket.on("error", (error) => {
-            if (TCP_DEBUG)
-                process.stdout.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
-        });
         clientSocket.on("end", () => {
-            if (TCP_DEBUG)
-                process.stdout.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+            if (debug)
+                process.stderr.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted end event signaling that no more data will be sent to proxy` + "\n");
             destroySocket(clientSocket);
         });
         serverSocket.on("end", () => {
-            if (TCP_DEBUG)
-                process.stdout.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted ${terminal.stylize("end", terminal.FG_CYAN)} event` + "\n");
+            if (debug)
+                process.stderr.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted end event signaling that no more data will be sent to proxy` + "\n");
             destroySocket(serverSocket);
         });
     }
     exports.connectProxySockets = connectProxySockets;
     ;
-    function connectTls(options, timeout_seconds) {
+    function connectTls(options, timeout_seconds, debug) {
         let serverSocket = libtls.connect(options);
         let timeout = setTimeout(() => {
             serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
         }, timeout_seconds * 1000);
-        serverSocket.on("secureConnect", () => {
+        serverSocket.once("secureConnect", () => {
             clearTimeout(timeout);
-            let address = proxy.getRemoteAddress(serverSocket);
-            if (CONNECTION_DEBUG)
-                process.stderr.write(`Outgoing ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
-            serverSocket.on("close", (had_error) => {
-                if (CONNECTION_DEBUG)
-                    process.stderr.write(`Outgoing ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+            let remoteAddress = proxy.getRemoteAddress(serverSocket);
+            let localAddress = proxy.getLocalAddress(serverSocket);
+            if (debug)
+                process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
+            serverSocket.once("close", (had_error) => {
+                if (debug)
+                    process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
             });
+        });
+        serverSocket.on("error", (error) => {
+            var _a;
+            if (debug)
+                process.stderr.write(`Outgoing TCP connection ${(_a = serverSocket.localPort) !== null && _a !== void 0 ? _a : "?"} emitted error event with message "${error.message}"` + "\n");
         });
         return serverSocket;
     }
     exports.connectTls = connectTls;
     ;
-    function makeTlsProxyConnection(host, port, head, clientSocket) {
+    function makeTlsProxyConnection(host, port, head, clientSocket, debug) {
         let serverSocket = connectTls({
             host,
             port
-        }, TIMEOUT_SECONDS);
+        }, TIMEOUT_SECONDS, debug);
         serverSocket.write(head);
-        connectProxySockets(clientSocket, serverSocket);
+        connectProxySockets(clientSocket, serverSocket, debug);
         return serverSocket;
     }
     exports.makeTlsProxyConnection = makeTlsProxyConnection;
     ;
-    function connectTcp(options, timeout_seconds) {
+    function connectTcp(options, timeout_seconds, debug) {
         let serverSocket = libnet.connect(options);
         let timeout = setTimeout(() => {
             serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
         }, timeout_seconds * 1000);
-        serverSocket.on("connect", () => {
+        serverSocket.once("connect", () => {
             clearTimeout(timeout);
-            let address = proxy.getRemoteAddress(serverSocket);
-            if (CONNECTION_DEBUG)
-                process.stderr.write(`Outgoing ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
-            serverSocket.on("close", (had_error) => {
-                if (CONNECTION_DEBUG)
-                    process.stderr.write(`Outgoing ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+            let remoteAddress = proxy.getRemoteAddress(serverSocket);
+            let localAddress = proxy.getLocalAddress(serverSocket);
+            if (debug)
+                process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
+            serverSocket.once("close", (had_error) => {
+                if (debug)
+                    process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
             });
+        });
+        serverSocket.on("error", (error) => {
+            var _a;
+            if (debug)
+                process.stderr.write(`Outgoing TCP connection ${(_a = serverSocket.localPort) !== null && _a !== void 0 ? _a : "?"} emitted error event with message "${error.message}"` + "\n");
         });
         return serverSocket;
     }
     exports.connectTcp = connectTcp;
     ;
-    function makeTcpProxyConnection(host, port, head, clientSocket) {
+    function makeTcpProxyConnection(host, port, head, clientSocket, debug) {
         let serverSocket = connectTcp({
             host,
             port
-        }, TIMEOUT_SECONDS);
+        }, TIMEOUT_SECONDS, debug);
         serverSocket.write(head);
-        connectProxySockets(clientSocket, serverSocket);
+        connectProxySockets(clientSocket, serverSocket, debug);
         return serverSocket;
     }
     exports.makeTcpProxyConnection = makeTcpProxyConnection;
@@ -10301,6 +10574,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             return tlsSocket[SOCKET_KEY];
         }
     }
+    exports.getSocket = getSocket;
     ;
     function setSocket(tlsSocket, socket) {
         Object.defineProperty(tlsSocket, SOCKET_KEY, {
@@ -10323,11 +10597,6 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
     }
     exports.handleTLS = handleTLS;
-    ;
-    function formatAddress(address) {
-        return address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
-    }
-    exports.formatAddress = formatAddress;
     ;
     function createDeferredSecureContext(options) {
         if (options.key || options.cert) {
@@ -10401,10 +10670,12 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     exports.createDeferredSecureContext = createDeferredSecureContext;
     ;
     function makeServer(options) {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
         let http = (_a = options.http) !== null && _a !== void 0 ? _a : 8080;
         let https = (_b = options.https) !== null && _b !== void 0 ? _b : 8443;
         let sign = (_c = options.sign) !== null && _c !== void 0 ? _c : false;
+        let httpDebug = (_e = (_d = options.debug) === null || _d === void 0 ? void 0 : _d.includes("http")) !== null && _e !== void 0 ? _e : false;
+        let tcpDebug = (_g = (_f = options.debug) === null || _f === void 0 ? void 0 : _f.includes("tcp")) !== null && _g !== void 0 ? _g : false;
         let defaultSecureContext = libtls.createSecureContext();
         let defaultRequestListener = (request, response) => {
             response.writeHead(404);
@@ -10420,15 +10691,15 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         let httpsUpgradeListeners = new Array();
         let handledServernameConnectionConfigs = new Array();
         let delegatedServernameConnectionConfigs = new Array();
-        for (let domain of (_d = options.domains) !== null && _d !== void 0 ? _d : []) {
-            let root = (_e = domain.root) !== null && _e !== void 0 ? _e : "./";
+        for (let domain of (_h = options.domains) !== null && _h !== void 0 ? _h : []) {
+            let root = (_j = domain.root) !== null && _j !== void 0 ? _j : "./";
             let key = domain.key;
             let cert = domain.cert;
             let pass = domain.pass;
-            let host = (_f = domain.host) !== null && _f !== void 0 ? _f : "*";
+            let host = (_k = domain.host) !== null && _k !== void 0 ? _k : "*";
             let handler = domain.handler;
-            let routing = (_g = domain.routing) !== null && _g !== void 0 ? _g : true;
-            let indices = (_h = domain.indices) !== null && _h !== void 0 ? _h : false;
+            let routing = (_l = domain.routing) !== null && _l !== void 0 ? _l : true;
+            let indices = (_m = domain.indices) !== null && _m !== void 0 ? _m : false;
             let httpHost = `http://${host}:${http}`;
             let httpsHost = `https://${host}:${https}`;
             let secureContext = createDeferredSecureContext({
@@ -10448,10 +10719,10 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                     handledServernameConnectionConfigs.push([host, servernameConnectionConfig]);
                     if (exports.HTTP_PROTOCOLS.includes(servernameConnectionConfig.protocol)) {
                         process.stdout.write(`Proxying ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-                        let httpsRequestListener = makeProxyRequestListener(servernameConnectionConfig);
+                        let httpsRequestListener = makeProxyRequestListener(servernameConnectionConfig, httpDebug);
                         httpsRequestListeners.push([host, httpsRequestListener]);
                         ;
-                        let httpsUpgradeListener = makeProxyUpgradeListener(servernameConnectionConfig);
+                        let httpsUpgradeListener = makeProxyUpgradeListener(servernameConnectionConfig, httpDebug);
                         httpsUpgradeListeners.push([host, httpsUpgradeListener]);
                     }
                     else {
@@ -10473,10 +10744,10 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                     delegatedServernameConnectionConfigs.push([host, servernameConnectionConfig]);
                     if (exports.HTTP_PROTOCOLS.includes(servernameConnectionConfig.protocol)) {
                         process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-                        let httpsRequestListener = makeProxyRequestListener(servernameConnectionConfig);
+                        let httpsRequestListener = makeProxyRequestListener(servernameConnectionConfig, httpDebug);
                         httpRequestListeners.push([host, httpsRequestListener]);
                         ;
-                        let httpsUpgradeListener = makeProxyUpgradeListener(servernameConnectionConfig);
+                        let httpsUpgradeListener = makeProxyUpgradeListener(servernameConnectionConfig, httpDebug);
                         httpUpgradeListeners.push([host, httpsUpgradeListener]);
                     }
                     else {
@@ -10521,17 +10792,10 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             let upgradeListener = (_c = (_b = httpsUpgradeListeners.find((pair) => matchesHostnamePattern(hostname, pair[0]))) === null || _b === void 0 ? void 0 : _b[1]) !== null && _c !== void 0 ? _c : defaultUpgradeListener;
             return upgradeListener(request, socket, head);
         });
-        // NOTE: Sockets have allowHalfOpen set to false.
         let httpRouter = proxy.createServer({
-            trustedRemoteAddresses: options.trust
+            trustedRemoteAddresses: options.trust,
+            tcpDebug: tcpDebug
         }, (clientSocket, proxyHeader) => {
-            let address = proxy.getRemoteAddress(clientSocket);
-            if (CONNECTION_DEBUG) {
-                process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
-                clientSocket.on("close", (had_error) => {
-                    process.stderr.write(`Incoming ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
-                });
-            }
             httpRequestRouter.emit("connection", clientSocket);
         });
         httpRouter.listen({
@@ -10539,19 +10803,12 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             host: process.platform === "win32" ? "0.0.0.0" : undefined
         }, () => {
             let address = getServerAddress(httpRouter);
-            process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}\n`);
+            process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(proxy.formatAddress(address), terminal.FG_YELLOW)}\n`);
         });
-        // NOTE: Sockets have allowHalfOpen set to false.
         let httpsRouter = proxy.createServer({
-            trustedRemoteAddresses: options.trust
+            trustedRemoteAddresses: options.trust,
+            tcpDebug: tcpDebug
         }, (clientSocket, proxyHeader) => {
-            let address = proxy.getRemoteAddress(clientSocket);
-            if (CONNECTION_DEBUG) {
-                process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}` + "\n");
-                clientSocket.on("close", (had_error) => {
-                    process.stderr.write(`Incoming ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} connection ${address.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
-                });
-            }
             let timeout = setTimeout(() => {
                 clientSocket.resetAndDestroy();
             }, TIMEOUT_SECONDS * 1000);
@@ -10583,7 +10840,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                             proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(clientSocket);
                             buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                         }
-                        makeTcpProxyConnection(hostname, port, buffer, clientSocket);
+                        makeTcpProxyConnection(hostname, port, buffer, clientSocket, tcpDebug);
                     }
                     else {
                         let secureContext = secureContexts.find((pair) => matchesHostnamePattern(servername, pair.host));
@@ -10605,7 +10862,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                                         proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(tlsSocket);
                                         buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                                     }
-                                    makeTcpProxyConnection(hostname, port, buffer, tlsSocket);
+                                    makeTcpProxyConnection(hostname, port, buffer, tlsSocket, tcpDebug);
                                 }
                                 else {
                                     httpsRequestRouter.emit("connection", tlsSocket);
@@ -10630,7 +10887,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             host: process.platform === "win32" ? "0.0.0.0" : undefined
         }, () => {
             let address = getServerAddress(httpsRouter);
-            process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(formatAddress(address), terminal.FG_YELLOW)}\n`);
+            process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(proxy.formatAddress(address), terminal.FG_YELLOW)}\n`);
         });
     }
     exports.makeServer = makeServer;
@@ -10664,7 +10921,7 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
     };
     Object.defineProperty(exports, "__esModule", { value: true });
     function run() {
-        var _a;
+        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
             let domain = {};
             let domains = new Array();
@@ -10717,6 +10974,9 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
                 else if ((parts = /^--trust=(.*)$/.exec(arg)) !== null) {
                     options.trust = [...((_a = options.trust) !== null && _a !== void 0 ? _a : []), parts[1]];
                 }
+                else if ((parts = /^--debug=(.*)$/.exec(arg)) !== null) {
+                    options.debug = [...((_b = options.debug) !== null && _b !== void 0 ? _b : []), parts[1]];
+                }
                 else {
                     unrecognizedArguments.push(arg);
                 }
@@ -10755,6 +11015,8 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
                 process.stderr.write(`		Configure automatic generation of self-signed certificates.\n`);
                 process.stderr.write(`	--trust=string\n`);
                 process.stderr.write(`		Add trusted remote address for PROXY protocol.\n`);
+                process.stderr.write(`	--debug=string\n`);
+                process.stderr.write(`		Add debug option.\n`);
                 process.exit(0);
             }
             else {
