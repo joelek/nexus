@@ -587,7 +587,7 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	let clientSocketDestroyTimeout: NodeJS.Timeout | undefined;
 	function closeServer() {
 		if (serverSocket.writable) {
-			if (debug) process.stderr.write(`Outgoing TCP connection ${serverID ?? "?"} closing...` + "\n");
+			if (debug) process.stderr.write(`Server connection ${serverID ?? "?"} closing...` + "\n");
 			serverSocketDestroyTimeout = setTimeout(() => {
 				destroySocket(serverSocket);
 			}, TIMEOUT_SECONDS * 1000);
@@ -598,7 +598,7 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	}
 	function closeClient() {
 		if (clientSocket.writable) {
-			if (debug) process.stderr.write(`Incoming TCP connection ${clientID ?? "?"} closing...` + "\n");
+			if (debug) process.stderr.write(`Client connection ${clientID ?? "?"} closing...` + "\n");
 			clientSocketDestroyTimeout = setTimeout(() => {
 				destroySocket(clientSocket);
 			}, TIMEOUT_SECONDS * 1000);
@@ -608,7 +608,7 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 		}
 	}
 	serverSocket.on("close", (had_error) => {
-		if (debug) process.stderr.write(`Outgoing TCP connection ${serverID ?? "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+		if (debug) process.stderr.write(`Server connection ${serverID ?? "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
 		clearTimeout(serverSocketDestroyTimeout);
 		if (had_error) {
 			destroySocket(clientSocket);
@@ -617,7 +617,7 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 		}
 	});
 	clientSocket.on("close", (had_error) => {
-		if (debug) process.stderr.write(`Incoming TCP connection ${clientID ?? "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+		if (debug) process.stderr.write(`Client connection ${clientID ?? "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
 		clearTimeout(clientSocketDestroyTimeout);
 		if (had_error) {
 			destroySocket(serverSocket);
@@ -626,11 +626,11 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 		}
 	});
 	clientSocket.on("end", () => {
-		if (debug) process.stderr.write(`Incoming TCP connection ${clientID ?? "?"} emitted end event` + "\n");
+		if (debug) process.stderr.write(`Client connection ${clientID ?? "?"} emitted end event` + "\n");
 		closeServer();
 	});
 	serverSocket.on("end", () => {
-		if (debug) process.stderr.write(`Outgoing TCP connection ${serverID ?? "?"} emitted end event` + "\n");
+		if (debug) process.stderr.write(`Server connection ${serverID ?? "?"} emitted end event` + "\n");
 		closeClient();
 	});
 };
@@ -644,15 +644,15 @@ export function connectTls(options: libtls.ConnectionOptions, timeout_seconds: n
 		clearTimeout(timeout);
 		let remoteAddress = proxy.getRemoteAddress(serverSocket);
 		let localAddress = proxy.getLocalAddress(serverSocket);
-		if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
+		if (debug) process.stderr.write(`Server connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
 		serverSocket.once("close", (had_error) => {
 			process.nextTick(() => {
-				if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+				if (debug) process.stderr.write(`Server connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
 			});
 		});
 	});
 	serverSocket.on("error", (error) => {
-		if (debug) process.stderr.write(`Outgoing TCP connection ${serverSocket.localPort ?? "?"} emitted error event with message "${error.message}"` + "\n");
+		if (debug) process.stderr.write(`Server connection ${serverSocket.localPort ?? "?"} emitted error event with message "${error.message}"` + "\n");
 	});
 	return serverSocket;
 };
@@ -676,15 +676,15 @@ export function connectTcp(options: libnet.NetConnectOpts, timeout_seconds: numb
 		clearTimeout(timeout);
 		let remoteAddress = proxy.getRemoteAddress(serverSocket);
 		let localAddress = proxy.getLocalAddress(serverSocket);
-		if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
+		if (debug) process.stderr.write(`Server connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
 		serverSocket.once("close", (had_error) => {
 			process.nextTick(() => {
-				if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+				if (debug) process.stderr.write(`Server connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
 			});
 		});
 	});
 	serverSocket.on("error", (error) => {
-		if (debug) process.stderr.write(`Outgoing TCP connection ${serverSocket.localPort ?? "?"} emitted error event with message "${error.message}"` + "\n");
+		if (debug) process.stderr.write(`Server connection ${serverSocket.localPort ?? "?"} emitted error event with message "${error.message}"` + "\n");
 	});
 	return serverSocket;
 };

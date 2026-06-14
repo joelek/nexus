@@ -232,15 +232,15 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 		let remoteAdress = getRemoteAddress(socket);
 		let localAddress = getLocalAddress(socket);
 		if (tcpDebug) {
-			process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+			process.stderr.write(`Client connection ${remoteAdress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
 			socket.once("close", (had_error) => {
 				process.nextTick(() => {
-					process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+					process.stderr.write(`Client connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
 				});
 			});
 		}
 		socket.on("error", (error) => {
-			if (tcpDebug) process.stderr.write(`Incoming TCP connection ${remoteAdress.port} emitted error event with message "${error.message}"` + "\n");
+			if (tcpDebug) process.stderr.write(`Client connection ${remoteAdress.port} emitted error event with message "${error.message}"` + "\n");
 		});
 		socket.on("data", function ondata(chunk: Buffer): void {
 			socket.off("data", ondata);
