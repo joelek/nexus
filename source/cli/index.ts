@@ -41,6 +41,8 @@ async function run(): Promise<void> {
 			options.sign = parts[1] === "true";
 		} else if ((parts = /^--trust=(.*)$/.exec(arg)) !== null) {
 			options.trust = [...(options.trust ?? []), parts[1]];
+		} else if ((parts = /^--debug=(.*)$/.exec(arg)) !== null) {
+			options.debug = [...(options.debug ?? []), parts[1]];
 		} else {
 			unrecognizedArguments.push(arg);
 		}
@@ -79,6 +81,8 @@ async function run(): Promise<void> {
 		process.stderr.write(`		Configure automatic generation of self-signed certificates.\n`);
 		process.stderr.write(`	--trust=string\n`);
 		process.stderr.write(`		Add trusted remote address for PROXY protocol.\n`);
+		process.stderr.write(`	--debug=string\n`);
+		process.stderr.write(`		Add debug option.\n`);
 		process.exit(0);
 	} else {
 		if (domains.length === 0) {

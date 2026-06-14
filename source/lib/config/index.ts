@@ -33,7 +33,8 @@ export const Options: autoguard.serialization.MessageGuard<Options> = autoguard.
 	"http": autoguard.guards.Number,
 	"https": autoguard.guards.Number,
 	"sign": autoguard.guards.Boolean,
-	"trust": autoguard.guards.Array.of(autoguard.guards.String)
+	"trust": autoguard.guards.Array.of(autoguard.guards.String),
+	"debug": autoguard.guards.Array.of(autoguard.guards.String)
 });
 
 export type Options = autoguard.guards.Object<{}, {
@@ -41,7 +42,8 @@ export type Options = autoguard.guards.Object<{}, {
 	"http": autoguard.guards.Number,
 	"https": autoguard.guards.Number,
 	"sign": autoguard.guards.Boolean,
-	"trust": autoguard.guards.Array<autoguard.guards.String>
+	"trust": autoguard.guards.Array<autoguard.guards.String>,
+	"debug": autoguard.guards.Array<autoguard.guards.String>
 }>;
 
 export namespace Autoguard {

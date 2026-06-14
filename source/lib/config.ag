@@ -16,5 +16,6 @@ guard Options: {
 	http?: number,
 	https?: number,
 	sign?: boolean,
-	trust?: string[]
+	trust?: string[],
+	debug?: string[]
 };
