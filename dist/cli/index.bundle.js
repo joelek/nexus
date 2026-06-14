@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781439630976,
+    "timestamp": 1781468752770,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9591,7 +9591,7 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal"], f
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.createServer = exports.formatAddress = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
+    exports.createServer = exports.formatAddress = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
     function parseHeader(buffer) {
         if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
             return {
@@ -9794,43 +9794,70 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal"], f
     exports.getTargetAddress = getTargetAddress;
     ;
     function setSourceAddress(socket, header) {
+        delete socket[SOURCE_KEY];
         let sourceAddress = createSourceAddress(header);
         Object.defineProperty(socket, SOURCE_KEY, {
-            value: sourceAddress
+            value: sourceAddress,
+            configurable: true
         });
     }
     exports.setSourceAddress = setSourceAddress;
     ;
     function setTargetAddress(socket, header) {
+        delete socket[TARGET_KEY];
         let targetAddress = createTargetAddress(header);
         Object.defineProperty(socket, TARGET_KEY, {
-            value: targetAddress
+            value: targetAddress,
+            configurable: true
         });
     }
     exports.setTargetAddress = setTargetAddress;
+    ;
+    const CONNECTION_ID_KEY = Symbol();
+    function getConnectionId(socket) {
+        if (CONNECTION_ID_KEY in socket) {
+            return socket[CONNECTION_ID_KEY];
+        }
+    }
+    exports.getConnectionId = getConnectionId;
+    ;
+    function setConnectionId(socket, connectionId) {
+        delete socket[CONNECTION_ID_KEY];
+        Object.defineProperty(socket, CONNECTION_ID_KEY, {
+            value: connectionId,
+            configurable: true
+        });
+    }
+    exports.setConnectionId = setConnectionId;
     ;
     function formatAddress(address) {
         return address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
     }
     exports.formatAddress = formatAddress;
     ;
-    // NOTE: Sockets have allowHalfOpen set to false.
     function createServer(options, connectionListener) {
         var _a, _b;
         let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
-        let tcpDebug = (_b = options.tcpDebug) !== null && _b !== void 0 ? _b : false;
-        return libnet.createServer({}, (socket) => {
-            let remoteAdress = getRemoteAddress(socket);
+        let debug = (_b = options.debug) !== null && _b !== void 0 ? _b : false;
+        return libnet.createServer({
+            allowHalfOpen: true
+        }, (socket) => {
+            let remoteAddress = getRemoteAddress(socket);
             let localAddress = getLocalAddress(socket);
-            if (tcpDebug) {
-                process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+            setConnectionId(socket, `${remoteAddress.port}`);
+            if (debug) {
+                process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
                 socket.once("close", (had_error) => {
-                    process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                    process.nextTick(() => {
+                        process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                    });
                 });
             }
             socket.on("error", (error) => {
-                if (tcpDebug)
-                    process.stderr.write(`Incoming TCP connection ${remoteAdress.port} emitted error event with message "${error.message}"` + "\n");
+                var _a;
+                if (debug) {
+                    process.stderr.write(`Client connection ${(_a = getConnectionId(socket)) !== null && _a !== void 0 ? _a : "-"} emitted error event with message "${error.message}"` + "\n");
+                }
             });
             socket.on("data", function ondata(chunk) {
                 socket.off("data", ondata);
@@ -10283,25 +10310,29 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         proxyRequest.on("response", (proxyResponse) => {
             var _a;
             clearTimeout(timeout);
-            if (debug)
+            if (debug) {
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("response", terminal.FG_CYAN)} event` + "\n");
+            }
             clientResponse.writeHead((_a = proxyResponse.statusCode) !== null && _a !== void 0 ? _a : 200, proxyResponse.rawHeaders);
             proxyResponse.pipe(clientResponse);
         });
         proxyRequest.on("timeout", () => {
-            if (debug)
+            if (debug) {
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("timeout", terminal.FG_CYAN)} event` + "\n");
+            }
             proxyRequest.destroy(new TimeoutError("destroy", TIMEOUT_SECONDS));
         });
         proxyRequest.on("error", (error) => {
-            if (debug)
+            if (debug) {
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
+            }
             clientResponse.writeHead(error instanceof TimeoutError || error.code === "ETIMEDOUT" ? 504 : 502);
             clientResponse.end();
         });
         proxyRequest.on("close", () => {
-            if (debug)
+            if (debug) {
                 process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("close", terminal.FG_CYAN)} event` + "\n");
+            }
         });
         clientRequest.pipe(proxyRequest);
         return proxyRequest;
@@ -10418,6 +10449,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.TimeoutError = TimeoutError;
     ;
+    // NOTE: Using resetAndDestroy() sends a RST close and sets SO_LINGER to 0 allowing immediate port re-use.
     function destroySocket(socket) {
         if (socket instanceof libtls.TLSSocket) {
             let underlying = getSocket(socket);
@@ -10434,26 +10466,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.destroySocket = destroySocket;
     ;
-    // NOTE: The normal destroy() method has inconsistent behaviour between OSes and may attempt a graceful FIN close in several situations. Using resetAndDestroy() always sends a RST close and works when there is large backpressure.
     function connectProxySockets(clientSocket, serverSocket, debug) {
-        let clientID;
-        let serverID;
-        if (serverSocket.connecting) {
-            serverSocket.once("connect", () => {
-                serverID = serverSocket.localPort;
-            });
-        }
-        else {
-            serverID = serverSocket.localPort;
-        }
-        if (clientSocket.connecting) {
-            clientSocket.once("connect", () => {
-                clientID = clientSocket.remotePort;
-            });
-        }
-        else {
-            clientID = clientSocket.remotePort;
-        }
         serverSocket.on("data", (buffer) => {
             let doContinue = clientSocket.write(buffer);
             if (!doContinue) {
@@ -10472,51 +10485,115 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         serverSocket.on("drain", () => {
             clientSocket.resume();
         });
+        let serverSocketDestroyTimeout;
+        let clientSocketDestroyTimeout;
+        function closeServer() {
+            if (serverSocket.writable) {
+                if (debug) {
+                    process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} closing...` + "\n");
+                }
+                serverSocketDestroyTimeout = setTimeout(() => {
+                    destroySocket(serverSocket);
+                }, TIMEOUT_SECONDS * 1000);
+                serverSocket.end();
+            }
+            else {
+                destroySocket(serverSocket);
+            }
+        }
+        function closeClient() {
+            if (clientSocket.writable) {
+                if (debug) {
+                    process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} closing...` + "\n");
+                }
+                clientSocketDestroyTimeout = setTimeout(() => {
+                    destroySocket(clientSocket);
+                }, TIMEOUT_SECONDS * 1000);
+                clientSocket.end();
+            }
+            else {
+                destroySocket(clientSocket);
+            }
+        }
         serverSocket.on("close", (had_error) => {
-            if (debug)
-                process.stderr.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
-            destroySocket(clientSocket);
+            if (debug) {
+                process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+            }
+            clearTimeout(serverSocketDestroyTimeout);
+            if (had_error) {
+                destroySocket(clientSocket);
+            }
+            else {
+                closeClient();
+            }
         });
         clientSocket.on("close", (had_error) => {
-            if (debug)
-                process.stderr.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
-            destroySocket(serverSocket);
+            if (debug) {
+                process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+            }
+            clearTimeout(clientSocketDestroyTimeout);
+            if (had_error) {
+                destroySocket(serverSocket);
+            }
+            else {
+                closeServer();
+            }
         });
         clientSocket.on("end", () => {
-            if (debug)
-                process.stderr.write(`Incoming TCP connection ${clientID !== null && clientID !== void 0 ? clientID : "?"} emitted end event signaling that no more data will be sent to proxy` + "\n");
-            destroySocket(clientSocket);
+            if (debug) {
+                process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted end event` + "\n");
+            }
+            closeServer();
         });
         serverSocket.on("end", () => {
-            if (debug)
-                process.stderr.write(`Outgoing TCP connection ${serverID !== null && serverID !== void 0 ? serverID : "?"} emitted end event signaling that no more data will be sent to proxy` + "\n");
-            destroySocket(serverSocket);
+            if (debug) {
+                process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted end event` + "\n");
+            }
+            closeClient();
         });
     }
     exports.connectProxySockets = connectProxySockets;
     ;
     function connectTls(options, timeout_seconds, debug) {
-        let serverSocket = libtls.connect(options);
+        let serverSocket = libnet.connect(options);
         let timeout = setTimeout(() => {
             serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
         }, timeout_seconds * 1000);
-        serverSocket.once("secureConnect", () => {
+        proxy.setConnectionId(serverSocket, "-");
+        serverSocket.once("connect", () => {
             clearTimeout(timeout);
             let remoteAddress = proxy.getRemoteAddress(serverSocket);
             let localAddress = proxy.getLocalAddress(serverSocket);
-            if (debug)
-                process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
+            proxy.setConnectionId(serverSocket, `${localAddress.port}`);
+            if (debug) {
+                process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
+            }
             serverSocket.once("close", (had_error) => {
-                if (debug)
-                    process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                process.nextTick(() => {
+                    if (debug) {
+                        process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                    }
+                });
             });
         });
         serverSocket.on("error", (error) => {
-            var _a;
-            if (debug)
-                process.stderr.write(`Outgoing TCP connection ${(_a = serverSocket.localPort) !== null && _a !== void 0 ? _a : "?"} emitted error event with message "${error.message}"` + "\n");
+            if (debug) {
+                process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted error event with message "${error.message}"` + "\n");
+            }
         });
-        return serverSocket;
+        let tlsSocket = new libtls.TLSSocket(serverSocket, {
+            isServer: false,
+        });
+        proxy.setConnectionId(tlsSocket, "-");
+        if (options.host != null) {
+            tlsSocket.servername = options.host;
+        }
+        tlsSocket.on("error", (error) => { }); // Prevent errors from being thrown.
+        tlsSocket.on("secureConnect", () => {
+            proxy.setConnectionId(tlsSocket, proxy.getConnectionId(serverSocket));
+        });
+        setSocket(tlsSocket, serverSocket);
+        return tlsSocket;
     }
     exports.connectTls = connectTls;
     ;
@@ -10536,21 +10613,27 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         let timeout = setTimeout(() => {
             serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
         }, timeout_seconds * 1000);
+        proxy.setConnectionId(serverSocket, "-");
         serverSocket.once("connect", () => {
             clearTimeout(timeout);
             let remoteAddress = proxy.getRemoteAddress(serverSocket);
             let localAddress = proxy.getLocalAddress(serverSocket);
-            if (debug)
-                process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
+            proxy.setConnectionId(serverSocket, `${localAddress.port}`);
+            if (debug) {
+                process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
+            }
             serverSocket.once("close", (had_error) => {
-                if (debug)
-                    process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                process.nextTick(() => {
+                    if (debug) {
+                        process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                    }
+                });
             });
         });
         serverSocket.on("error", (error) => {
-            var _a;
-            if (debug)
-                process.stderr.write(`Outgoing TCP connection ${(_a = serverSocket.localPort) !== null && _a !== void 0 ? _a : "?"} emitted error event with message "${error.message}"` + "\n");
+            if (debug) {
+                process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted error event with message "${error.message}"` + "\n");
+            }
         });
         return serverSocket;
     }
@@ -10577,8 +10660,10 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     exports.getSocket = getSocket;
     ;
     function setSocket(tlsSocket, socket) {
+        delete socket[SOCKET_KEY];
         Object.defineProperty(tlsSocket, SOCKET_KEY, {
-            value: socket
+            value: socket,
+            configurable: true
         });
     }
     exports.setSocket = setSocket;
@@ -10590,9 +10675,11 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             isServer: true,
             secureContext
         });
+        proxy.setConnectionId(tlsSocket, "-");
         setSocket(tlsSocket, clientSocket);
-        tlsSocket.on("error", (error) => { }); // Prevent errors from being thrown. Socket is closed automatically.
+        tlsSocket.on("error", (error) => { }); // Prevent errors from being thrown.
         tlsSocket.on("secure", () => {
+            proxy.setConnectionId(tlsSocket, proxy.getConnectionId(clientSocket));
             callback(tlsSocket);
         });
     }
@@ -10794,7 +10881,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
         let httpRouter = proxy.createServer({
             trustedRemoteAddresses: options.trust,
-            tcpDebug: tcpDebug
+            debug: tcpDebug
         }, (clientSocket, proxyHeader) => {
             httpRequestRouter.emit("connection", clientSocket);
         });
@@ -10807,7 +10894,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
         let httpsRouter = proxy.createServer({
             trustedRemoteAddresses: options.trust,
-            tcpDebug: tcpDebug
+            debug: tcpDebug
         }, (clientSocket, proxyHeader) => {
             let timeout = setTimeout(() => {
                 clientSocket.resetAndDestroy();

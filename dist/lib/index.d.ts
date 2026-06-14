@@ -45,9 +45,9 @@ export declare class TimeoutError extends Error {
 }
 export declare function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void;
 export declare function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): void;
-export declare function connectTls(options: libtls.ConnectionOptions, timeout_seconds: number, debug: boolean): libtls.TLSSocket;
+export declare function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libtls.TLSSocket;
 export declare function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): libtls.TLSSocket;
-export declare function connectTcp(options: libnet.NetConnectOpts, timeout_seconds: number, debug: boolean): libnet.Socket;
+export declare function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libnet.Socket;
 export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): libnet.Socket;
 export declare function getSocket(tlsSocket: libtls.TLSSocket): libnet.Socket | undefined;
 export declare function setSocket(tlsSocket: libtls.TLSSocket, socket: libnet.Socket): void;

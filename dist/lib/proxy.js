@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createServer = exports.formatAddress = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
+exports.createServer = exports.formatAddress = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
 const libnet = require("net");
 const terminal = require("./terminal");
 function parseHeader(buffer) {
@@ -205,43 +205,70 @@ function getTargetAddress(socket) {
 exports.getTargetAddress = getTargetAddress;
 ;
 function setSourceAddress(socket, header) {
+    delete socket[SOURCE_KEY];
     let sourceAddress = createSourceAddress(header);
     Object.defineProperty(socket, SOURCE_KEY, {
-        value: sourceAddress
+        value: sourceAddress,
+        configurable: true
     });
 }
 exports.setSourceAddress = setSourceAddress;
 ;
 function setTargetAddress(socket, header) {
+    delete socket[TARGET_KEY];
     let targetAddress = createTargetAddress(header);
     Object.defineProperty(socket, TARGET_KEY, {
-        value: targetAddress
+        value: targetAddress,
+        configurable: true
     });
 }
 exports.setTargetAddress = setTargetAddress;
+;
+const CONNECTION_ID_KEY = Symbol();
+function getConnectionId(socket) {
+    if (CONNECTION_ID_KEY in socket) {
+        return socket[CONNECTION_ID_KEY];
+    }
+}
+exports.getConnectionId = getConnectionId;
+;
+function setConnectionId(socket, connectionId) {
+    delete socket[CONNECTION_ID_KEY];
+    Object.defineProperty(socket, CONNECTION_ID_KEY, {
+        value: connectionId,
+        configurable: true
+    });
+}
+exports.setConnectionId = setConnectionId;
 ;
 function formatAddress(address) {
     return address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
 }
 exports.formatAddress = formatAddress;
 ;
-// NOTE: Sockets have allowHalfOpen set to false.
 function createServer(options, connectionListener) {
     var _a, _b;
     let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
-    let tcpDebug = (_b = options.tcpDebug) !== null && _b !== void 0 ? _b : false;
-    return libnet.createServer({}, (socket) => {
-        let remoteAdress = getRemoteAddress(socket);
+    let debug = (_b = options.debug) !== null && _b !== void 0 ? _b : false;
+    return libnet.createServer({
+        allowHalfOpen: true
+    }, (socket) => {
+        let remoteAddress = getRemoteAddress(socket);
         let localAddress = getLocalAddress(socket);
-        if (tcpDebug) {
-            process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+        setConnectionId(socket, `${remoteAddress.port}`);
+        if (debug) {
+            process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
             socket.once("close", (had_error) => {
-                process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                process.nextTick(() => {
+                    process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                });
             });
         }
         socket.on("error", (error) => {
-            if (tcpDebug)
-                process.stderr.write(`Incoming TCP connection ${remoteAdress.port} emitted error event with message "${error.message}"` + "\n");
+            var _a;
+            if (debug) {
+                process.stderr.write(`Client connection ${(_a = getConnectionId(socket)) !== null && _a !== void 0 ? _a : "-"} emitted error event with message "${error.message}"` + "\n");
+            }
         });
         socket.on("data", function ondata(chunk) {
             socket.off("data", ondata);
