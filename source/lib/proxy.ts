@@ -234,7 +234,9 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 		if (tcpDebug) {
 			process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
 			socket.once("close", (had_error) => {
-				process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+				process.nextTick(() => {
+					process.stderr.write(`Incoming TCP connection ${remoteAdress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+				});
 			});
 		}
 		socket.on("error", (error) => {

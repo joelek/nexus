@@ -646,7 +646,9 @@ export function connectTls(options: libtls.ConnectionOptions, timeout_seconds: n
 		let localAddress = proxy.getLocalAddress(serverSocket);
 		if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
 		serverSocket.once("close", (had_error) => {
-			if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+			process.nextTick(() => {
+				if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+			});
 		});
 	});
 	serverSocket.on("error", (error) => {
@@ -676,7 +678,9 @@ export function connectTcp(options: libnet.NetConnectOpts, timeout_seconds: numb
 		let localAddress = proxy.getLocalAddress(serverSocket);
 		if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
 		serverSocket.once("close", (had_error) => {
-			if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+			process.nextTick(() => {
+				if (debug) process.stderr.write(`Outgoing TCP connection ${localAddress.port} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+			});
 		});
 	});
 	serverSocket.on("error", (error) => {
