@@ -655,12 +655,12 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 };
 
-export function connectTls(options: libtls.ConnectionOptions, timeout_seconds: number, debug: boolean): libtls.TLSSocket {
-	let serverSocket = libtls.connect(options);
+export function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libtls.TLSSocket {
+	let serverSocket = libnet.connect(options);
 	let timeout = setTimeout(() => {
 		serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
 	}, timeout_seconds * 1000);
-	serverSocket.once("secureConnect", () => {
+	serverSocket.once("connect", () => {
 		clearTimeout(timeout);
 		let remoteAddress = proxy.getRemoteAddress(serverSocket);
 		let localAddress = proxy.getLocalAddress(serverSocket);
@@ -680,7 +680,15 @@ export function connectTls(options: libtls.ConnectionOptions, timeout_seconds: n
 			process.stderr.write(`Server connection ${serverSocket.localPort ?? "?"} emitted error event with message "${error.message}"` + "\n");
 		}
 	});
-	return serverSocket;
+	let tlsSocket = new libtls.TLSSocket(serverSocket, {
+		isServer: false,
+	});
+	if (options.host != null) {
+		tlsSocket.servername = options.host;
+	}
+	tlsSocket.on("error", (error) => {}); // Prevent errors from being thrown.
+	setSocket(tlsSocket, serverSocket);
+	return tlsSocket;
 };
 
 export function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): libtls.TLSSocket {
@@ -693,7 +701,7 @@ export function makeTlsProxyConnection(host: string, port: number, head: Buffer,
 	return serverSocket;
 };
 
-export function connectTcp(options: libnet.NetConnectOpts, timeout_seconds: number, debug: boolean): libnet.Socket {
+export function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libnet.Socket {
 	let serverSocket = libnet.connect(options);
 	let timeout = setTimeout(() => {
 		serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
@@ -755,7 +763,7 @@ export function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureCon
 		secureContext
 	});
 	setSocket(tlsSocket, clientSocket);
-	tlsSocket.on("error", (error) => {}); // Prevent errors from being thrown. Socket is closed automatically.
+	tlsSocket.on("error", (error) => {}); // Prevent errors from being thrown.
 	tlsSocket.on("secure", () => {
 		callback(tlsSocket);
 	});
