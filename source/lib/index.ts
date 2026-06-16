@@ -598,7 +598,31 @@ export function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void {
 	}
 };
 
+export function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void {
+	serverSocket.on("drain", () => {
+		process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted drain event` + "\n");
+	});
+	serverSocket.on("end", () => {
+		process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted end event` + "\n");
+	});
+	serverSocket.on("close", (had_error) => {
+		process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+	});
+	clientSocket.on("drain", () => {
+		process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted drain event` + "\n");
+	});
+	clientSocket.on("close", (had_error) => {
+		process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+	});
+	clientSocket.on("end", () => {
+		process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted end event` + "\n");
+	});
+};
+
 export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): void {
+	if (debug) {
+		setupProxySocketsLogging(clientSocket, serverSocket);
+	}
 	serverSocket.on("data", (buffer) => {
 		let doContinue = clientSocket.write(buffer);
 		if (!doContinue) {
@@ -621,9 +645,6 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	let clientSocketDestroyTimeout: NodeJS.Timeout | undefined;
 	function closeServer() {
 		if (serverSocket.writable) {
-			if (debug) {
-				process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} closing...` + "\n");
-			}
 			serverSocketDestroyTimeout = setTimeout(() => {
 				destroySocket(serverSocket);
 			}, TIMEOUT_SECONDS * 1000);
@@ -634,9 +655,6 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	}
 	function closeClient() {
 		if (clientSocket.writable) {
-			if (debug) {
-				process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} closing...` + "\n");
-			}
 			clientSocketDestroyTimeout = setTimeout(() => {
 				destroySocket(clientSocket);
 			}, TIMEOUT_SECONDS * 1000);
@@ -646,9 +664,6 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 		}
 	}
 	serverSocket.on("close", (had_error) => {
-		if (debug) {
-			process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
-		}
 		clearTimeout(serverSocketDestroyTimeout);
 		if (had_error) {
 			destroySocket(clientSocket);
@@ -657,9 +672,6 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 		}
 	});
 	clientSocket.on("close", (had_error) => {
-		if (debug) {
-			process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
-		}
 		clearTimeout(clientSocketDestroyTimeout);
 		if (had_error) {
 			destroySocket(serverSocket);
@@ -668,15 +680,9 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 		}
 	});
 	clientSocket.on("end", () => {
-		if (debug) {
-			process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted end event` + "\n");
-		}
 		closeServer();
 	});
 	serverSocket.on("end", () => {
-		if (debug) {
-			process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted end event` + "\n");
-		}
 		closeClient();
 	});
 };
@@ -684,7 +690,7 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 export function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libtls.TLSSocket {
 	let serverSocket = connectTcp(options, timeout_seconds, debug);
 	let tlsSocket = new libtls.TLSSocket(serverSocket, {
-		isServer: false,
+		isServer: false
 	});
 	proxy.setConnectionId(tlsSocket, "-");
 	if (options.host != null) {
