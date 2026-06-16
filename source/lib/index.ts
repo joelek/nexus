@@ -955,7 +955,6 @@ export function makeServer(options: Options): void {
 					let agent = new (scc.protocol === "http:" ? libhttp.Agent : libhttps.Agent)({
 						keepAlive: true
 					});
-					if (scc.protocol === "http:")
 					agent.createConnection = (options) => {
 						return (scc.protocol === "http:" ? connectTcp : connectTls)({
 							host: options.host,
