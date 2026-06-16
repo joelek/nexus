@@ -387,64 +387,106 @@ export function createProxyRawHeaders(request: libhttp.IncomingMessage, override
 	return headers;
 };
 
-export function makeProxyRequest(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, scc: ServernameConnectionConfig, debug: boolean): libhttp.ClientRequest {
+export function setupServerRequestLogging(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, serverRequest: libhttp.ClientRequest): void {
+	clientRequest.on("error", (error) => {
+		process.stdout.write(`Client request emitted error event with message "${error.message}"` + "\n");
+	});
+	clientRequest.on("close", () => {
+		process.stdout.write(`Client request emitted close event` + "\n");
+	});
+	clientRequest.on("end", () => {
+		process.stdout.write(`Client request emitted end event` + "\n");
+	});
+	clientResponse.on("error", (error) => {
+		process.stdout.write(`Client response emitted error event with message "${error.message}"` + "\n");
+	});
+	clientResponse.on("finish", () => {
+		process.stdout.write(`Client response emitted finish event` + "\n");
+	});
+	clientResponse.on("close", () => {
+		process.stdout.write(`Client response emitted close event` + "\n");
+	});
+	serverRequest.on("response", (serverResponse) => {
+		process.stdout.write(`Server request emitted response event` + "\n");
+		serverResponse.on("error", (error) => {
+			process.stdout.write(`Server response emitted error event with message "${error.message}"` + "\n");
+		});
+		serverResponse.on("end", () => {
+			process.stdout.write(`Server response emitted end event` + "\n");
+		});
+		serverResponse.on("close", () => {
+			process.stdout.write(`Server response emitted close event` + "\n");
+		});
+	});
+	serverRequest.on("timeout", () => {
+		process.stdout.write(`Server request emitted timeout event` + "\n");
+	});
+	serverRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
+		process.stdout.write(`Server request emitted upgrade event` + "\n");
+	});
+	serverRequest.on("error", (error) => {
+		process.stdout.write(`Server request emitted error event with message "${error.message}"` + "\n");
+	});
+	serverRequest.on("finish", () => {
+		process.stdout.write(`Server request emitted finish event` + "\n");
+	});
+	serverRequest.on("close", () => {
+		process.stdout.write(`Server request emitted close event` + "\n");
+	});
+};
+
+export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, scc: ServernameConnectionConfig, httpDebug: boolean): libhttp.ClientRequest {
 	let rawHeaders = createProxyRawHeaders(clientRequest, {});
-	let proxyRequest = (scc.protocol === "https:" ? libhttps : libhttp).request({
+	let serverRequest = (scc.protocol === "https:" ? libhttps : libhttp).request({
 		host: scc.hostname,
 		port: scc.port,
-		timeout: 0, // NOTE: The global agent uses a default socket idle timeout of 5 seconds when timeout is unspecified.
+		agent,
 		method: clientRequest.method,
 		path: clientRequest.url,
 		headers: rawHeaders as any
 	});
+	if (httpDebug) {
+		setupServerRequestLogging(clientRequest, clientResponse, serverRequest);
+	}
 	let timeout = setTimeout(() => {
-		proxyRequest.emit("timeout");
+		serverRequest.destroy(new TimeoutError("connect", TIMEOUT_SECONDS));
 	}, TIMEOUT_SECONDS * 1000);
-	proxyRequest.on("response", (proxyResponse) => {
+	serverRequest.on("response", (serverResponse) => {
 		clearTimeout(timeout);
-		if (debug) {
-			process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("response", terminal.FG_CYAN)} event` + "\n");
-		}
-		clientResponse.writeHead(proxyResponse.statusCode ?? 200, proxyResponse.rawHeaders);
-		proxyResponse.pipe(clientResponse);
+		clientResponse.writeHead(serverResponse.statusCode ?? 200, serverResponse.rawHeaders);
+		serverResponse.pipe(clientResponse);
 	});
-	proxyRequest.on("timeout", () => {
-		if (debug) {
-			process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("timeout", terminal.FG_CYAN)} event` + "\n");
-		}
-		proxyRequest.destroy(new TimeoutError("destroy", TIMEOUT_SECONDS));
-	});
-	proxyRequest.on("error", (error) => {
-		if (debug) {
-			process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("error", terminal.FG_CYAN)} event with message "${error.message}"` + "\n");
-		}
-		clientResponse.writeHead(error instanceof TimeoutError || (error as any).code === "ETIMEDOUT" ? 504 : 502);
-		clientResponse.end();
-	});
-	proxyRequest.on("close", () => {
-		if (debug) {
-			process.stdout.write(`HTTP proxy request emitted ${terminal.stylize("close", terminal.FG_CYAN)} event` + "\n");
+	serverRequest.on("error", (error) => {
+		clearTimeout(timeout);
+		if (clientResponse.headersSent) {
+			clientResponse.destroy(); // NOTE: Propagate server closing prematurely.
+		} else {
+			clientResponse.writeHead(error instanceof TimeoutError || (error as any).code === "ETIMEDOUT" ? 504 : 502);
+			clientResponse.end();
 		}
 	});
-	clientRequest.pipe(proxyRequest);
-	return proxyRequest;
+	clientResponse.on("close", () => {
+		serverRequest.destroy(); // NOTE: Propagate client closing prematurely.
+	});
+	clientRequest.pipe(serverRequest);
+	return serverRequest;
 };
 
-export function makeProxyRequestListener(scc: ServernameConnectionConfig, debug: boolean): libhttp.RequestListener {
-	return (request, response) => {
-		makeProxyRequest(request, response, scc, debug);
+export function makeProxyRequestListener(agent: libhttp.Agent, scc: ServernameConnectionConfig, httpDebug: boolean): libhttp.RequestListener {
+	return (clientRequest, clientResponse) => {
+		makeServerRequest(agent, clientRequest, clientResponse, scc, httpDebug);
 	};
 };
 
-export function makeProxyUpgradeListener(scc: ServernameConnectionConfig, debug: boolean): UpgradeListener {
+export function makeProxyUpgradeListener(agent: libhttp.Agent, scc: ServernameConnectionConfig, httpDebug: boolean): UpgradeListener {
 	return (clientRequest, clientSocket, clientHead) => {
 		let clientResponse = new libhttp.ServerResponse(clientRequest);
 		clientResponse.assignSocket(clientSocket);
-		let proxyRequest = makeProxyRequest(clientRequest, clientResponse, scc, debug);
-		proxyRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
+		let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, scc, httpDebug);
+		serverRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
 			clientResponse.writeHead(serverResponse.statusCode ?? 200, serverResponse.rawHeaders);
 			clientResponse.end();
-			connectProxySockets(clientSocket, serverSocket, debug);
+			connectProxySockets(clientSocket, serverSocket, httpDebug);
 			serverSocket.write(clientHead);
 			clientSocket.write(serverHead);
 		});
@@ -869,14 +911,23 @@ export function makeServer(options: Options): void {
 			secureContexts.push(secureContext);
 			let httpRequestListener = makeRedirectRequestListener(https);
 			httpRequestListeners.push([host, httpRequestListener]);
-			let servernameConnectionConfig = parseServernameConnectionConfig(root, 80);
-			if (servernameConnectionConfig != null) {
-				handledServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-				if (HTTP_PROTOCOLS.includes(servernameConnectionConfig.protocol)) {
+			const scc = parseServernameConnectionConfig(root, 80);
+			if (scc != null) {
+				handledServernameConnectionConfigs.push([host, scc]);
+				if (HTTP_PROTOCOLS.includes(scc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-					let httpsRequestListener = makeProxyRequestListener(servernameConnectionConfig, httpDebug);
+					let agent = new (scc.protocol === "http:" ? libhttp.Agent : libhttps.Agent)({
+						keepAlive: true
+					});
+					agent.createConnection = (options) => {
+						return (scc.protocol === "http:" ? connectTcp : connectTls)({
+							host: options.host,
+							port: options.port
+						} as any, TIMEOUT_SECONDS, tcpDebug);
+					};
+					let httpsRequestListener = makeProxyRequestListener(agent, scc, httpDebug);
 					httpsRequestListeners.push([host, httpsRequestListener]);;
-					let httpsUpgradeListener = makeProxyUpgradeListener(servernameConnectionConfig, httpDebug);
+					let httpsUpgradeListener = makeProxyUpgradeListener(agent, scc, httpDebug);
 					httpsUpgradeListeners.push([host, httpsUpgradeListener]);
 				} else {
 					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
@@ -890,14 +941,24 @@ export function makeServer(options: Options): void {
 				httpsRequestListeners.push([host, httpsRequestListener]);
 			}
 		} else {
-			let servernameConnectionConfig = parseServernameConnectionConfig(root, 443);
-			if (servernameConnectionConfig != null) {
-				delegatedServernameConnectionConfigs.push([host, servernameConnectionConfig]);
-				if (HTTP_PROTOCOLS.includes(servernameConnectionConfig.protocol)) {
+			const scc = parseServernameConnectionConfig(root, 443);
+			if (scc != null) {
+				delegatedServernameConnectionConfigs.push([host, scc]);
+				if (HTTP_PROTOCOLS.includes(scc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-					let httpsRequestListener = makeProxyRequestListener(servernameConnectionConfig, httpDebug);
-					httpRequestListeners.push([host, httpsRequestListener]);;
-					let httpsUpgradeListener = makeProxyUpgradeListener(servernameConnectionConfig, httpDebug);
+					let agent = new (scc.protocol === "http:" ? libhttp.Agent : libhttps.Agent)({
+						keepAlive: true
+					});
+					if (scc.protocol === "http:")
+					agent.createConnection = (options) => {
+						return (scc.protocol === "http:" ? connectTcp : connectTls)({
+							host: options.host,
+							port: options.port
+						} as any, TIMEOUT_SECONDS, tcpDebug);
+					};
+					let httpsRequestListener = makeProxyRequestListener(agent, scc, httpDebug);
+					httpRequestListeners.push([host, httpsRequestListener]);
+					let httpsUpgradeListener = makeProxyUpgradeListener(agent, scc, httpDebug);
 					httpUpgradeListeners.push([host, httpsUpgradeListener]);
 				} else {
 					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
