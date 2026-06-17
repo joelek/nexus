@@ -781,7 +781,6 @@ export function createTLSSocket(clientSocket: libnet.Socket, buffer: Buffer, sec
 	});
 	proxy.setConnectionId(tlsSocket, "-");
 	setSocket(tlsSocket, clientSocket);
-	tlsSocket.on("error", (error) => {}); // Prevent errors from being thrown.
 	let timeout = setTimeout(() => {
 		clientSocket.destroy(new TimeoutError("handshake", TIMEOUT_SECONDS));
 	}, TIMEOUT_SECONDS * 1000);
