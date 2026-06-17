@@ -772,7 +772,7 @@ export function setSocket(tlsSocket: libtls.TLSSocket, socket: libnet.Socket): v
 	});
 };
 
-export function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void) {
+export function createTLSSocket(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void) {
 	clientSocket.pause(); // The socket has to be paused in order to properly delegate parsing to the TLS socket.
 	clientSocket.unshift(buffer);
 	let tlsSocket = new libtls.TLSSocket(clientSocket, {
@@ -1056,7 +1056,7 @@ export function makeServer(options: Options): void {
 				} else {
 					let secureContext = secureContexts.find((pair) => matchesHostnamePattern(servername, pair.host));
 					secureContext?.load();
-					handleTLS(clientSocket, buffer, secureContext?.secureContext ?? defaultSecureContext, (tlsSocket) => {
+					createTLSSocket(clientSocket, buffer, secureContext?.secureContext ?? defaultSecureContext, (tlsSocket) => {
 						if (proxyHeader != null) {
 							proxy.setSourceAddress(tlsSocket, proxyHeader);
 							proxy.setTargetAddress(tlsSocket, proxyHeader);
