@@ -687,31 +687,26 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 };
 
-export function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libtls.TLSSocket {
+export async function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): Promise<libtls.TLSSocket> {
 	let serverSocket = connectTcp(options, timeout_seconds, debug);
-	let tlsSocket = new libtls.TLSSocket(serverSocket, {
-		isServer: false
+	let tlsSocket = await new Promise<libtls.TLSSocket>((resolve, reject) => {
+		serverSocket.once("connect", () => {
+			let tlsSocket = libtls.connect({
+				socket: serverSocket,
+				servername: options.host
+			});
+			proxy.setConnectionId(tlsSocket, "-");
+			tlsSocket.once("error", (error) => {
+				reject(error);
+			});
+			tlsSocket.once("secureConnect", () => {
+				proxy.setConnectionId(tlsSocket, proxy.getConnectionId(serverSocket));
+				resolve(tlsSocket);
+			});
+			setSocket(tlsSocket, serverSocket);
+		});
 	});
-	proxy.setConnectionId(tlsSocket, "-");
-	if (options.host != null) {
-		tlsSocket.servername = options.host;
-	}
-	tlsSocket.on("error", (error) => {}); // Prevent errors from being thrown.
-	tlsSocket.on("secureConnect", () => {
-		proxy.setConnectionId(tlsSocket, proxy.getConnectionId(serverSocket));
-	});
-	setSocket(tlsSocket, serverSocket);
 	return tlsSocket;
-};
-
-export function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): libtls.TLSSocket {
-	let serverSocket = connectTls({
-		host,
-		port
-	}, TIMEOUT_SECONDS, debug);
-	serverSocket.write(head);
-	connectProxySockets(clientSocket, serverSocket, debug);
-	return serverSocket;
 };
 
 export function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libnet.Socket {
@@ -874,6 +869,47 @@ export function createDeferredSecureContext(options: {
 	}
 };
 
+export function createAgent(scc: ServernameConnectionConfig, tcpDebug: boolean): libhttp.Agent | libhttps.Agent {
+	if (scc.protocol === "http:") {
+		let agent = new libhttp.Agent({
+			keepAlive: true
+		});
+		agent.createConnection = (options, callback) => {
+			let serverSocket = connectTcp({
+				host: options.host,
+				port: options.port
+			} as any, TIMEOUT_SECONDS, tcpDebug);
+			if (callback != null) {
+				serverSocket.once("connect", () => {
+					callback(null, serverSocket);
+				});
+			}
+			return null;
+		};
+		return agent;
+	} else {
+		let agent = new libhttps.Agent({
+			keepAlive: true
+		});
+		agent.createConnection = (options, callback) => {
+			connectTls({
+				host: options.host,
+				port: options.port
+			} as any, TIMEOUT_SECONDS, tcpDebug).catch((error: Error) => error).then((tlsSocketOrError) => {
+				if (callback != null) {
+					if (tlsSocketOrError instanceof libtls.TLSSocket) {
+						callback(null, tlsSocketOrError);
+					} else {
+						callback(tlsSocketOrError, null as any);
+					}
+				}
+			});
+			return null;
+		};
+		return agent;
+	}
+};
+
 type UpgradeListener = (request: libhttp.IncomingMessage, socket: libnet.Socket, head: Buffer) => void;
 
 export function makeServer(options: Options): void {
@@ -925,15 +961,7 @@ export function makeServer(options: Options): void {
 				handledServernameConnectionConfigs.push([host, scc]);
 				if (HTTP_PROTOCOLS.includes(scc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-					let agent = new (scc.protocol === "http:" ? libhttp.Agent : libhttps.Agent)({
-						keepAlive: true
-					});
-					agent.createConnection = (options) => {
-						return (scc.protocol === "http:" ? connectTcp : connectTls)({
-							host: options.host,
-							port: options.port
-						} as any, TIMEOUT_SECONDS, tcpDebug);
-					};
+					let agent = createAgent(scc, tcpDebug);
 					let httpsRequestListener = makeProxyRequestListener(agent, scc, httpDebug);
 					httpsRequestListeners.push([host, httpsRequestListener]);;
 					let httpsUpgradeListener = makeProxyUpgradeListener(agent, scc, httpDebug);
@@ -955,15 +983,7 @@ export function makeServer(options: Options): void {
 				delegatedServernameConnectionConfigs.push([host, scc]);
 				if (HTTP_PROTOCOLS.includes(scc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-					let agent = new (scc.protocol === "http:" ? libhttp.Agent : libhttps.Agent)({
-						keepAlive: true
-					});
-					agent.createConnection = (options) => {
-						return (scc.protocol === "http:" ? connectTcp : connectTls)({
-							host: options.host,
-							port: options.port
-						} as any, TIMEOUT_SECONDS, tcpDebug);
-					};
+					let agent = createAgent(scc, tcpDebug);
 					let httpsRequestListener = makeProxyRequestListener(agent, scc, httpDebug);
 					httpRequestListeners.push([host, httpsRequestListener]);
 					let httpsUpgradeListener = makeProxyUpgradeListener(agent, scc, httpDebug);
