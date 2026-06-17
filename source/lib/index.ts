@@ -599,17 +599,11 @@ export function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void {
 };
 
 export function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void {
-	serverSocket.on("drain", () => {
-		process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted drain event` + "\n");
-	});
 	serverSocket.on("end", () => {
 		process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted end event` + "\n");
 	});
 	serverSocket.on("close", (had_error) => {
 		process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
-	});
-	clientSocket.on("drain", () => {
-		process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted drain event` + "\n");
 	});
 	clientSocket.on("close", (had_error) => {
 		process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
