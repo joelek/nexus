@@ -782,7 +782,11 @@ export function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureCon
 	proxy.setConnectionId(tlsSocket, "-");
 	setSocket(tlsSocket, clientSocket);
 	tlsSocket.on("error", (error) => {}); // Prevent errors from being thrown.
+	let timeout = setTimeout(() => {
+		clientSocket.destroy(new TimeoutError("handshake", TIMEOUT_SECONDS));
+	}, TIMEOUT_SECONDS * 1000);
 	tlsSocket.on("secure", () => {
+		clearTimeout(timeout);
 		proxy.setConnectionId(tlsSocket, proxy.getConnectionId(clientSocket));
 		callback(tlsSocket);
 	});
