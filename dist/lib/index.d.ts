@@ -3,8 +3,10 @@
 /// <reference types="node" />
 /// <reference types="node" />
 /// <reference types="node" />
+/// <reference types="node" />
 import * as autoguard from "@joelek/autoguard/dist/lib-server";
 import * as libhttp from "http";
+import * as libhttps from "https";
 import * as libnet from "net";
 import * as libtls from "tls";
 import { Options, Handler } from "./config";
@@ -24,9 +26,10 @@ export declare function makeReadStreamResponse(pathPrefix: string, pathSuffix: s
 export declare function makeRequestListener(pathPrefix: string, handler: Handler | undefined, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener;
 export declare function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener;
 export declare function createProxyRawHeaders(request: libhttp.IncomingMessage, overrides: Record<string, string>): Array<string>;
-export declare function makeProxyRequest(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, scc: ServernameConnectionConfig, debug: boolean): libhttp.ClientRequest;
-export declare function makeProxyRequestListener(scc: ServernameConnectionConfig, debug: boolean): libhttp.RequestListener;
-export declare function makeProxyUpgradeListener(scc: ServernameConnectionConfig, debug: boolean): UpgradeListener;
+export declare function setupServerRequestLogging(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, serverRequest: libhttp.ClientRequest): void;
+export declare function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, scc: ServernameConnectionConfig, httpDebug: boolean): libhttp.ClientRequest;
+export declare function makeProxyRequestListener(agent: libhttp.Agent, scc: ServernameConnectionConfig, httpDebug: boolean): libhttp.RequestListener;
+export declare function makeProxyUpgradeListener(agent: libhttp.Agent, scc: ServernameConnectionConfig, httpDebug: boolean): UpgradeListener;
 export declare function matchesHostnamePattern(subject: string, pattern: string): boolean;
 export declare function getServerAddress(server: libnet.Server): libnet.AddressInfo;
 export type ServernameConnectionConfig = {
@@ -44,14 +47,14 @@ export declare class TimeoutError extends Error {
     get message(): string;
 }
 export declare function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void;
+export declare function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void;
 export declare function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): void;
-export declare function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libtls.TLSSocket;
-export declare function makeTlsProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): libtls.TLSSocket;
+export declare function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): Promise<libtls.TLSSocket>;
 export declare function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libnet.Socket;
 export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): libnet.Socket;
 export declare function getSocket(tlsSocket: libtls.TLSSocket): libnet.Socket | undefined;
 export declare function setSocket(tlsSocket: libtls.TLSSocket, socket: libnet.Socket): void;
-export declare function handleTLS(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void): void;
+export declare function createTLSSocket(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void): void;
 export type DeferredSecureContext = {
     host: string;
     secureContext: libtls.SecureContext;
@@ -66,5 +69,6 @@ export declare function createDeferredSecureContext(options: {
     sign: boolean;
     defaultSecureContext: libtls.SecureContext;
 }): DeferredSecureContext | undefined;
+export declare function createAgent(scc: ServernameConnectionConfig, tcpDebug: boolean): libhttp.Agent | libhttps.Agent;
 type UpgradeListener = (request: libhttp.IncomingMessage, socket: libnet.Socket, head: Buffer) => void;
 export declare function makeServer(options: Options): void;
