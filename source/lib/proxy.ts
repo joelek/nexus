@@ -243,6 +243,19 @@ export type Options = {
 	debug: boolean;
 };
 
+export function setupConnectionLogging(socket: libnet.Socket): void {
+	let localAddress = getLocalAddress(socket);
+	process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+	socket.once("close", (had_error) => {
+		process.nextTick(() => {
+			process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+		});
+	});
+	socket.on("error", (error) => {
+		process.stderr.write(`Client connection ${getConnectionId(socket) ?? "-"} emitted error event with message "${error.message}"` + "\n");
+	});
+};
+
 export function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
 	let debug = options.debug ?? false;
@@ -250,25 +263,14 @@ export function createServer(options: Partial<Options>, connectionListener: Conn
 		allowHalfOpen: true
 	}, (socket) => {
 		let remoteAddress = getRemoteAddress(socket);
-		let localAddress = getLocalAddress(socket);
 		setConnectionId(socket, `${remoteAddress.port}`);
 		if (debug) {
-			process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
-			socket.once("close", (had_error) => {
-				process.nextTick(() => {
-					process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
-				});
-			});
+			setupConnectionLogging(socket);
 		}
-		socket.on("error", (error) => {
-			if (debug) {
-				process.stderr.write(`Client connection ${getConnectionId(socket) ?? "-"} emitted error event with message "${error.message}"` + "\n");
-			}
-		});
+		socket.on("error", (error) => {}); // NOTE: Prevent errors from being thrown.
 		socket.on("data", function ondata(chunk: Buffer): void {
 			socket.off("data", ondata);
 			try {
-				let remoteAddress = getRemoteAddress(socket);
 				let { header, buffer } = parseHeader(chunk);
 				if (header != null) {
 					let matchingTrustedRemoteAddress = trustedRemoteAddresses.find((trustedRemoteAddress) => {
