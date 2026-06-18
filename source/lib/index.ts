@@ -1048,16 +1048,15 @@ export function makeServer(options: Options): void {
 					clientSocket.resetAndDestroy();
 					return;
 				}
-				let delegatedConnectionConfig = delegatedConnectionConfigs.find((pair) => {
+				let cc = delegatedConnectionConfigs.find((pair) => {
 					return matchesHostnamePattern(servername, pair[0]);
 				})?.[1];
-				if (delegatedConnectionConfig != null) {
-					let { protocol, hostname, port } = { ...delegatedConnectionConfig };
-					if (protocol === "proxy:") {
+				if (cc != null) {
+					if (cc.protocol === "proxy:") {
 						proxyHeader = proxyHeader ?? proxy.createProxyHeader(clientSocket);
 						buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
 					}
-					makeTcpProxyConnection(hostname, port, buffer, clientSocket, tcpDebug);
+					makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
 				} else {
 					let secureContext = secureContexts.find((pair) => matchesHostnamePattern(servername, pair.host));
 					secureContext?.load();
@@ -1066,18 +1065,17 @@ export function makeServer(options: Options): void {
 							proxy.setSourceAddress(tlsSocket, proxyHeader);
 							proxy.setTargetAddress(tlsSocket, proxyHeader);
 						}
-						let handledConnectionConfig = handledConnectionConfigs.find((pair) => {
+						let cc = handledConnectionConfigs.find((pair) => {
 							return matchesHostnamePattern(servername, pair[0]);
 						})?.[1];
-						if (handledConnectionConfig != null) {
-							let { protocol, hostname, port } = { ...handledConnectionConfig };
-							if (TCP_PROTOCOLS.includes(protocol)) {
+						if (cc != null) {
+							if (TCP_PROTOCOLS.includes(cc.protocol)) {
 								let buffer = Buffer.alloc(0);
-								if (protocol === "proxy:") {
+								if (cc.protocol === "proxy:") {
 									proxyHeader = proxyHeader ?? proxy.createProxyHeader(tlsSocket);
 									buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
 								}
-								makeTcpProxyConnection(hostname, port, buffer, tlsSocket, tcpDebug);
+								makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, tcpDebug);
 							} else {
 								httpsRequestRouter.emit("connection", tlsSocket);
 							}
