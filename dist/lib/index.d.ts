@@ -11,6 +11,7 @@ import * as libnet from "net";
 import * as libtls from "tls";
 import { Options, Handler } from "./config";
 export { Domain, Options, Handler } from "./config";
+import * as http from "./http";
 export declare function loadConfig(config: string): Options;
 export declare function computeSimpleHash(string: string): number;
 export declare function encodeXMLText(string: string): string;
@@ -29,12 +30,15 @@ export declare function createProxyRawHeaders(request: libhttp.IncomingMessage, 
 export declare function setupServerRequestLogging(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, serverRequest: libhttp.ClientRequest): void;
 export declare function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, cc: ConnectionConfig, httpDebug: boolean): libhttp.ClientRequest;
 export declare function makeProxyRequestListener(agent: libhttp.Agent, cc: ConnectionConfig, httpDebug: boolean): libhttp.RequestListener;
-export declare function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, httpDebug: boolean): UpgradeListener;
-export declare function matchesHostnamePattern(subject: string, pattern: string): boolean;
+export declare function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, httpDebug: boolean): http.UpgradeListener;
 export type ConnectionConfig = {
     protocol: string;
     hostname: string;
     port: number;
+};
+export type ConnectionConfigAndHostname = {
+    hostname: string;
+    connectionConfig: ConnectionConfig;
 };
 export declare const TCP_PROTOCOLS: string[];
 export declare const HTTP_PROTOCOLS: string[];
@@ -69,5 +73,4 @@ export declare function createDeferredSecureContext(options: {
     defaultSecureContext: libtls.SecureContext;
 }): DeferredSecureContext | undefined;
 export declare function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Agent | libhttps.Agent;
-type UpgradeListener = (request: libhttp.IncomingMessage, socket: libnet.Socket, head: Buffer) => void;
 export declare function makeServer(options: Options): void;

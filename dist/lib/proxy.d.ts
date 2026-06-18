@@ -14,10 +14,6 @@ export declare function parseHeader(buffer: Buffer): {
     buffer: Buffer;
 };
 export declare function serializeHeader(header: Header): Buffer;
-export declare function getLocalAddress(socket: libnet.Socket): libnet.AddressInfo;
-export declare function getRemoteAddress(socket: libnet.Socket): libnet.AddressInfo;
-export declare function normalizeIPv6(ip: string): string;
-export declare function normalizeToIPv6(address: string): string;
 export declare function createProxyHeader(socket: libnet.Socket): Header;
 export declare function createTargetAddress(header: Header): libnet.AddressInfo;
 export declare function createSourceAddress(header: Header): libnet.AddressInfo;
@@ -27,13 +23,12 @@ export declare function getTargetAddress(socket: libnet.Socket): libnet.AddressI
 export declare function setTargetAddress(socket: libnet.Socket, header: Header): void;
 export declare function getConnectionId(socket: libnet.Socket): string | undefined;
 export declare function setConnectionId(socket: libnet.Socket, connectionId: string | undefined): void;
-export declare function formatAddress(address: libnet.AddressInfo): string;
 export type Server = libnet.Server;
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 export type Options = {
-    trustedRemoteAddresses: Array<string>;
-    debug: boolean;
+    trustedRemoteAddresses?: Array<string>;
+    debug?: boolean;
 };
 export declare function getServerAddress(server: libnet.Server): libnet.AddressInfo;
 export declare function setupConnectionLogging(socket: libnet.Socket): void;
-export declare function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server;
+export declare function createServer(options: Options, connectionListener: ConnectionListener): Server;
