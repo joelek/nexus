@@ -515,14 +515,6 @@ export function matchesHostnamePattern(subject: string, pattern: string): boolea
 	return true;
 };
 
-export function getServerAddress(server: libnet.Server): libnet.AddressInfo {
-	let address = server.address();
-	if (address == null || typeof address === "string") {
-		throw `Expected type AddressInfo!`;
-	}
-	return address;
-};
-
 export type ServernameConnectionConfig = {
 	protocol: string,
 	hostname: string,
@@ -1029,7 +1021,7 @@ export function makeServer(options: Options): void {
 		port: http,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
-		let address = getServerAddress(httpRouter);
+		let address = proxy.getServerAddress(httpRouter);
 		process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(proxy.formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
 	let httpsRouter = proxy.createServer({
@@ -1106,7 +1098,7 @@ export function makeServer(options: Options): void {
 		port: https,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
-		let address = getServerAddress(httpsRouter);
+		let address = proxy.getServerAddress(httpsRouter);
 		process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(proxy.formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
 };
