@@ -384,7 +384,7 @@ export function createProxyRawHeaders(request: libhttp.IncomingMessage, override
 		}
 		headers.push(key, value);
 	}
-	let sourceAddress = proxy.getSourceAddress(request.socket) ?? proxy.getRemoteAddress(request.socket);
+	let sourceAddress = proxy.getSourceAddress(request.socket) ?? utils.getRemoteAddress(request.socket);
 	headers.push("X-Forwarded-For", sourceAddress.address);
 	return headers;
 };
@@ -688,16 +688,16 @@ export function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: n
 	proxy.setConnectionId(serverSocket, "-");
 	serverSocket.once("connect", () => {
 		clearTimeout(timeout);
-		let remoteAddress = proxy.getRemoteAddress(serverSocket);
-		let localAddress = proxy.getLocalAddress(serverSocket);
+		let remoteAddress = utils.getRemoteAddress(serverSocket);
+		let localAddress = utils.getLocalAddress(serverSocket);
 		proxy.setConnectionId(serverSocket, `${localAddress.port}`);
 		if (debug) {
-			process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
+			process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
 		}
 		serverSocket.once("close", (had_error) => {
 			process.nextTick(() => {
 				if (debug) {
-					process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(proxy.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+					process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
 				}
 			});
 		});
@@ -1006,7 +1006,7 @@ export function makeServer(options: Options): void {
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = proxy.getServerAddress(httpRouter);
-		process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(proxy.formatAddress(address), terminal.FG_YELLOW)}\n`);
+		process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
 	let httpsRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
@@ -1081,6 +1081,6 @@ export function makeServer(options: Options): void {
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = proxy.getServerAddress(httpsRouter);
-		process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(proxy.formatAddress(address), terminal.FG_YELLOW)}\n`);
+		process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
 };
