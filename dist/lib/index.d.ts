@@ -27,19 +27,18 @@ export declare function makeRequestListener(pathPrefix: string, handler: Handler
 export declare function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener;
 export declare function createProxyRawHeaders(request: libhttp.IncomingMessage, overrides: Record<string, string>): Array<string>;
 export declare function setupServerRequestLogging(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, serverRequest: libhttp.ClientRequest): void;
-export declare function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, scc: ServernameConnectionConfig, httpDebug: boolean): libhttp.ClientRequest;
-export declare function makeProxyRequestListener(agent: libhttp.Agent, scc: ServernameConnectionConfig, httpDebug: boolean): libhttp.RequestListener;
-export declare function makeProxyUpgradeListener(agent: libhttp.Agent, scc: ServernameConnectionConfig, httpDebug: boolean): UpgradeListener;
+export declare function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, cc: ConnectionConfig, httpDebug: boolean): libhttp.ClientRequest;
+export declare function makeProxyRequestListener(agent: libhttp.Agent, cc: ConnectionConfig, httpDebug: boolean): libhttp.RequestListener;
+export declare function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, httpDebug: boolean): UpgradeListener;
 export declare function matchesHostnamePattern(subject: string, pattern: string): boolean;
-export declare function getServerAddress(server: libnet.Server): libnet.AddressInfo;
-export type ServernameConnectionConfig = {
+export type ConnectionConfig = {
     protocol: string;
     hostname: string;
     port: number;
 };
 export declare const TCP_PROTOCOLS: string[];
 export declare const HTTP_PROTOCOLS: string[];
-export declare function parseServernameConnectionConfig(root: string, defaultPort: number): ServernameConnectionConfig | undefined;
+export declare function parseConnectionConfig(root: string, defaultPort: number): ConnectionConfig | undefined;
 export declare class TimeoutError extends Error {
     protected action: string;
     protected timeout_seconds: number;
@@ -69,6 +68,6 @@ export declare function createDeferredSecureContext(options: {
     sign: boolean;
     defaultSecureContext: libtls.SecureContext;
 }): DeferredSecureContext | undefined;
-export declare function createAgent(scc: ServernameConnectionConfig, tcpDebug: boolean): libhttp.Agent | libhttps.Agent;
+export declare function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Agent | libhttps.Agent;
 type UpgradeListener = (request: libhttp.IncomingMessage, socket: libnet.Socket, head: Buffer) => void;
 export declare function makeServer(options: Options): void;

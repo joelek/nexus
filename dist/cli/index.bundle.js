@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781719549025,
+    "timestamp": 1781786910466,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9591,7 +9591,7 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal"], f
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.createServer = exports.formatAddress = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.setSourceAddress = exports.getTargetAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
+    exports.createServer = exports.setupConnectionLogging = exports.getServerAddress = exports.formatAddress = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.getTargetAddress = exports.setSourceAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.getRemoteAddress = exports.getLocalAddress = exports.serializeHeader = exports.parseHeader = void 0;
     function parseHeader(buffer) {
         if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
             return {
@@ -9778,20 +9778,12 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal"], f
     exports.createSourceAddress = createSourceAddress;
     ;
     const SOURCE_KEY = Symbol();
-    const TARGET_KEY = Symbol();
     function getSourceAddress(socket) {
         if (SOURCE_KEY in socket) {
             return socket[SOURCE_KEY];
         }
     }
     exports.getSourceAddress = getSourceAddress;
-    ;
-    function getTargetAddress(socket) {
-        if (TARGET_KEY in socket) {
-            return socket[TARGET_KEY];
-        }
-    }
-    exports.getTargetAddress = getTargetAddress;
     ;
     function setSourceAddress(socket, header) {
         delete socket[SOURCE_KEY];
@@ -9802,6 +9794,14 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal"], f
         });
     }
     exports.setSourceAddress = setSourceAddress;
+    ;
+    const TARGET_KEY = Symbol();
+    function getTargetAddress(socket) {
+        if (TARGET_KEY in socket) {
+            return socket[TARGET_KEY];
+        }
+    }
+    exports.getTargetAddress = getTargetAddress;
     ;
     function setTargetAddress(socket, header) {
         delete socket[TARGET_KEY];
@@ -9835,6 +9835,30 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal"], f
     }
     exports.formatAddress = formatAddress;
     ;
+    function getServerAddress(server) {
+        let address = server.address();
+        if (address == null || typeof address === "string") {
+            throw new Error(`Expected type AddressInfo!`);
+        }
+        return address;
+    }
+    exports.getServerAddress = getServerAddress;
+    ;
+    function setupConnectionLogging(socket) {
+        let localAddress = getLocalAddress(socket);
+        process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+        socket.once("close", (had_error) => {
+            process.nextTick(() => {
+                process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+            });
+        });
+        socket.on("error", (error) => {
+            var _a;
+            process.stderr.write(`Client connection ${(_a = getConnectionId(socket)) !== null && _a !== void 0 ? _a : "-"} emitted error event with message "${error.message}"` + "\n");
+        });
+    }
+    exports.setupConnectionLogging = setupConnectionLogging;
+    ;
     function createServer(options, connectionListener) {
         var _a, _b;
         let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
@@ -9843,26 +9867,14 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal"], f
             allowHalfOpen: true
         }, (socket) => {
             let remoteAddress = getRemoteAddress(socket);
-            let localAddress = getLocalAddress(socket);
             setConnectionId(socket, `${remoteAddress.port}`);
             if (debug) {
-                process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
-                socket.once("close", (had_error) => {
-                    process.nextTick(() => {
-                        process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
-                    });
-                });
+                setupConnectionLogging(socket);
             }
-            socket.on("error", (error) => {
-                var _a;
-                if (debug) {
-                    process.stderr.write(`Client connection ${(_a = getConnectionId(socket)) !== null && _a !== void 0 ? _a : "-"} emitted error event with message "${error.message}"` + "\n");
-                }
-            });
+            socket.on("error", (error) => { }); // NOTE: Prevent errors from being thrown.
             socket.on("data", function ondata(chunk) {
                 socket.off("data", ondata);
                 try {
-                    let remoteAddress = getRemoteAddress(socket);
                     let { header, buffer } = parseHeader(chunk);
                     if (header != null) {
                         let matchingTrustedRemoteAddress = trustedRemoteAddresses.find((trustedRemoteAddress) => {
@@ -9915,7 +9927,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
     };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.makeServer = exports.createAgent = exports.createDeferredSecureContext = exports.createTLSSocket = exports.setSocket = exports.getSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.connectTls = exports.connectProxySockets = exports.setupProxySocketsLogging = exports.destroySocket = exports.TimeoutError = exports.parseServernameConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.getServerAddress = exports.matchesHostnamePattern = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeServerRequest = exports.setupServerRequestLogging = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+    exports.makeServer = exports.createAgent = exports.createDeferredSecureContext = exports.createTLSSocket = exports.setSocket = exports.getSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.connectTls = exports.connectProxySockets = exports.setupProxySocketsLogging = exports.destroySocket = exports.TimeoutError = exports.parseConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.matchesHostnamePattern = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeServerRequest = exports.setupServerRequestLogging = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
     Object.defineProperty(exports, "Domain", { enumerable: true, get: function () { return config_2.Domain; } });
     Object.defineProperty(exports, "Options", { enumerable: true, get: function () { return config_2.Options; } });
     Object.defineProperty(exports, "Handler", { enumerable: true, get: function () { return config_2.Handler; } });
@@ -10343,11 +10355,11 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.setupServerRequestLogging = setupServerRequestLogging;
     ;
-    function makeServerRequest(agent, clientRequest, clientResponse, scc, httpDebug) {
+    function makeServerRequest(agent, clientRequest, clientResponse, cc, httpDebug) {
         let rawHeaders = createProxyRawHeaders(clientRequest, {});
-        let serverRequest = (scc.protocol === "https:" ? libhttps : libhttp).request({
-            host: scc.hostname,
-            port: scc.port,
+        let serverRequest = (cc.protocol === "https:" ? libhttps : libhttp).request({
+            host: cc.hostname,
+            port: cc.port,
             agent,
             method: clientRequest.method,
             path: clientRequest.url,
@@ -10383,18 +10395,18 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.makeServerRequest = makeServerRequest;
     ;
-    function makeProxyRequestListener(agent, scc, httpDebug) {
+    function makeProxyRequestListener(agent, cc, httpDebug) {
         return (clientRequest, clientResponse) => {
-            makeServerRequest(agent, clientRequest, clientResponse, scc, httpDebug);
+            makeServerRequest(agent, clientRequest, clientResponse, cc, httpDebug);
         };
     }
     exports.makeProxyRequestListener = makeProxyRequestListener;
     ;
-    function makeProxyUpgradeListener(agent, scc, httpDebug) {
+    function makeProxyUpgradeListener(agent, cc, httpDebug) {
         return (clientRequest, clientSocket, clientHead) => {
             let clientResponse = new libhttp.ServerResponse(clientRequest);
             clientResponse.assignSocket(clientSocket);
-            let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, scc, httpDebug);
+            let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, cc, httpDebug);
             serverRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
                 var _a;
                 clientResponse.writeHead((_a = serverResponse.statusCode) !== null && _a !== void 0 ? _a : 200, serverResponse.rawHeaders);
@@ -10430,15 +10442,6 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.matchesHostnamePattern = matchesHostnamePattern;
     ;
-    function getServerAddress(server) {
-        let address = server.address();
-        if (address == null || typeof address === "string") {
-            throw `Expected type AddressInfo!`;
-        }
-        return address;
-    }
-    exports.getServerAddress = getServerAddress;
-    ;
     exports.TCP_PROTOCOLS = [
         "pipe:",
         "proxy:"
@@ -10447,7 +10450,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         "http:",
         "https:"
     ];
-    function parseServernameConnectionConfig(root, defaultPort) {
+    function parseConnectionConfig(root, defaultPort) {
         let url;
         try {
             url = new liburl.URL(root);
@@ -10479,7 +10482,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             throw `Expected a supported protocol!`;
         }
     }
-    exports.parseServernameConnectionConfig = parseServernameConnectionConfig;
+    exports.parseConnectionConfig = parseConnectionConfig;
     ;
     class TimeoutError extends Error {
         constructor(action, timeout_seconds) {
@@ -10775,8 +10778,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.createDeferredSecureContext = createDeferredSecureContext;
     ;
-    function createAgent(scc, tcpDebug) {
-        if (scc.protocol === "http:") {
+    function createAgent(cc, tcpDebug) {
+        if (cc.protocol === "http:") {
             let agent = new libhttp.Agent({
                 keepAlive: true
             });
@@ -10839,8 +10842,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         let httpUpgradeListeners = new Array();
         let httpsRequestListeners = new Array();
         let httpsUpgradeListeners = new Array();
-        let handledServernameConnectionConfigs = new Array();
-        let delegatedServernameConnectionConfigs = new Array();
+        let handledConnectionConfigs = new Array();
+        let delegatedConnectionConfigs = new Array();
         for (let domain of (_h = options.domains) !== null && _h !== void 0 ? _h : []) {
             let root = (_j = domain.root) !== null && _j !== void 0 ? _j : "./";
             let key = domain.key;
@@ -10864,19 +10867,19 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 secureContexts.push(secureContext);
                 let httpRequestListener = makeRedirectRequestListener(https);
                 httpRequestListeners.push([host, httpRequestListener]);
-                const scc = parseServernameConnectionConfig(root, 80);
-                if (scc != null) {
-                    handledServernameConnectionConfigs.push([host, scc]);
-                    if (exports.HTTP_PROTOCOLS.includes(scc.protocol)) {
-                        process.stdout.write(`Proxying ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-                        let agent = createAgent(scc, tcpDebug);
-                        let httpsRequestListener = makeProxyRequestListener(agent, scc, httpDebug);
+                const cc = parseConnectionConfig(root, 80);
+                if (cc != null) {
+                    if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
+                        process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
+                        let agent = createAgent(cc, tcpDebug);
+                        let httpsRequestListener = makeProxyRequestListener(agent, cc, httpDebug);
                         httpsRequestListeners.push([host, httpsRequestListener]);
                         ;
-                        let httpsUpgradeListener = makeProxyUpgradeListener(agent, scc, httpDebug);
+                        let httpsUpgradeListener = makeProxyUpgradeListener(agent, cc, httpDebug);
                         httpsUpgradeListeners.push([host, httpsUpgradeListener]);
                     }
                     else {
+                        handledConnectionConfigs.push([host, cc]);
                         process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
                     }
                 }
@@ -10890,18 +10893,18 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 }
             }
             else {
-                const scc = parseServernameConnectionConfig(root, 443);
-                if (scc != null) {
-                    delegatedServernameConnectionConfigs.push([host, scc]);
-                    if (exports.HTTP_PROTOCOLS.includes(scc.protocol)) {
+                const cc = parseConnectionConfig(root, 443);
+                if (cc != null) {
+                    if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
                         process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-                        let agent = createAgent(scc, tcpDebug);
-                        let httpsRequestListener = makeProxyRequestListener(agent, scc, httpDebug);
+                        let agent = createAgent(cc, tcpDebug);
+                        let httpsRequestListener = makeProxyRequestListener(agent, cc, httpDebug);
                         httpRequestListeners.push([host, httpsRequestListener]);
-                        let httpsUpgradeListener = makeProxyUpgradeListener(agent, scc, httpDebug);
+                        let httpsUpgradeListener = makeProxyUpgradeListener(agent, cc, httpDebug);
                         httpUpgradeListeners.push([host, httpsUpgradeListener]);
                     }
                     else {
+                        delegatedConnectionConfigs.push([host, cc]);
                         process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
                         let httpRequestListener = makeRedirectRequestListener(https);
                         httpRequestListeners.push([host, httpRequestListener]);
@@ -10953,7 +10956,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             port: http,
             host: process.platform === "win32" ? "0.0.0.0" : undefined
         }, () => {
-            let address = getServerAddress(httpRouter);
+            let address = proxy.getServerAddress(httpRouter);
             process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(proxy.formatAddress(address), terminal.FG_YELLOW)}\n`);
         });
         let httpsRouter = proxy.createServer({
@@ -10982,11 +10985,11 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                         clientSocket.resetAndDestroy();
                         return;
                     }
-                    let delegatedServernameConnectionConfig = (_a = delegatedServernameConnectionConfigs.find((pair) => {
+                    let delegatedConnectionConfig = (_a = delegatedConnectionConfigs.find((pair) => {
                         return matchesHostnamePattern(servername, pair[0]);
                     })) === null || _a === void 0 ? void 0 : _a[1];
-                    if (delegatedServernameConnectionConfig != null) {
-                        let { protocol, hostname, port } = Object.assign({}, delegatedServernameConnectionConfig);
+                    if (delegatedConnectionConfig != null) {
+                        let { protocol, hostname, port } = Object.assign({}, delegatedConnectionConfig);
                         if (protocol === "proxy:") {
                             proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(clientSocket);
                             buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
@@ -11002,11 +11005,11 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                                 proxy.setSourceAddress(tlsSocket, proxyHeader);
                                 proxy.setTargetAddress(tlsSocket, proxyHeader);
                             }
-                            let handledServernameConnectionConfig = (_a = handledServernameConnectionConfigs.find((pair) => {
+                            let handledConnectionConfig = (_a = handledConnectionConfigs.find((pair) => {
                                 return matchesHostnamePattern(servername, pair[0]);
                             })) === null || _a === void 0 ? void 0 : _a[1];
-                            if (handledServernameConnectionConfig != null) {
-                                let { protocol, hostname, port } = Object.assign({}, handledServernameConnectionConfig);
+                            if (handledConnectionConfig != null) {
+                                let { protocol, hostname, port } = Object.assign({}, handledConnectionConfig);
                                 if (exports.TCP_PROTOCOLS.includes(protocol)) {
                                     let buffer = Buffer.alloc(0);
                                     if (protocol === "proxy:") {
@@ -11037,7 +11040,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             port: https,
             host: process.platform === "win32" ? "0.0.0.0" : undefined
         }, () => {
-            let address = getServerAddress(httpsRouter);
+            let address = proxy.getServerAddress(httpsRouter);
             process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(proxy.formatAddress(address), terminal.FG_YELLOW)}\n`);
         });
     }
