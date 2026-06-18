@@ -167,8 +167,8 @@ export type Server = libnet.Server;
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 
 export type Options = {
-	trustedRemoteAddresses: Array<string>;
-	debug: boolean;
+	trustedRemoteAddresses?: Array<string>;
+	debug?: boolean;
 };
 
 export function getServerAddress(server: libnet.Server): libnet.AddressInfo {
@@ -192,7 +192,7 @@ export function setupConnectionLogging(socket: libnet.Socket): void {
 	});
 };
 
-export function createServer(options: Partial<Options>, connectionListener: ConnectionListener): Server {
+export function createServer(options: Options, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
 	let debug = options.debug ?? false;
 	return libnet.createServer({
