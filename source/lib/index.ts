@@ -944,7 +944,6 @@ export function makeServer(options: Options): void {
 			httpRequestListeners.push([host, httpRequestListener]);
 			const cc = parseConnectionConfig(root, 80);
 			if (cc != null) {
-				handledConnectionConfigs.push([host, cc]);
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 					let agent = createAgent(cc, tcpDebug);
@@ -953,6 +952,7 @@ export function makeServer(options: Options): void {
 					let httpsUpgradeListener = makeProxyUpgradeListener(agent, cc, httpDebug);
 					httpsUpgradeListeners.push([host, httpsUpgradeListener]);
 				} else {
+					handledConnectionConfigs.push([host, cc]);
 					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 				}
 			} else {
@@ -966,7 +966,6 @@ export function makeServer(options: Options): void {
 		} else {
 			const cc = parseConnectionConfig(root, 443);
 			if (cc != null) {
-				delegatedConnectionConfigs.push([host, cc]);
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 					let agent = createAgent(cc, tcpDebug);
@@ -975,6 +974,7 @@ export function makeServer(options: Options): void {
 					let httpsUpgradeListener = makeProxyUpgradeListener(agent, cc, httpDebug);
 					httpUpgradeListeners.push([host, httpsUpgradeListener]);
 				} else {
+					delegatedConnectionConfigs.push([host, cc]);
 					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
 					let httpRequestListener = makeRedirectRequestListener(https);
 					httpRequestListeners.push([host, httpRequestListener]);
