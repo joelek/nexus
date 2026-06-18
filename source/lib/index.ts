@@ -501,6 +501,11 @@ export type ConnectionConfig = {
 	port: number
 };
 
+export type ConnectionConfigAndHostname = {
+	hostname: string;
+	connectionConfig: ConnectionConfig;
+};
+
 export const TCP_PROTOCOLS = [
 	"pipe:",
 	"proxy:"
@@ -888,8 +893,8 @@ export function makeServer(options: Options): void {
 	let httpUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
 	let httpsRequestListeners = new Array<http.RequestListenerAndHostname>();
 	let httpsUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
-	let handledConnectionConfigs = new Array<[string, ConnectionConfig]>();
-	let delegatedConnectionConfigs = new Array<[string, ConnectionConfig]>();
+	let handledConnectionConfigs = new Array<ConnectionConfigAndHostname>();
+	let delegatedConnectionConfigs = new Array<ConnectionConfigAndHostname>();
 	for (let domain of options.domains ?? []) {
 		let root = domain.root ?? "./";
 		let key = domain.key;
@@ -929,7 +934,10 @@ export function makeServer(options: Options): void {
 						listener:  makeProxyUpgradeListener(agent, cc, httpDebug)
 					});
 				} else {
-					handledConnectionConfigs.push([host, cc]);
+					handledConnectionConfigs.push({
+						hostname: host,
+						connectionConfig: cc
+					});
 					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 				}
 			} else {
@@ -957,7 +965,10 @@ export function makeServer(options: Options): void {
 						listener: makeProxyUpgradeListener(agent, cc, httpDebug)
 					});
 				} else {
-					delegatedConnectionConfigs.push([host, cc]);
+					delegatedConnectionConfigs.push({
+						hostname: host,
+						connectionConfig: cc
+					});
 					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
 					httpRequestListeners.push({
 						hostname: host,
@@ -1021,9 +1032,9 @@ export function makeServer(options: Options): void {
 					clientSocket.resetAndDestroy();
 					return;
 				}
-				let cc = delegatedConnectionConfigs.find((pair) => {
-					return utils.matchesHostnamePattern(servername, pair[0]);
-				})?.[1];
+				let cc = delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
+					return utils.matchesHostnamePattern(servername, delegatedConnectionConfig.hostname);
+				})?.connectionConfig;
 				if (cc != null) {
 					if (cc.protocol === "proxy:") {
 						proxyHeader = proxyHeader ?? proxy.createProxyHeader(clientSocket);
@@ -1038,9 +1049,9 @@ export function makeServer(options: Options): void {
 							proxy.setSourceAddress(tlsSocket, proxyHeader);
 							proxy.setTargetAddress(tlsSocket, proxyHeader);
 						}
-						let cc = handledConnectionConfigs.find((pair) => {
-							return utils.matchesHostnamePattern(servername, pair[0]);
-						})?.[1];
+						let cc = handledConnectionConfigs.find((handledConnectionConfig) => {
+							return utils.matchesHostnamePattern(servername, handledConnectionConfig.hostname);
+						})?.connectionConfig;
 						if (cc != null) {
 							if (TCP_PROTOCOLS.includes(cc.protocol)) {
 								let buffer = Buffer.alloc(0);
