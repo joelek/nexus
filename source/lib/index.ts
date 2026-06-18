@@ -945,7 +945,7 @@ export function makeServer(options: Options): void {
 			const cc = parseConnectionConfig(root, 80);
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
-					process.stdout.write(`Proxying ${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
+					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 					let agent = createAgent(cc, tcpDebug);
 					let httpsRequestListener = makeProxyRequestListener(agent, cc, httpDebug);
 					httpsRequestListeners.push([host, httpsRequestListener]);;
