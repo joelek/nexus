@@ -933,7 +933,7 @@ export function makeServer(options: Options): void {
 						hostname: host,
 						listener:  makeProxyUpgradeListener(agent, cc, httpDebug)
 					});
-				} else {
+				} else if (TCP_PROTOCOLS.includes(cc.protocol)) {
 					handledConnectionConfigs.push({
 						hostname: host,
 						connectionConfig: cc
@@ -964,7 +964,7 @@ export function makeServer(options: Options): void {
 						hostname: host,
 						listener: makeProxyUpgradeListener(agent, cc, httpDebug)
 					});
-				} else {
+				} else if (TCP_PROTOCOLS.includes(cc.protocol)) {
 					delegatedConnectionConfigs.push({
 						hostname: host,
 						connectionConfig: cc
