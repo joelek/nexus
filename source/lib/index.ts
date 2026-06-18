@@ -461,7 +461,7 @@ export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.I
 		if (clientResponse.headersSent) {
 			clientResponse.destroy(); // NOTE: Propagate server closing prematurely.
 		} else {
-			clientResponse.writeHead(error instanceof TimeoutError || (error as any).code === "ETIMEDOUT" ? 504 : 502);
+			clientResponse.writeHead(error instanceof TimeoutError || (error as NodeJS.ErrnoException).code === "ETIMEDOUT" ? 504 : 502);
 			clientResponse.end();
 		}
 	});
