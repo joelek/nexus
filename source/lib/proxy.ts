@@ -17,47 +17,47 @@ export function parseHeader(buffer: Buffer): { header?: Header; buffer: Buffer; 
 	}
 	let end = buffer.indexOf("\r\n", 0, "ascii");
 	if (end < 0) {
-		throw new Error();
+		throw new Error(`Expected PROXY header to end with CRLF!`);
 	}
 	let parts = buffer.subarray(0, end).toString("ascii").split(" ");
-	if (parts.length < 2) {
-		throw new Error();
-	}
 	let [proxy, type, source_address, target_address, source_port, target_port] = parts;
 	if (type === "TCP4") {
 		if (parts.length !== 6) {
-			throw new Error();
+			throw new Error(`Expected PROXY header with TCP4 type to have exactly 4 arguments!`);
 		}
 		if (!libnet.isIPv4(source_address)) {
-			throw new Error();
+			throw new Error(`Expected PROXY header source address "${source_address}" to be a valid IPv4 address!`);
 		}
 		if (!libnet.isIPv4(target_address)) {
-			throw new Error();
+			throw new Error(`Expected PROXY header target address "${target_address}" to be a valid IPv4 address!`);
 		}
 	} else if (type === "TCP6") {
 		if (parts.length !== 6) {
-			throw new Error();
+			throw new Error(`Expected PROXY header with TCP6 type to have exactly 4 arguments!`);
 		}
 		if (!libnet.isIPv6(source_address)) {
-			throw new Error();
+			throw new Error(`Expected PROXY header source address "${source_address}" to be a valid IPv6 address!`);
 		}
 		if (!libnet.isIPv6(target_address)) {
-			throw new Error();
+			throw new Error(`Expected PROXY header target address "${target_address}" to be a valid IPv6 address!`);
 		}
 	} else if (type === "UNKNOWN") {
+		if (parts.length !== 2) {
+			throw new Error(`Expected PROXY header with UNKNOWN type to have exactly 0 arguments!`);
+		}
 		return {
 			buffer
 		};
 	} else {
-		throw new Error();
+		throw new Error(`Expected PROXY header type to be known!`);
 	}
 	let source_port_number = Number.parseInt(source_port);
 	if (!(source_port_number >= 0 && source_port_number <= 65535)) {
-		throw new Error();
+		throw new Error(`Expected PROXY header source port ${source_port_number} to be a valid port number!`);
 	}
 	let target_port_number = Number.parseInt(target_port);
 	if (!(target_port_number >= 0 && target_port_number <= 65535)) {
-		throw new Error();
+		throw new Error(`Expected PROXY header target port ${target_port_number} to be a valid port number!`);
 	}
 	return {
 		header: {
