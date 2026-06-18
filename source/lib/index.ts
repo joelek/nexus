@@ -911,25 +911,22 @@ export function makeServer(options: Options): void {
 		});
 		if (secureContext != null) {
 			secureContexts.push(secureContext);
-			let httpRequestListener = makeRedirectRequestListener(httpsPort);
 			httpRequestListeners.push({
 				hostname: host,
-				listener: httpRequestListener
+				listener: makeRedirectRequestListener(httpsPort)
 			});
-			const cc = parseConnectionConfig(root, 80);
+			let cc = parseConnectionConfig(root, 80);
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 					let agent = createAgent(cc, tcpDebug);
-					let httpsRequestListener = makeProxyRequestListener(agent, cc, httpDebug);
 					httpsRequestListeners.push({
 						hostname: host,
-						listener: httpsRequestListener
+						listener: makeProxyRequestListener(agent, cc, httpDebug)
 					});
-					let httpsUpgradeListener = makeProxyUpgradeListener(agent, cc, httpDebug);
 					httpsUpgradeListeners.push({
 						hostname: host,
-						listener: httpsUpgradeListener
+						listener:  makeProxyUpgradeListener(agent, cc, httpDebug)
 					});
 				} else {
 					handledConnectionConfigs.push([host, cc]);
@@ -940,35 +937,31 @@ export function makeServer(options: Options): void {
 					throw `Expected "${root}" to exist and be a directory!`;
 				}
 				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
-				let httpsRequestListener = makeRequestListener(root, handler, routing, indices);
 				httpsRequestListeners.push({
 					hostname: host,
-					listener: httpsRequestListener
+					listener: makeRequestListener(root, handler, routing, indices)
 				});
 			}
 		} else {
-			const cc = parseConnectionConfig(root, 443);
+			let cc = parseConnectionConfig(root, 443);
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 					let agent = createAgent(cc, tcpDebug);
-					let httpsRequestListener = makeProxyRequestListener(agent, cc, httpDebug);
 					httpRequestListeners.push({
 						hostname: host,
-						listener: httpsRequestListener
+						listener: makeProxyRequestListener(agent, cc, httpDebug)
 					});
-					let httpsUpgradeListener = makeProxyUpgradeListener(agent, cc, httpDebug);
 					httpUpgradeListeners.push({
 						hostname: host,
-						listener: httpsUpgradeListener
+						listener: makeProxyUpgradeListener(agent, cc, httpDebug)
 					});
 				} else {
 					delegatedConnectionConfigs.push([host, cc]);
 					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
-					let httpRequestListener = makeRedirectRequestListener(httpsPort);
 					httpRequestListeners.push({
 						hostname: host,
-						listener: httpRequestListener
+						listener: makeRedirectRequestListener(httpsPort)
 					});
 				}
 			} else {
@@ -976,10 +969,9 @@ export function makeServer(options: Options): void {
 					throw `Expected "${root}" to exist and be a directory!`;
 				}
 				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
-				let httpRequestListener = makeRequestListener(root, handler, routing, indices);
 				httpRequestListeners.push({
 					hostname: host,
-					listener: httpRequestListener
+					listener: makeRequestListener(root, handler, routing, indices)
 				});
 			}
 		}
