@@ -182,17 +182,10 @@ export function createSourceAddress(header: Header): libnet.AddressInfo {
 };
 
 const SOURCE_KEY = Symbol();
-const TARGET_KEY = Symbol();
 
 export function getSourceAddress(socket: libnet.Socket): libnet.AddressInfo | undefined {
 	if (SOURCE_KEY in socket) {
 		return socket[SOURCE_KEY] as libnet.AddressInfo;
-	}
-};
-
-export function getTargetAddress(socket: libnet.Socket): libnet.AddressInfo | undefined {
-	if (TARGET_KEY in socket) {
-		return socket[TARGET_KEY] as libnet.AddressInfo;
 	}
 };
 
@@ -203,6 +196,14 @@ export function setSourceAddress(socket: libnet.Socket, header: Header): void {
 		value: sourceAddress,
 		configurable: true
 	});
+};
+
+const TARGET_KEY = Symbol();
+
+export function getTargetAddress(socket: libnet.Socket): libnet.AddressInfo | undefined {
+	if (TARGET_KEY in socket) {
+		return socket[TARGET_KEY] as libnet.AddressInfo;
+	}
 };
 
 export function setTargetAddress(socket: libnet.Socket, header: Header): void {
