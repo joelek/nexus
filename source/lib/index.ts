@@ -12,8 +12,10 @@ import * as libserver from "./api/server";
 import { Domain, Options, Handler } from "./config";
 export { Domain, Options, Handler } from "./config";
 import * as tls from "./tls";
+import * as http from "./http";
 import * as proxy from "./proxy";
 import * as terminal from "./terminal";
+import * as utils from "./utils";
 
 const TIMEOUT_SECONDS = 10;
 
@@ -478,7 +480,7 @@ export function makeProxyRequestListener(agent: libhttp.Agent, cc: ConnectionCon
 	};
 };
 
-export function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, httpDebug: boolean): UpgradeListener {
+export function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, httpDebug: boolean): http.UpgradeListener {
 	return (clientRequest, clientSocket, clientHead) => {
 		let clientResponse = new libhttp.ServerResponse(clientRequest);
 		clientResponse.assignSocket(clientSocket);
@@ -491,28 +493,6 @@ export function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionCon
 			clientSocket.write(serverHead);
 		});
 	};
-};
-
-export function matchesHostnamePattern(subject: string, pattern: string): boolean {
-	let subjectParts = subject.split(".");
-	let patternParts = pattern.split(".");
-	if (subjectParts.length < patternParts.length) {
-		return false;
-	}
-	if (subjectParts.length > patternParts.length && patternParts[0] !== "*") {
-		return false;
-	}
-	subjectParts = subjectParts.reverse();
-	patternParts = patternParts.reverse();
-	for (let [index, patternPart] of patternParts.entries()) {
-		if (patternPart === "*") {
-			continue;
-		}
-		if (subjectParts[index] !== patternPart) {
-			return false;
-		}
-	}
-	return true;
 };
 
 export type ConnectionConfig = {
@@ -896,27 +876,18 @@ export function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Ag
 	}
 };
 
-type UpgradeListener = (request: libhttp.IncomingMessage, socket: libnet.Socket, head: Buffer) => void;
-
 export function makeServer(options: Options): void {
-	let http = options.http ?? 8080;
-	let https = options.https ?? 8443;
+	let httpPort = options.http ?? 8080;
+	let httpsPort = options.https ?? 8443;
 	let sign = options.sign ?? false;
 	let httpDebug = options.debug?.includes("http") ?? false;
 	let tcpDebug = options.debug?.includes("tcp") ?? false;
 	let defaultSecureContext = libtls.createSecureContext();
-	let defaultRequestListener: libhttp.RequestListener = (request, response) => {
-		response.writeHead(404);
-		response.end();
-	};
-	let defaultUpgradeListener: UpgradeListener = (request, socket, head) => {
-		socket.end();
-	};
 	let secureContexts = new Array<DeferredSecureContext>();
-	let httpRequestListeners = new Array<[string, libhttp.RequestListener]>();
-	let httpUpgradeListeners = new Array<[string, UpgradeListener]>();
-	let httpsRequestListeners = new Array<[string, libhttp.RequestListener]>();
-	let httpsUpgradeListeners = new Array<[string, UpgradeListener]>();
+	let httpRequestListeners = new Array<http.RequestListenerAndHostname>();
+	let httpUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
+	let httpsRequestListeners = new Array<http.RequestListenerAndHostname>();
+	let httpsUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
 	let handledConnectionConfigs = new Array<[string, ConnectionConfig]>();
 	let delegatedConnectionConfigs = new Array<[string, ConnectionConfig]>();
 	for (let domain of options.domains ?? []) {
@@ -928,8 +899,8 @@ export function makeServer(options: Options): void {
 		let handler = domain.handler;
 		let routing = domain.routing ?? true;
 		let indices = domain.indices ?? false;
-		let httpHost = `http://${host}:${http}`;
-		let httpsHost = `https://${host}:${https}`;
+		let httpHost = `http://${host}:${httpPort}`;
+		let httpsHost = `https://${host}:${httpsPort}`;
 		let secureContext = createDeferredSecureContext({
 			host,
 			key,
@@ -940,17 +911,26 @@ export function makeServer(options: Options): void {
 		});
 		if (secureContext != null) {
 			secureContexts.push(secureContext);
-			let httpRequestListener = makeRedirectRequestListener(https);
-			httpRequestListeners.push([host, httpRequestListener]);
+			let httpRequestListener = makeRedirectRequestListener(httpsPort);
+			httpRequestListeners.push({
+				hostname: host,
+				listener: httpRequestListener
+			});
 			const cc = parseConnectionConfig(root, 80);
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 					let agent = createAgent(cc, tcpDebug);
 					let httpsRequestListener = makeProxyRequestListener(agent, cc, httpDebug);
-					httpsRequestListeners.push([host, httpsRequestListener]);;
+					httpsRequestListeners.push({
+						hostname: host,
+						listener: httpsRequestListener
+					});
 					let httpsUpgradeListener = makeProxyUpgradeListener(agent, cc, httpDebug);
-					httpsUpgradeListeners.push([host, httpsUpgradeListener]);
+					httpsUpgradeListeners.push({
+						hostname: host,
+						listener: httpsUpgradeListener
+					});
 				} else {
 					handledConnectionConfigs.push([host, cc]);
 					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
@@ -961,7 +941,10 @@ export function makeServer(options: Options): void {
 				}
 				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
 				let httpsRequestListener = makeRequestListener(root, handler, routing, indices);
-				httpsRequestListeners.push([host, httpsRequestListener]);
+				httpsRequestListeners.push({
+					hostname: host,
+					listener: httpsRequestListener
+				});
 			}
 		} else {
 			const cc = parseConnectionConfig(root, 443);
@@ -970,14 +953,23 @@ export function makeServer(options: Options): void {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 					let agent = createAgent(cc, tcpDebug);
 					let httpsRequestListener = makeProxyRequestListener(agent, cc, httpDebug);
-					httpRequestListeners.push([host, httpsRequestListener]);
+					httpRequestListeners.push({
+						hostname: host,
+						listener: httpsRequestListener
+					});
 					let httpsUpgradeListener = makeProxyUpgradeListener(agent, cc, httpDebug);
-					httpUpgradeListeners.push([host, httpsUpgradeListener]);
+					httpUpgradeListeners.push({
+						hostname: host,
+						listener: httpsUpgradeListener
+					});
 				} else {
 					delegatedConnectionConfigs.push([host, cc]);
 					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
-					let httpRequestListener = makeRedirectRequestListener(https);
-					httpRequestListeners.push([host, httpRequestListener]);
+					let httpRequestListener = makeRedirectRequestListener(httpsPort);
+					httpRequestListeners.push({
+						hostname: host,
+						listener: httpRequestListener
+					});
 				}
 			} else {
 				if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
@@ -985,41 +977,20 @@ export function makeServer(options: Options): void {
 				}
 				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
 				let httpRequestListener = makeRequestListener(root, handler, routing, indices);
-				httpRequestListeners.push([host, httpRequestListener]);
+				httpRequestListeners.push({
+					hostname: host,
+					listener: httpRequestListener
+				});
 			}
 		}
 	}
-	let httpRequestRouter = libhttp.createServer({});
-	httpRequestRouter.keepAliveTimeout = 60 * 1000;
-	httpRequestRouter.on("request", (request, response) => {
-		let hostname = (request.headers.host ?? "localhost").split(":")[0];
-		let requestListener = httpRequestListeners.find((pair) => {
-			return matchesHostnamePattern(hostname, pair[0]);
-		})?.[1] ?? defaultRequestListener;
-		return requestListener(request, response);
+	let httpRequestRouter = http.createServer({
+		requestListeners: httpRequestListeners,
+		upgradeListeners: httpUpgradeListeners
 	});
-	httpRequestRouter.on("upgrade", (request, socket, head) => {
-		let hostname = (request.headers.host ?? "localhost").split(":")[0];
-		let upgradeListener = httpUpgradeListeners.find((pair) => {
-			return matchesHostnamePattern(hostname, pair[0]);
-		})?.[1] ?? defaultUpgradeListener;
-		return upgradeListener(request, socket as libnet.Socket, head);
-	});
-	let httpsRequestRouter = libhttp.createServer({});
-	httpsRequestRouter.keepAliveTimeout = 60 * 1000;
-	httpsRequestRouter.on("request", (request, response) => {
-		let hostname = (request.headers.host ?? "localhost").split(":")[0];
-		let requestListener = httpsRequestListeners.find((pair) => {
-			return matchesHostnamePattern(hostname, pair[0]);
-		})?.[1] ?? defaultRequestListener;
-		return requestListener(request, response);
-	});
-	httpsRequestRouter.on("upgrade", (request, socket, head) => {
-		let hostname = (request.headers.host ?? "localhost").split(":")[0];
-		let upgradeListener = httpsUpgradeListeners.find((pair) => {
-			return matchesHostnamePattern(hostname, pair[0]);
-		})?.[1] ?? defaultUpgradeListener;
-		return upgradeListener(request, socket as libnet.Socket, head);
+	let httpsRequestRouter = http.createServer({
+		requestListeners: httpsRequestListeners,
+		upgradeListeners: httpsUpgradeListeners
 	});
 	let httpRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
@@ -1028,7 +999,7 @@ export function makeServer(options: Options): void {
 		httpRequestRouter.emit("connection", clientSocket);
 	});
 	httpRouter.listen({
-		port: http,
+		port: httpPort,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = proxy.getServerAddress(httpRouter);
@@ -1059,7 +1030,7 @@ export function makeServer(options: Options): void {
 					return;
 				}
 				let cc = delegatedConnectionConfigs.find((pair) => {
-					return matchesHostnamePattern(servername, pair[0]);
+					return utils.matchesHostnamePattern(servername, pair[0]);
 				})?.[1];
 				if (cc != null) {
 					if (cc.protocol === "proxy:") {
@@ -1068,7 +1039,7 @@ export function makeServer(options: Options): void {
 					}
 					makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
 				} else {
-					let secureContext = secureContexts.find((pair) => matchesHostnamePattern(servername, pair.host));
+					let secureContext = secureContexts.find((pair) => utils.matchesHostnamePattern(servername, pair.host));
 					secureContext?.load();
 					createTLSSocket(clientSocket, buffer, secureContext?.secureContext ?? defaultSecureContext, (tlsSocket) => {
 						if (proxyHeader != null) {
@@ -1076,7 +1047,7 @@ export function makeServer(options: Options): void {
 							proxy.setTargetAddress(tlsSocket, proxyHeader);
 						}
 						let cc = handledConnectionConfigs.find((pair) => {
-							return matchesHostnamePattern(servername, pair[0]);
+							return utils.matchesHostnamePattern(servername, pair[0]);
 						})?.[1];
 						if (cc != null) {
 							if (TCP_PROTOCOLS.includes(cc.protocol)) {
@@ -1103,7 +1074,7 @@ export function makeServer(options: Options): void {
 		});
 	});
 	httpsRouter.listen({
-		port: https,
+		port: httpsPort,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = proxy.getServerAddress(httpsRouter);
