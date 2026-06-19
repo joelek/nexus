@@ -95,3 +95,11 @@ export function getRemoteAddress(socket: libnet.Socket): libnet.AddressInfo {
 export function formatAddress(address: libnet.AddressInfo): string {
 	return address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
 };
+
+export function getServerAddress(server: libnet.Server): libnet.AddressInfo {
+	let address = server.address();
+	if (address == null || typeof address === "string") {
+		throw new Error(`Expected type AddressInfo!`);
+	}
+	return address;
+};

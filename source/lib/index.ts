@@ -1003,7 +1003,7 @@ export function makeServer(options: Options): void {
 		port: httpPort,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
-		let address = proxy.getServerAddress(httpRouter);
+		let address = utils.getServerAddress(httpRouter);
 		process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
 	let httpsRouter = proxy.createServer({
@@ -1064,7 +1064,7 @@ export function makeServer(options: Options): void {
 		port: httpsPort,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
-		let address = proxy.getServerAddress(httpsRouter);
+		let address = utils.getServerAddress(httpsRouter);
 		process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
 };

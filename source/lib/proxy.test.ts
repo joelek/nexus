@@ -1,6 +1,7 @@
 import * as libnet from "net";
 import * as wtf from "@joelek/wtf";
 import * as proxy from "./proxy";
+import * as utils from "./utils";
 
 wtf.test(`Server should immediately reset connections sending bad proxy headers.`, async (assert) => {
 	return new Promise<void>((resolve, reject) => {
@@ -9,7 +10,7 @@ wtf.test(`Server should immediately reset connections sending bad proxy headers.
 			trustedRemoteAddresses: []
 		}, (socket, header) => {});
 		server.listen(undefined, () => {
-			let address = proxy.getServerAddress(server);
+			let address = utils.getServerAddress(server);
 			let socket = libnet.connect({
 				port: address.port
 			});
@@ -41,7 +42,7 @@ wtf.test(`Server should pass PROXY header when remote address is trusted.`, asyn
 			}
 		});
 		server.listen(undefined, () => {
-			let address = proxy.getServerAddress(server);
+			let address = utils.getServerAddress(server);
 			let socket = libnet.connect({
 				port: address.port
 			});
@@ -69,7 +70,7 @@ wtf.test(`Server should not pass PROXY header when remote address is untrusted.`
 			}
 		});
 		server.listen(undefined, () => {
-			let address = proxy.getServerAddress(server);
+			let address = utils.getServerAddress(server);
 			let socket = libnet.connect({
 				port: address.port
 			});

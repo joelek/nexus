@@ -171,14 +171,6 @@ export type Options = {
 	debug?: boolean;
 };
 
-export function getServerAddress(server: libnet.Server): libnet.AddressInfo {
-	let address = server.address();
-	if (address == null || typeof address === "string") {
-		throw new Error(`Expected type AddressInfo!`);
-	}
-	return address;
-};
-
 export function setupConnectionLogging(socket: libnet.Socket): void {
 	let localAddress = utils.getLocalAddress(socket);
 	process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
