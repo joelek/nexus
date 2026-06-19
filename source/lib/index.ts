@@ -880,9 +880,7 @@ export function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Ag
 
 const DEFAULT_SECURE_CONTEXT = libtls.createSecureContext();;
 
-export function createConfigFromOptions(options: Options): {
-	httpPort: number;
-	httpsPort: number;
+export type Config = {
 	deferredSecureContexts: Array<DeferredSecureContext>;
 	httpRequestListeners: Array<http.RequestListenerAndHostname>;
 	httpUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
@@ -890,7 +888,9 @@ export function createConfigFromOptions(options: Options): {
 	httpsUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
 	handledConnectionConfigs: Array<ConnectionConfigAndHostname>;
 	delegatedConnectionConfigs: Array<ConnectionConfigAndHostname>;
-} {
+};
+
+export function createConfigFromOptions(options: Options): Config {
 	let httpPort = options.http ?? 8080;
 	let httpsPort = options.https ?? 8443;
 	let sign = options.sign ?? false;
@@ -995,8 +995,6 @@ export function createConfigFromOptions(options: Options): {
 		}
 	}
 	return {
-		httpPort,
-		httpsPort,
 		deferredSecureContexts,
 		httpRequestListeners,
 		httpUpgradeListeners,
@@ -1007,31 +1005,28 @@ export function createConfigFromOptions(options: Options): {
 	};
 };
 
-export function makeServer(options: Options): void {
+export function createHttpServer(config: Config, options: Options): proxy.Server {
 	let tcpDebug = options.debug?.includes("tcp") ?? false;
-	let config = createConfigFromOptions(options);
 	let httpRequestRouter = http.createServer({
 		requestListeners: config.httpRequestListeners,
 		upgradeListeners: config.httpUpgradeListeners
 	});
-	let httpsRequestRouter = http.createServer({
-		requestListeners: config.httpsRequestListeners,
-		upgradeListeners: config.httpsUpgradeListeners
-	});
-	let httpRouter = proxy.createServer({
+	let httpServer = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
 		debug: tcpDebug
 	}, (clientSocket, proxyHeader) => {
 		httpRequestRouter.emit("connection", clientSocket);
 	});
-	httpRouter.listen({
-		port: config.httpPort,
-		host: process.platform === "win32" ? "0.0.0.0" : undefined
-	}, () => {
-		let address = utils.getServerAddress(httpRouter);
-		process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
+	return httpServer;
+};
+
+export function createHttpsServer(config: Config, options: Options): proxy.Server {
+	let tcpDebug = options.debug?.includes("tcp") ?? false;
+	let httpsRequestRouter = http.createServer({
+		requestListeners: config.httpsRequestListeners,
+		upgradeListeners: config.httpsUpgradeListeners
 	});
-	let httpsRouter = proxy.createServer({
+	let httpsServer = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
 		debug: tcpDebug
 	}, async (clientSocket, proxyHeader) => {
@@ -1088,11 +1083,25 @@ export function makeServer(options: Options): void {
 			clientSocket.resetAndDestroy();
 		}
 	});
-	httpsRouter.listen({
-		port: config.httpsPort,
+	return httpsServer;
+};
+
+export function makeServer(options: Options): void {
+	let config = createConfigFromOptions(options);
+	let httpServer = createHttpServer(config, options);
+	let httpsServer = createHttpsServer(config, options);
+	httpServer.listen({
+		port: options.http ?? 8080,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
-		let address = utils.getServerAddress(httpsRouter);
+		let address = utils.getServerAddress(httpServer);
+		process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
+	});
+	httpsServer.listen({
+		port: options.https ?? 8443,
+		host: process.platform === "win32" ? "0.0.0.0" : undefined
+	}, () => {
+		let address = utils.getServerAddress(httpsServer);
 		process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
 	});
 };
