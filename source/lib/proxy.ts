@@ -162,7 +162,9 @@ export function setConnectionId(socket: libnet.Socket, connectionId: string | un
 	});
 };
 
-export type Server = libnet.Server;
+export class Server extends libnet.Server {
+
+};
 
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 
@@ -187,9 +189,10 @@ export function setupConnectionLogging(socket: libnet.Socket): void {
 export function createServer(options: Options, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
 	let debug = options.debug ?? false;
-	return libnet.createServer({
+	let server = new Server({
 		allowHalfOpen: true
-	}, (socket) => {
+	});
+	server.on("connection", (socket) => {
 		let remoteAddress = utils.getRemoteAddress(socket);
 		setConnectionId(socket, `${remoteAddress.port}`);
 		if (debug) {
@@ -219,4 +222,5 @@ export function createServer(options: Options, connectionListener: ConnectionLis
 			}
 		});
 	});
+	return server;
 };
