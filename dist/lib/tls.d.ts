@@ -1,5 +1,7 @@
 /// <reference types="node" />
 /// <reference types="node" />
+/// <reference types="node" />
+import * as libnet from "net";
 type ParsingState = {
     buffer: Buffer;
     offset: number;
@@ -94,4 +96,12 @@ export type Hostname = {
 };
 export declare function parseHostname(state: ParsingState): Hostname;
 export declare function getServername(tlsPlaintext: TlsPlaintext): string;
+export type Options = {
+    socket: libnet.Socket;
+    timeoutSeconds?: number;
+};
+export declare function getServernameAndBuffer(options: Options): Promise<{
+    servername: string;
+    buffer: Buffer;
+}>;
 export {};

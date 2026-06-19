@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781816093718,
+    "timestamp": 1781869287545,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9270,8 +9270,31 @@ define("build/lib/config/index", ["require", "exports", "node_modules/@joelek/au
 });
 define("build/lib/tls", ["require", "exports"], function (require, exports) {
     "use strict";
+    var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+        function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+        return new (P || (P = Promise))(function (resolve, reject) {
+            function fulfilled(value) {
+                try {
+                    step(generator.next(value));
+                }
+                catch (e) {
+                    reject(e);
+                }
+            }
+            function rejected(value) {
+                try {
+                    step(generator["throw"](value));
+                }
+                catch (e) {
+                    reject(e);
+                }
+            }
+            function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+            step((generator = generator.apply(thisArg, _arguments || [])).next());
+        });
+    };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.getServername = exports.parseHostname = exports.parseServerNames = exports.parseServerName = exports.parseNameType = exports.NameType = exports.parseClientHello = exports.parseExtension = exports.parseExtensionType = exports.ExtensionType = exports.parseCompressionMethod = exports.CompressionMethod = exports.parseCipherSuite = exports.parseSessionId = exports.parseRandom = exports.parseHandshake = exports.parseHandshakeType = exports.HandshakeType = exports.parseTlsPlaintext = exports.parseProtocolVersion = exports.parseContentType = exports.ContentType = void 0;
+    exports.getServernameAndBuffer = exports.getServername = exports.parseHostname = exports.parseServerNames = exports.parseServerName = exports.parseNameType = exports.NameType = exports.parseClientHello = exports.parseExtension = exports.parseExtensionType = exports.ExtensionType = exports.parseCompressionMethod = exports.CompressionMethod = exports.parseCipherSuite = exports.parseSessionId = exports.parseRandom = exports.parseHandshake = exports.parseHandshakeType = exports.HandshakeType = exports.parseTlsPlaintext = exports.parseProtocolVersion = exports.parseContentType = exports.ContentType = void 0;
     function getSubState(state, bytes) {
         let length = state.buffer.readUIntBE(state.offset, bytes);
         state.offset += bytes;
@@ -9555,12 +9578,54 @@ define("build/lib/tls", ["require", "exports"], function (require, exports) {
     }
     exports.getServername = getServername;
     ;
+    const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
+    function getServernameAndBuffer(options) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            let socket = options.socket;
+            let timeoutSeconds = (_a = options.timeoutSeconds) !== null && _a !== void 0 ? _a : 10;
+            let buffer = Buffer.alloc(0);
+            let tlsPlaintext = yield new Promise((resolve, reject) => {
+                let timeout = setTimeout(() => {
+                    socket.off("data", ondata);
+                    reject(new Error(`Expected a TLS plaintext message to arrive in ${timeoutSeconds} seconds!`));
+                }, timeoutSeconds * 1000);
+                function ondata(chunk) {
+                    buffer = Buffer.concat([buffer, chunk]);
+                    try {
+                        let tlsPlaintext = parseTlsPlaintext({
+                            buffer: buffer,
+                            offset: 0
+                        });
+                        clearTimeout(timeout);
+                        socket.off("data", ondata);
+                        resolve(tlsPlaintext);
+                    }
+                    catch (error) {
+                        if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
+                            socket.off("data", ondata);
+                            reject(new Error(`Expected a TLS plaintext message to arrive in first ${TLS_PLAINTEXT_MAX_SIZE_BYTES} bytes!`));
+                        }
+                    }
+                }
+                ;
+                socket.on("data", ondata);
+            });
+            let servername = getServername(tlsPlaintext);
+            return {
+                servername,
+                buffer
+            };
+        });
+    }
+    exports.getServernameAndBuffer = getServernameAndBuffer;
+    ;
 });
 define("build/lib/utils", ["require", "exports", "net"], function (require, exports, libnet) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
+    exports.getServerAddress = exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
     function matchesHostnamePattern(subject, pattern) {
         let subjectParts = subject.split(".");
         let patternParts = pattern.split(".");
@@ -9664,6 +9729,15 @@ define("build/lib/utils", ["require", "exports", "net"], function (require, expo
     }
     exports.formatAddress = formatAddress;
     ;
+    function getServerAddress(server) {
+        let address = server.address();
+        if (address == null || typeof address === "string") {
+            throw new Error(`Expected type AddressInfo!`);
+        }
+        return address;
+    }
+    exports.getServerAddress = getServerAddress;
+    ;
 });
 define("build/lib/http", ["require", "exports", "http", "build/lib/utils"], function (require, exports, libhttp, utils) {
     "use strict";
@@ -9740,7 +9814,7 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal", "b
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.createServer = exports.setupConnectionLogging = exports.getServerAddress = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.getTargetAddress = exports.setSourceAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.serializeHeader = exports.parseHeader = void 0;
+    exports.createServer = exports.setupConnectionLogging = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.getTargetAddress = exports.setSourceAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.serializeHeader = exports.parseHeader = void 0;
     function parseHeader(buffer) {
         if (buffer.subarray(0, 5).toString("ascii") !== "PROXY") {
             return {
@@ -9903,15 +9977,6 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal", "b
         });
     }
     exports.setConnectionId = setConnectionId;
-    ;
-    function getServerAddress(server) {
-        let address = server.address();
-        if (address == null || typeof address === "string") {
-            throw new Error(`Expected type AddressInfo!`);
-        }
-        return address;
-    }
-    exports.getServerAddress = getServerAddress;
     ;
     function setupConnectionLogging(socket) {
         let localAddress = utils.getLocalAddress(socket);
@@ -10715,7 +10780,6 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.makeTcpProxyConnection = makeTcpProxyConnection;
     ;
-    const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
     const SOCKET_KEY = Symbol();
     function getSocket(tlsSocket) {
         if (SOCKET_KEY in tlsSocket) {
@@ -10998,89 +11062,72 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             port: httpPort,
             host: process.platform === "win32" ? "0.0.0.0" : undefined
         }, () => {
-            let address = proxy.getServerAddress(httpRouter);
+            let address = utils.getServerAddress(httpRouter);
             process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
         });
         let httpsRouter = proxy.createServer({
             trustedRemoteAddresses: options.trust,
             debug: tcpDebug
-        }, (clientSocket, proxyHeader) => {
-            let timeout = setTimeout(() => {
-                clientSocket.resetAndDestroy();
-            }, TIMEOUT_SECONDS * 1000);
-            let buffer = Buffer.alloc(0);
-            clientSocket.on("data", function ondata(chunk) {
-                var _a, _b;
-                buffer = Buffer.concat([buffer, chunk]);
-                try {
-                    let tlsPlaintext = tls.parseTlsPlaintext({
-                        buffer: buffer,
-                        offset: 0
+        }, (clientSocket, proxyHeader) => __awaiter(this, void 0, void 0, function* () {
+            var _o;
+            try {
+                let { servername, buffer } = yield tls.getServernameAndBuffer({
+                    socket: clientSocket,
+                    timeoutSeconds: TIMEOUT_SECONDS
+                });
+                let delegatedConnectionConfig = delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
+                    return utils.matchesHostnamePattern(servername, delegatedConnectionConfig.hostname);
+                });
+                if (delegatedConnectionConfig != null) {
+                    let cc = delegatedConnectionConfig.connectionConfig;
+                    if (cc.protocol === "proxy:") {
+                        proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(clientSocket);
+                        buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
+                    }
+                    makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
+                }
+                else {
+                    let secureContext = secureContexts.find((secureContext) => {
+                        return utils.matchesHostnamePattern(servername, secureContext.host);
                     });
-                    clearTimeout(timeout);
-                    clientSocket.off("data", ondata);
-                    let servername;
-                    try {
-                        servername = tls.getServername(tlsPlaintext);
-                    }
-                    catch (error) {
-                        clientSocket.resetAndDestroy();
-                        return;
-                    }
-                    let cc = (_a = delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
-                        return utils.matchesHostnamePattern(servername, delegatedConnectionConfig.hostname);
-                    })) === null || _a === void 0 ? void 0 : _a.connectionConfig;
-                    if (cc != null) {
-                        if (cc.protocol === "proxy:") {
-                            proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(clientSocket);
-                            buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
+                    secureContext === null || secureContext === void 0 ? void 0 : secureContext.load();
+                    createTLSSocket(clientSocket, buffer, (_o = secureContext === null || secureContext === void 0 ? void 0 : secureContext.secureContext) !== null && _o !== void 0 ? _o : defaultSecureContext, (tlsSocket) => {
+                        if (proxyHeader != null) {
+                            proxy.setSourceAddress(tlsSocket, proxyHeader);
+                            proxy.setTargetAddress(tlsSocket, proxyHeader);
                         }
-                        makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
-                    }
-                    else {
-                        let secureContext = secureContexts.find((pair) => utils.matchesHostnamePattern(servername, pair.host));
-                        secureContext === null || secureContext === void 0 ? void 0 : secureContext.load();
-                        createTLSSocket(clientSocket, buffer, (_b = secureContext === null || secureContext === void 0 ? void 0 : secureContext.secureContext) !== null && _b !== void 0 ? _b : defaultSecureContext, (tlsSocket) => {
-                            var _a;
-                            if (proxyHeader != null) {
-                                proxy.setSourceAddress(tlsSocket, proxyHeader);
-                                proxy.setTargetAddress(tlsSocket, proxyHeader);
-                            }
-                            let cc = (_a = handledConnectionConfigs.find((handledConnectionConfig) => {
-                                return utils.matchesHostnamePattern(servername, handledConnectionConfig.hostname);
-                            })) === null || _a === void 0 ? void 0 : _a.connectionConfig;
-                            if (cc != null) {
-                                if (exports.TCP_PROTOCOLS.includes(cc.protocol)) {
-                                    let buffer = Buffer.alloc(0);
-                                    if (cc.protocol === "proxy:") {
-                                        proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(tlsSocket);
-                                        buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
-                                    }
-                                    makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, tcpDebug);
+                        let handledConnectionConfig = handledConnectionConfigs.find((handledConnectionConfig) => {
+                            return utils.matchesHostnamePattern(servername, handledConnectionConfig.hostname);
+                        });
+                        if (handledConnectionConfig != null) {
+                            let cc = handledConnectionConfig.connectionConfig;
+                            if (exports.TCP_PROTOCOLS.includes(cc.protocol)) {
+                                let buffer = Buffer.alloc(0);
+                                if (cc.protocol === "proxy:") {
+                                    proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(tlsSocket);
+                                    buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                                 }
-                                else {
-                                    httpsRequestRouter.emit("connection", tlsSocket);
-                                }
+                                makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, tcpDebug);
                             }
                             else {
                                 httpsRequestRouter.emit("connection", tlsSocket);
                             }
-                        });
-                    }
+                        }
+                        else {
+                            httpsRequestRouter.emit("connection", tlsSocket);
+                        }
+                    });
                 }
-                catch (error) {
-                    if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
-                        clientSocket.off("data", ondata);
-                        clientSocket.resetAndDestroy();
-                    }
-                }
-            });
-        });
+            }
+            catch (error) {
+                clientSocket.resetAndDestroy();
+            }
+        }));
         httpsRouter.listen({
             port: httpsPort,
             host: process.platform === "win32" ? "0.0.0.0" : undefined
         }, () => {
-            let address = proxy.getServerAddress(httpsRouter);
+            let address = utils.getServerAddress(httpsRouter);
             process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
         });
     }

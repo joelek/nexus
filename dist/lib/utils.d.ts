@@ -6,3 +6,4 @@ export declare function normalizeToIPv6(address: string): string;
 export declare function getLocalAddress(socket: libnet.Socket): libnet.AddressInfo;
 export declare function getRemoteAddress(socket: libnet.Socket): libnet.AddressInfo;
 export declare function formatAddress(address: libnet.AddressInfo): string;
+export declare function getServerAddress(server: libnet.Server): libnet.AddressInfo;

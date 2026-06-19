@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
+exports.getServerAddress = exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
 const libnet = require("net");
 function matchesHostnamePattern(subject, pattern) {
     let subjectParts = subject.split(".");
@@ -104,4 +104,13 @@ function formatAddress(address) {
     return address.family === "IPv4" ? `${address.address}:${address.port}` : `[${address.address}]:${address.port}`;
 }
 exports.formatAddress = formatAddress;
+;
+function getServerAddress(server) {
+    let address = server.address();
+    if (address == null || typeof address === "string") {
+        throw new Error(`Expected type AddressInfo!`);
+    }
+    return address;
+}
+exports.getServerAddress = getServerAddress;
 ;

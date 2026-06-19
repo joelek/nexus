@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createServer = exports.setupConnectionLogging = exports.getServerAddress = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.getTargetAddress = exports.setSourceAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.serializeHeader = exports.parseHeader = void 0;
+exports.createServer = exports.setupConnectionLogging = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.getTargetAddress = exports.setSourceAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.serializeHeader = exports.parseHeader = void 0;
 const libnet = require("net");
 const terminal = require("./terminal");
 const utils = require("./utils");
@@ -166,15 +166,6 @@ function setConnectionId(socket, connectionId) {
     });
 }
 exports.setConnectionId = setConnectionId;
-;
-function getServerAddress(server) {
-    let address = server.address();
-    if (address == null || typeof address === "string") {
-        throw new Error(`Expected type AddressInfo!`);
-    }
-    return address;
-}
-exports.getServerAddress = getServerAddress;
 ;
 function setupConnectionLogging(socket) {
     let localAddress = utils.getLocalAddress(socket);

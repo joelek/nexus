@@ -29,6 +29,5 @@ export type Options = {
     trustedRemoteAddresses?: Array<string>;
     debug?: boolean;
 };
-export declare function getServerAddress(server: libnet.Server): libnet.AddressInfo;
 export declare function setupConnectionLogging(socket: libnet.Socket): void;
 export declare function createServer(options: Options, connectionListener: ConnectionListener): Server;

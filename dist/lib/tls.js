@@ -1,6 +1,15 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getServername = exports.parseHostname = exports.parseServerNames = exports.parseServerName = exports.parseNameType = exports.NameType = exports.parseClientHello = exports.parseExtension = exports.parseExtensionType = exports.ExtensionType = exports.parseCompressionMethod = exports.CompressionMethod = exports.parseCipherSuite = exports.parseSessionId = exports.parseRandom = exports.parseHandshake = exports.parseHandshakeType = exports.HandshakeType = exports.parseTlsPlaintext = exports.parseProtocolVersion = exports.parseContentType = exports.ContentType = void 0;
+exports.getServernameAndBuffer = exports.getServername = exports.parseHostname = exports.parseServerNames = exports.parseServerName = exports.parseNameType = exports.NameType = exports.parseClientHello = exports.parseExtension = exports.parseExtensionType = exports.ExtensionType = exports.parseCompressionMethod = exports.CompressionMethod = exports.parseCipherSuite = exports.parseSessionId = exports.parseRandom = exports.parseHandshake = exports.parseHandshakeType = exports.HandshakeType = exports.parseTlsPlaintext = exports.parseProtocolVersion = exports.parseContentType = exports.ContentType = void 0;
 function getSubState(state, bytes) {
     let length = state.buffer.readUIntBE(state.offset, bytes);
     state.offset += bytes;
@@ -283,4 +292,46 @@ function getServername(tlsPlaintext) {
     return hostnames[0].name;
 }
 exports.getServername = getServername;
+;
+const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
+function getServernameAndBuffer(options) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        let socket = options.socket;
+        let timeoutSeconds = (_a = options.timeoutSeconds) !== null && _a !== void 0 ? _a : 10;
+        let buffer = Buffer.alloc(0);
+        let tlsPlaintext = yield new Promise((resolve, reject) => {
+            let timeout = setTimeout(() => {
+                socket.off("data", ondata);
+                reject(new Error(`Expected a TLS plaintext message to arrive in ${timeoutSeconds} seconds!`));
+            }, timeoutSeconds * 1000);
+            function ondata(chunk) {
+                buffer = Buffer.concat([buffer, chunk]);
+                try {
+                    let tlsPlaintext = parseTlsPlaintext({
+                        buffer: buffer,
+                        offset: 0
+                    });
+                    clearTimeout(timeout);
+                    socket.off("data", ondata);
+                    resolve(tlsPlaintext);
+                }
+                catch (error) {
+                    if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
+                        socket.off("data", ondata);
+                        reject(new Error(`Expected a TLS plaintext message to arrive in first ${TLS_PLAINTEXT_MAX_SIZE_BYTES} bytes!`));
+                    }
+                }
+            }
+            ;
+            socket.on("data", ondata);
+        });
+        let servername = getServername(tlsPlaintext);
+        return {
+            servername,
+            buffer
+        };
+    });
+}
+exports.getServernameAndBuffer = getServernameAndBuffer;
 ;

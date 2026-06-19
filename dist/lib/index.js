@@ -746,7 +746,6 @@ function makeTcpProxyConnection(host, port, head, clientSocket, debug) {
 }
 exports.makeTcpProxyConnection = makeTcpProxyConnection;
 ;
-const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
 const SOCKET_KEY = Symbol();
 function getSocket(tlsSocket) {
     if (SOCKET_KEY in tlsSocket) {
@@ -1029,89 +1028,72 @@ function makeServer(options) {
         port: httpPort,
         host: process.platform === "win32" ? "0.0.0.0" : undefined
     }, () => {
-        let address = proxy.getServerAddress(httpRouter);
+        let address = utils.getServerAddress(httpRouter);
         process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
     });
     let httpsRouter = proxy.createServer({
         trustedRemoteAddresses: options.trust,
         debug: tcpDebug
-    }, (clientSocket, proxyHeader) => {
-        let timeout = setTimeout(() => {
-            clientSocket.resetAndDestroy();
-        }, TIMEOUT_SECONDS * 1000);
-        let buffer = Buffer.alloc(0);
-        clientSocket.on("data", function ondata(chunk) {
-            var _a, _b;
-            buffer = Buffer.concat([buffer, chunk]);
-            try {
-                let tlsPlaintext = tls.parseTlsPlaintext({
-                    buffer: buffer,
-                    offset: 0
+    }, (clientSocket, proxyHeader) => __awaiter(this, void 0, void 0, function* () {
+        var _o;
+        try {
+            let { servername, buffer } = yield tls.getServernameAndBuffer({
+                socket: clientSocket,
+                timeoutSeconds: TIMEOUT_SECONDS
+            });
+            let delegatedConnectionConfig = delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
+                return utils.matchesHostnamePattern(servername, delegatedConnectionConfig.hostname);
+            });
+            if (delegatedConnectionConfig != null) {
+                let cc = delegatedConnectionConfig.connectionConfig;
+                if (cc.protocol === "proxy:") {
+                    proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(clientSocket);
+                    buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
+                }
+                makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
+            }
+            else {
+                let secureContext = secureContexts.find((secureContext) => {
+                    return utils.matchesHostnamePattern(servername, secureContext.host);
                 });
-                clearTimeout(timeout);
-                clientSocket.off("data", ondata);
-                let servername;
-                try {
-                    servername = tls.getServername(tlsPlaintext);
-                }
-                catch (error) {
-                    clientSocket.resetAndDestroy();
-                    return;
-                }
-                let cc = (_a = delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
-                    return utils.matchesHostnamePattern(servername, delegatedConnectionConfig.hostname);
-                })) === null || _a === void 0 ? void 0 : _a.connectionConfig;
-                if (cc != null) {
-                    if (cc.protocol === "proxy:") {
-                        proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(clientSocket);
-                        buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
+                secureContext === null || secureContext === void 0 ? void 0 : secureContext.load();
+                createTLSSocket(clientSocket, buffer, (_o = secureContext === null || secureContext === void 0 ? void 0 : secureContext.secureContext) !== null && _o !== void 0 ? _o : defaultSecureContext, (tlsSocket) => {
+                    if (proxyHeader != null) {
+                        proxy.setSourceAddress(tlsSocket, proxyHeader);
+                        proxy.setTargetAddress(tlsSocket, proxyHeader);
                     }
-                    makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
-                }
-                else {
-                    let secureContext = secureContexts.find((pair) => utils.matchesHostnamePattern(servername, pair.host));
-                    secureContext === null || secureContext === void 0 ? void 0 : secureContext.load();
-                    createTLSSocket(clientSocket, buffer, (_b = secureContext === null || secureContext === void 0 ? void 0 : secureContext.secureContext) !== null && _b !== void 0 ? _b : defaultSecureContext, (tlsSocket) => {
-                        var _a;
-                        if (proxyHeader != null) {
-                            proxy.setSourceAddress(tlsSocket, proxyHeader);
-                            proxy.setTargetAddress(tlsSocket, proxyHeader);
-                        }
-                        let cc = (_a = handledConnectionConfigs.find((handledConnectionConfig) => {
-                            return utils.matchesHostnamePattern(servername, handledConnectionConfig.hostname);
-                        })) === null || _a === void 0 ? void 0 : _a.connectionConfig;
-                        if (cc != null) {
-                            if (exports.TCP_PROTOCOLS.includes(cc.protocol)) {
-                                let buffer = Buffer.alloc(0);
-                                if (cc.protocol === "proxy:") {
-                                    proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(tlsSocket);
-                                    buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
-                                }
-                                makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, tcpDebug);
+                    let handledConnectionConfig = handledConnectionConfigs.find((handledConnectionConfig) => {
+                        return utils.matchesHostnamePattern(servername, handledConnectionConfig.hostname);
+                    });
+                    if (handledConnectionConfig != null) {
+                        let cc = handledConnectionConfig.connectionConfig;
+                        if (exports.TCP_PROTOCOLS.includes(cc.protocol)) {
+                            let buffer = Buffer.alloc(0);
+                            if (cc.protocol === "proxy:") {
+                                proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(tlsSocket);
+                                buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                             }
-                            else {
-                                httpsRequestRouter.emit("connection", tlsSocket);
-                            }
+                            makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, tcpDebug);
                         }
                         else {
                             httpsRequestRouter.emit("connection", tlsSocket);
                         }
-                    });
-                }
+                    }
+                    else {
+                        httpsRequestRouter.emit("connection", tlsSocket);
+                    }
+                });
             }
-            catch (error) {
-                if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
-                    clientSocket.off("data", ondata);
-                    clientSocket.resetAndDestroy();
-                }
-            }
-        });
-    });
+        }
+        catch (error) {
+            clientSocket.resetAndDestroy();
+        }
+    }));
     httpsRouter.listen({
         port: httpsPort,
         host: process.platform === "win32" ? "0.0.0.0" : undefined
     }, () => {
-        let address = proxy.getServerAddress(httpsRouter);
+        let address = utils.getServerAddress(httpsRouter);
         process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
     });
 }

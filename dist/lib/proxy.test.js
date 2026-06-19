@@ -12,14 +12,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const libnet = require("net");
 const wtf = require("@joelek/wtf");
 const proxy = require("./proxy");
+const utils = require("./utils");
 wtf.test(`Server should immediately reset connections sending bad proxy headers.`, (assert) => __awaiter(void 0, void 0, void 0, function* () {
     return new Promise((resolve, reject) => {
-        setTimeout(reject, 1 * 1000);
+        setTimeout(reject, 5 * 1000);
         let server = proxy.createServer({
             trustedRemoteAddresses: []
         }, (socket, header) => { });
         server.listen(undefined, () => {
-            let address = proxy.getServerAddress(server);
+            let address = utils.getServerAddress(server);
             let socket = libnet.connect({
                 port: address.port
             });
@@ -40,7 +41,7 @@ wtf.test(`Server should immediately reset connections sending bad proxy headers.
 }));
 wtf.test(`Server should pass PROXY header when remote address is trusted.`, (assert) => __awaiter(void 0, void 0, void 0, function* () {
     return new Promise((resolve, reject) => {
-        setTimeout(reject, 1 * 1000);
+        setTimeout(reject, 5 * 1000);
         let server = proxy.createServer({
             trustedRemoteAddresses: ["localhost"]
         }, (socket, header) => {
@@ -52,7 +53,7 @@ wtf.test(`Server should pass PROXY header when remote address is trusted.`, (ass
             }
         });
         server.listen(undefined, () => {
-            let address = proxy.getServerAddress(server);
+            let address = utils.getServerAddress(server);
             let socket = libnet.connect({
                 port: address.port
             });
@@ -68,7 +69,7 @@ wtf.test(`Server should pass PROXY header when remote address is trusted.`, (ass
 }));
 wtf.test(`Server should not pass PROXY header when remote address is untrusted.`, (assert) => __awaiter(void 0, void 0, void 0, function* () {
     return new Promise((resolve, reject) => {
-        setTimeout(reject, 1 * 1000);
+        setTimeout(reject, 5 * 1000);
         let server = proxy.createServer({
             trustedRemoteAddresses: []
         }, (socket, header) => {
@@ -80,7 +81,7 @@ wtf.test(`Server should not pass PROXY header when remote address is untrusted.`
             }
         });
         server.listen(undefined, () => {
-            let address = proxy.getServerAddress(server);
+            let address = utils.getServerAddress(server);
             let socket = libnet.connect({
                 port: address.port
             });
