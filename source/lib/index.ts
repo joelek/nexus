@@ -768,12 +768,11 @@ export function createDeferredSecureContext(options: {
 	cert?: string;
 	pass?: string;
 	sign: boolean;
-	defaultSecureContext: libtls.SecureContext;
 }): DeferredSecureContext | undefined {
 	if (options.key || options.cert) {
 		let deferredSecureContext: DeferredSecureContext = {
 			host: options.host,
-			secureContext: options.defaultSecureContext,
+			secureContext: DEFAULT_SECURE_CONTEXT,
 			dirty: true,
 			load() {
 				if (this.dirty) {
@@ -802,7 +801,7 @@ export function createDeferredSecureContext(options: {
 		let days = 1;
 		let deferredSecureContext: DeferredSecureContext = {
 			host: options.host,
-			secureContext: options.defaultSecureContext,
+			secureContext: DEFAULT_SECURE_CONTEXT,
 			dirty: true,
 			load() {
 				if (this.dirty) {
@@ -879,13 +878,24 @@ export function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Ag
 	}
 };
 
-export function makeServer(options: Options): void {
+const DEFAULT_SECURE_CONTEXT = libtls.createSecureContext();;
+
+export function createConfigFromOptions(options: Options): {
+	httpPort: number;
+	httpsPort: number;
+	deferredSecureContexts: Array<DeferredSecureContext>;
+	httpRequestListeners: Array<http.RequestListenerAndHostname>;
+	httpUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
+	httpsRequestListeners: Array<http.RequestListenerAndHostname>;
+	httpsUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
+	handledConnectionConfigs: Array<ConnectionConfigAndHostname>;
+	delegatedConnectionConfigs: Array<ConnectionConfigAndHostname>;
+} {
 	let httpPort = options.http ?? 8080;
 	let httpsPort = options.https ?? 8443;
 	let sign = options.sign ?? false;
 	let httpDebug = options.debug?.includes("http") ?? false;
 	let tcpDebug = options.debug?.includes("tcp") ?? false;
-	let defaultSecureContext = libtls.createSecureContext();
 	let deferredSecureContexts = new Array<DeferredSecureContext>();
 	let httpRequestListeners = new Array<http.RequestListenerAndHostname>();
 	let httpUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
@@ -909,8 +919,7 @@ export function makeServer(options: Options): void {
 			key,
 			cert,
 			pass,
-			sign,
-			defaultSecureContext
+			sign
 		});
 		if (deferredSecureContext != null) {
 			deferredSecureContexts.push(deferredSecureContext);
@@ -985,13 +994,29 @@ export function makeServer(options: Options): void {
 			}
 		}
 	}
+	return {
+		httpPort,
+		httpsPort,
+		deferredSecureContexts,
+		httpRequestListeners,
+		httpUpgradeListeners,
+		httpsRequestListeners,
+		httpsUpgradeListeners,
+		handledConnectionConfigs,
+		delegatedConnectionConfigs
+	};
+};
+
+export function makeServer(options: Options): void {
+	let tcpDebug = options.debug?.includes("tcp") ?? false;
+	let config = createConfigFromOptions(options);
 	let httpRequestRouter = http.createServer({
-		requestListeners: httpRequestListeners,
-		upgradeListeners: httpUpgradeListeners
+		requestListeners: config.httpRequestListeners,
+		upgradeListeners: config.httpUpgradeListeners
 	});
 	let httpsRequestRouter = http.createServer({
-		requestListeners: httpsRequestListeners,
-		upgradeListeners: httpsUpgradeListeners
+		requestListeners: config.httpsRequestListeners,
+		upgradeListeners: config.httpsUpgradeListeners
 	});
 	let httpRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
@@ -1000,7 +1025,7 @@ export function makeServer(options: Options): void {
 		httpRequestRouter.emit("connection", clientSocket);
 	});
 	httpRouter.listen({
-		port: httpPort,
+		port: config.httpPort,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = utils.getServerAddress(httpRouter);
@@ -1015,21 +1040,21 @@ export function makeServer(options: Options): void {
 				socket: clientSocket,
 				timeoutSeconds: TIMEOUT_SECONDS
 			});
-			let delegatedConnectionConfig = delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
+			let delegatedConnectionConfig = config.delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
 				return utils.matchesHostnamePattern(servername, delegatedConnectionConfig.hostname);
 			});
 			if (delegatedConnectionConfig != null) {
-				let cc = delegatedConnectionConfig.connectionConfig
+				let cc = delegatedConnectionConfig.connectionConfig;
 				if (cc.protocol === "proxy:") {
 					proxyHeader = proxyHeader ?? proxy.createProxyHeader(clientSocket);
 					buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
 				}
 				makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
 			} else {
-				let deferredSecureContext = deferredSecureContexts.find((secureContext) => {
+				let deferredSecureContext = config.deferredSecureContexts.find((secureContext) => {
 					return utils.matchesHostnamePattern(servername, secureContext.host);
 				});
-				let secureContext = defaultSecureContext;
+				let secureContext = DEFAULT_SECURE_CONTEXT;
 				if (deferredSecureContext != null) {
 					deferredSecureContext.load();
 					secureContext = deferredSecureContext.secureContext;
@@ -1039,7 +1064,7 @@ export function makeServer(options: Options): void {
 						proxy.setSourceAddress(tlsSocket, proxyHeader);
 						proxy.setTargetAddress(tlsSocket, proxyHeader);
 					}
-					let handledConnectionConfig = handledConnectionConfigs.find((handledConnectionConfig) => {
+					let handledConnectionConfig = config.handledConnectionConfigs.find((handledConnectionConfig) => {
 						return utils.matchesHostnamePattern(servername, handledConnectionConfig.hostname);
 					});
 					if (handledConnectionConfig != null) {
@@ -1064,7 +1089,7 @@ export function makeServer(options: Options): void {
 		}
 	});
 	httpsRouter.listen({
-		port: httpsPort,
+		port: config.httpsPort,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = utils.getServerAddress(httpsRouter);
