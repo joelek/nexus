@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createServer = exports.setupConnectionLogging = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.getTargetAddress = exports.setSourceAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.serializeHeader = exports.parseHeader = void 0;
+exports.createServer = exports.setupConnectionLogging = exports.Server = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.getTargetAddress = exports.setSourceAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.serializeHeader = exports.parseHeader = void 0;
 const libnet = require("net");
 const terminal = require("./terminal");
 const utils = require("./utils");
@@ -167,6 +167,10 @@ function setConnectionId(socket, connectionId) {
 }
 exports.setConnectionId = setConnectionId;
 ;
+class Server extends libnet.Server {
+}
+exports.Server = Server;
+;
 function setupConnectionLogging(socket) {
     let localAddress = utils.getLocalAddress(socket);
     process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
@@ -186,9 +190,10 @@ function createServer(options, connectionListener) {
     var _a, _b;
     let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
     let debug = (_b = options.debug) !== null && _b !== void 0 ? _b : false;
-    return libnet.createServer({
+    let server = new Server({
         allowHalfOpen: true
-    }, (socket) => {
+    });
+    server.on("connection", (socket) => {
         let remoteAddress = utils.getRemoteAddress(socket);
         setConnectionId(socket, `${remoteAddress.port}`);
         if (debug) {
@@ -219,6 +224,7 @@ function createServer(options, connectionListener) {
             }
         });
     });
+    return server;
 }
 exports.createServer = createServer;
 ;

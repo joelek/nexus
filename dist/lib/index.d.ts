@@ -12,6 +12,7 @@ import * as libtls from "tls";
 import { Options, Handler } from "./config";
 export { Domain, Options, Handler } from "./config";
 import * as http from "./http";
+import * as proxy from "./proxy";
 export declare function loadConfig(config: string): Options;
 export declare function computeSimpleHash(string: string): number;
 export declare function encodeXMLText(string: string): string;
@@ -70,7 +71,18 @@ export declare function createDeferredSecureContext(options: {
     cert?: string;
     pass?: string;
     sign: boolean;
-    defaultSecureContext: libtls.SecureContext;
 }): DeferredSecureContext | undefined;
 export declare function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Agent | libhttps.Agent;
+export type Config = {
+    deferredSecureContexts: Array<DeferredSecureContext>;
+    httpRequestListeners: Array<http.RequestListenerAndHostname>;
+    httpUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
+    httpsRequestListeners: Array<http.RequestListenerAndHostname>;
+    httpsUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
+    handledConnectionConfigs: Array<ConnectionConfigAndHostname>;
+    delegatedConnectionConfigs: Array<ConnectionConfigAndHostname>;
+};
+export declare function createConfigFromOptions(options: Options): Config;
+export declare function createHttpServer(config: Config, options: Options): proxy.Server;
+export declare function createHttpsServer(config: Config, options: Options): proxy.Server;
 export declare function makeServer(options: Options): void;
