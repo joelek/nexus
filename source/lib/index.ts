@@ -886,7 +886,7 @@ export function makeServer(options: Options): void {
 	let httpDebug = options.debug?.includes("http") ?? false;
 	let tcpDebug = options.debug?.includes("tcp") ?? false;
 	let defaultSecureContext = libtls.createSecureContext();
-	let secureContexts = new Array<DeferredSecureContext>();
+	let deferredSecureContexts = new Array<DeferredSecureContext>();
 	let httpRequestListeners = new Array<http.RequestListenerAndHostname>();
 	let httpUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
 	let httpsRequestListeners = new Array<http.RequestListenerAndHostname>();
@@ -904,7 +904,7 @@ export function makeServer(options: Options): void {
 		let indices = domain.indices ?? false;
 		let httpHost = `http://${host}:${httpPort}`;
 		let httpsHost = `https://${host}:${httpsPort}`;
-		let secureContext = createDeferredSecureContext({
+		let deferredSecureContext = createDeferredSecureContext({
 			host,
 			key,
 			cert,
@@ -912,8 +912,8 @@ export function makeServer(options: Options): void {
 			sign,
 			defaultSecureContext
 		});
-		if (secureContext != null) {
-			secureContexts.push(secureContext);
+		if (deferredSecureContext != null) {
+			deferredSecureContexts.push(deferredSecureContext);
 			httpRequestListeners.push({
 				hostname: host,
 				listener: makeRedirectRequestListener(httpsPort)
@@ -1026,11 +1026,15 @@ export function makeServer(options: Options): void {
 				}
 				makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
 			} else {
-				let secureContext = secureContexts.find((secureContext) => {
+				let deferredSecureContext = deferredSecureContexts.find((secureContext) => {
 					return utils.matchesHostnamePattern(servername, secureContext.host);
 				});
-				secureContext?.load();
-				createTLSSocket(clientSocket, buffer, secureContext?.secureContext ?? defaultSecureContext, (tlsSocket) => {
+				let secureContext = defaultSecureContext;
+				if (deferredSecureContext != null) {
+					deferredSecureContext.load();
+					secureContext = deferredSecureContext.secureContext;
+				}
+				createTLSSocket(clientSocket, buffer, secureContext, (tlsSocket) => {
 					if (proxyHeader != null) {
 						proxy.setSourceAddress(tlsSocket, proxyHeader);
 						proxy.setTargetAddress(tlsSocket, proxyHeader);
