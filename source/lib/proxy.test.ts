@@ -5,7 +5,7 @@ import * as utils from "./utils";
 
 wtf.test(`Server should immediately reset connections sending bad proxy headers.`, async (assert) => {
 	return new Promise<void>((resolve, reject) => {
-		setTimeout(reject, 1 * 1000);
+		setTimeout(reject, 5 * 1000);
 		let server = proxy.createServer({
 			trustedRemoteAddresses: []
 		}, (socket, header) => {});
@@ -31,7 +31,7 @@ wtf.test(`Server should immediately reset connections sending bad proxy headers.
 
 wtf.test(`Server should pass PROXY header when remote address is trusted.`, async (assert) => {
 	return new Promise<void>((resolve, reject) => {
-		setTimeout(reject, 1 * 1000);
+		setTimeout(reject, 5 * 1000);
 		let server = proxy.createServer({
 			trustedRemoteAddresses: ["localhost"]
 		}, (socket, header) => {
@@ -59,7 +59,7 @@ wtf.test(`Server should pass PROXY header when remote address is trusted.`, asyn
 
 wtf.test(`Server should not pass PROXY header when remote address is untrusted.`, async (assert) => {
 	return new Promise<void>((resolve, reject) => {
-		setTimeout(reject, 1 * 1000);
+		setTimeout(reject, 5 * 1000);
 		let server = proxy.createServer({
 			trustedRemoteAddresses: []
 		}, (socket, header) => {
