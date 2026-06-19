@@ -1011,11 +1011,10 @@ export function makeServer(options: Options): void {
 		debug: tcpDebug
 	}, async (clientSocket, proxyHeader) => {
 		try {
-			let { tlsPlaintext, buffer } = await tls.getTlsPlaintext({
+			let { servername, buffer } = await tls.getServernameAndBuffer({
 				socket: clientSocket,
 				timeoutSeconds: TIMEOUT_SECONDS
 			});
-			let servername = tls.getServername(tlsPlaintext);
 			let delegatedConnectionConfig = delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
 				return utils.matchesHostnamePattern(servername, delegatedConnectionConfig.hostname);
 			});
