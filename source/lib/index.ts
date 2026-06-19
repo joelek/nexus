@@ -720,8 +720,6 @@ export function makeTcpProxyConnection(host: string, port: number, head: Buffer,
 	return serverSocket;
 };
 
-const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
-
 const SOCKET_KEY = Symbol();
 
 export function getSocket(tlsSocket: libtls.TLSSocket): libnet.Socket | undefined {
@@ -1011,70 +1009,56 @@ export function makeServer(options: Options): void {
 	let httpsRouter = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
 		debug: tcpDebug
-	}, (clientSocket, proxyHeader) => {
-		let timeout = setTimeout(() => {
-			clientSocket.resetAndDestroy();
-		}, TIMEOUT_SECONDS * 1000);
-		let buffer = Buffer.alloc(0);
-		clientSocket.on("data", function ondata(chunk: Buffer): void {
-			buffer = Buffer.concat([buffer, chunk]);
-			try {
-				let tlsPlaintext = tls.parseTlsPlaintext({
-					buffer: buffer,
-					offset: 0
-				});
-				clearTimeout(timeout);
-				clientSocket.off("data", ondata);
-				let servername!: string;
-				try {
-					servername = tls.getServername(tlsPlaintext);
-				} catch (error) {
-					clientSocket.resetAndDestroy();
-					return;
+	}, async (clientSocket, proxyHeader) => {
+		try {
+			let { tlsPlaintext, buffer } = await tls.getTlsPlaintext({
+				socket: clientSocket,
+				timeoutSeconds: TIMEOUT_SECONDS
+			});
+			let servername = tls.getServername(tlsPlaintext);
+			let delegatedConnectionConfig = delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
+				return utils.matchesHostnamePattern(servername, delegatedConnectionConfig.hostname);
+			});
+			if (delegatedConnectionConfig != null) {
+				let cc = delegatedConnectionConfig.connectionConfig
+				if (cc.protocol === "proxy:") {
+					proxyHeader = proxyHeader ?? proxy.createProxyHeader(clientSocket);
+					buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
 				}
-				let cc = delegatedConnectionConfigs.find((delegatedConnectionConfig) => {
-					return utils.matchesHostnamePattern(servername, delegatedConnectionConfig.hostname);
-				})?.connectionConfig;
-				if (cc != null) {
-					if (cc.protocol === "proxy:") {
-						proxyHeader = proxyHeader ?? proxy.createProxyHeader(clientSocket);
-						buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
+				makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
+			} else {
+				let secureContext = secureContexts.find((secureContext) => {
+					return utils.matchesHostnamePattern(servername, secureContext.host);
+				});
+				secureContext?.load();
+				createTLSSocket(clientSocket, buffer, secureContext?.secureContext ?? defaultSecureContext, (tlsSocket) => {
+					if (proxyHeader != null) {
+						proxy.setSourceAddress(tlsSocket, proxyHeader);
+						proxy.setTargetAddress(tlsSocket, proxyHeader);
 					}
-					makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
-				} else {
-					let secureContext = secureContexts.find((pair) => utils.matchesHostnamePattern(servername, pair.host));
-					secureContext?.load();
-					createTLSSocket(clientSocket, buffer, secureContext?.secureContext ?? defaultSecureContext, (tlsSocket) => {
-						if (proxyHeader != null) {
-							proxy.setSourceAddress(tlsSocket, proxyHeader);
-							proxy.setTargetAddress(tlsSocket, proxyHeader);
-						}
-						let cc = handledConnectionConfigs.find((handledConnectionConfig) => {
-							return utils.matchesHostnamePattern(servername, handledConnectionConfig.hostname);
-						})?.connectionConfig;
-						if (cc != null) {
-							if (TCP_PROTOCOLS.includes(cc.protocol)) {
-								let buffer = Buffer.alloc(0);
-								if (cc.protocol === "proxy:") {
-									proxyHeader = proxyHeader ?? proxy.createProxyHeader(tlsSocket);
-									buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
-								}
-								makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, tcpDebug);
-							} else {
-								httpsRequestRouter.emit("connection", tlsSocket);
+					let handledConnectionConfig = handledConnectionConfigs.find((handledConnectionConfig) => {
+						return utils.matchesHostnamePattern(servername, handledConnectionConfig.hostname);
+					});
+					if (handledConnectionConfig != null) {
+						let cc = handledConnectionConfig.connectionConfig;
+						if (TCP_PROTOCOLS.includes(cc.protocol)) {
+							let buffer = Buffer.alloc(0);
+							if (cc.protocol === "proxy:") {
+								proxyHeader = proxyHeader ?? proxy.createProxyHeader(tlsSocket);
+								buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
 							}
+							makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, tcpDebug);
 						} else {
 							httpsRequestRouter.emit("connection", tlsSocket);
 						}
-					});
-				}
-			} catch (error) {
-				if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
-					clientSocket.off("data", ondata);
-					clientSocket.resetAndDestroy();
-				}
+					} else {
+						httpsRequestRouter.emit("connection", tlsSocket);
+					}
+				});
 			}
-		});
+		} catch (error) {
+			clientSocket.resetAndDestroy();
+		}
 	});
 	httpsRouter.listen({
 		port: httpsPort,

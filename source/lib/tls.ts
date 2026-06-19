@@ -1,3 +1,5 @@
+import * as libnet from "net";
+
 type ParsingState = {
 	buffer: Buffer;
 	offset: number;
@@ -302,4 +304,47 @@ export function getServername(tlsPlaintext: TlsPlaintext): string {
 		throw `Expected exactly one hostname!`;
 	}
 	return hostnames[0].name;
+};
+
+const TLS_PLAINTEXT_MAX_SIZE_BYTES = 16384;
+
+export type Options = {
+	socket: libnet.Socket;
+	timeoutSeconds?: number;
+};
+
+export function getTlsPlaintext(options: Options): Promise<{
+	tlsPlaintext: TlsPlaintext;
+	buffer: Buffer;
+}> {
+	let socket = options.socket;
+	let timeoutSeconds = options.timeoutSeconds ?? 10;
+	return new Promise((resolve, reject) => {
+		let buffer = Buffer.alloc(0);
+		let timeout = setTimeout(() => {
+			socket.off("data", ondata);
+			reject(new Error(`Expected TLS plaintext message to arrive in ${timeoutSeconds} seconds!`));
+		}, timeoutSeconds * 1000);
+		function ondata(chunk: Buffer): void {
+			buffer = Buffer.concat([buffer, chunk]);
+			try {
+				let tlsPlaintext = parseTlsPlaintext({
+					buffer: buffer,
+					offset: 0
+				});
+				clearTimeout(timeout);
+				socket.off("data", ondata);
+				resolve({
+					tlsPlaintext,
+					buffer
+				});
+			} catch (error) {
+				if (buffer.length > TLS_PLAINTEXT_MAX_SIZE_BYTES) {
+					socket.off("data", ondata);
+					reject(new Error(`Expected TLS plaintext message to arrive in first ${TLS_PLAINTEXT_MAX_SIZE_BYTES} bytes!`));
+				}
+			}
+		};
+		socket.on("data", ondata);
+	});
 };
