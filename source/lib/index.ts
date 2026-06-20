@@ -542,7 +542,7 @@ export function parseConnectionConfig(root: string, defaultPort: number): Connec
 			port: port ?? defaultPort
 		};
 	} else {
-		throw `Expected a supported protocol!`;
+		throw new Error(`Expected a supported protocol!`);
 	}
 };
 
@@ -974,7 +974,7 @@ export function createConfigFromOptions(options: Options): Config {
 				}
 			} else {
 				if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
-					throw `Expected "${root}" to exist and be a directory!`;
+					throw new Error(`Expected "${root}" to exist and be a directory!`);
 				}
 				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
 				httpsRequestListeners.push({
@@ -1009,7 +1009,7 @@ export function createConfigFromOptions(options: Options): Config {
 				}
 			} else {
 				if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
-					throw `Expected "${root}" to exist and be a directory!`;
+					throw new Error(`Expected "${root}" to exist and be a directory!`);
 				}
 				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
 				httpRequestListeners.push({

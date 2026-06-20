@@ -8,7 +8,7 @@ type ParsingState = {
 function getSubState(state: ParsingState, bytes: number): ParsingState {
 	let length = state.buffer.readUIntBE(state.offset, bytes); state.offset += bytes;
 	if (state.offset + length > state.buffer.length) {
-		throw `Expected at least ${length} bytes remaining in buffer at position ${state.offset}!`;
+		throw new Error(`Expected at least ${length} bytes remaining in buffer at position ${state.offset}!`);
 	}
 	let buffer = state.buffer.slice(state.offset, state.offset + length); state.offset += length;
 	return {
@@ -103,7 +103,7 @@ export type Random = {
 export function parseRandom(state: ParsingState): Random {
 	let timestamp = state.buffer.readUIntBE(state.offset, 4); state.offset += 4;
 	if (state.offset + 28 > state.buffer.length) {
-		throw `Expected at least ${28} bytes remaining in buffer at position ${state.offset}!`;
+		throw new Error(`Expected at least ${28} bytes remaining in buffer at position ${state.offset}!`);
 	}
 	let buffer = state.buffer.slice(state.offset, state.offset + 28); state.offset += 28;
 	return {
@@ -262,14 +262,14 @@ export function parseHostname(state: ParsingState): Hostname {
 
 export function getServername(tlsPlaintext: TlsPlaintext): string {
 	if (tlsPlaintext.type !== ContentType.HANDSHAKE) {
-		throw `Expected a TLS handshake!`;
+		throw new Error(`Expected a TLS handshake!`);
 	}
 	let handshake = parseHandshake({
 		buffer: tlsPlaintext.body,
 		offset: 0
 	});
 	if (handshake.type !== HandshakeType.CLIENT_HELLO) {
-		throw `Expected a TLS client hello!`;
+		throw new Error(`Expected a TLS client hello!`);
 	}
 	let clientHello = parseClientHello({
 		buffer: handshake.body,
@@ -301,7 +301,7 @@ export function getServername(tlsPlaintext: TlsPlaintext): string {
 			});
 		});
 	if (hostnames.length !== 1) {
-		throw `Expected exactly one hostname!`;
+		throw new Error(`Expected exactly one hostname!`);
 	}
 	return hostnames[0].name;
 };
