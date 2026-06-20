@@ -755,11 +755,96 @@ export function createTLSSocket(clientSocket: libnet.Socket, buffer: Buffer, sec
 	});
 };
 
-export type DeferredSecureContext = {
-	host: string;
-	secureContext: libtls.SecureContext;
-	dirty: boolean;
-	load: () => void;
+export abstract class DeferredSecureContext {
+	protected host: string;
+
+	constructor(host: string) {
+		this.host = host;
+	}
+
+	abstract getSecureContext(): libtls.SecureContext;
+
+	matchesHostname(hostname: string): boolean {
+		return utils.matchesHostnamePattern(hostname, this.host);
+	}
+};
+
+export class CertificateDeferredSecureContext extends DeferredSecureContext {
+	protected key: string | undefined;
+	protected cert: string | undefined;
+	protected pass: string | undefined;
+	protected secureContext: libtls.SecureContext | undefined;
+
+	constructor(host: string, key: string | undefined, cert: string | undefined, pass: string | undefined) {
+		super(host);
+		this.key = key;
+		this.cert = cert;
+		this.pass = pass;
+		this.secureContext = undefined;
+		if (key) {
+			libfs.watch(key, () => {
+				this.secureContext = undefined;
+			});
+		}
+		if (cert) {
+			libfs.watch(cert, () => {
+				this.secureContext = undefined;
+			});
+		}
+	}
+
+	getSecureContext(): libtls.SecureContext {
+		if (this.secureContext == null) {
+			process.stdout.write(`Loading certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}\n`);
+			this.secureContext = libtls.createSecureContext({
+				key: this.key ? libfs.readFileSync(this.key) : undefined,
+				cert: this.cert ? libfs.readFileSync(this.cert) : undefined,
+				passphrase: this.pass
+			});
+		}
+		return this.secureContext;
+	}
+};
+
+export class SelfSignedDeferredSecureContext extends DeferredSecureContext {
+	protected days: number;
+	protected secureContext: libtls.SecureContext | undefined;
+
+	constructor(host: string, days: number) {
+		super(host);
+		this.days = days;
+		this.secureContext = undefined;
+	}
+
+	getSecureContext(): libtls.SecureContext {
+		if (this.secureContext == null) {
+			process.stdout.write(`Generating certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}\n`);
+			let key = multipass.rsa.generatePrivateKey();
+			let cert = multipass.pem.serialize({
+				sections: [
+					{
+						label: "CERTIFICATE",
+						buffer: multipass.x509.generateSelfSignedCertificate([this.host], key, {
+							validityPeriod: {
+								days: this.days
+							}
+						})
+					}
+				]
+			});
+			this.secureContext = libtls.createSecureContext({
+				key: key.export({
+					format: "pem",
+					type: "pkcs1"
+				}),
+				cert: cert
+			});
+			setTimeout(() => {
+				this.secureContext = undefined;
+			}, this.days * 24 * 60 * 60 * 1000);
+		}
+		return this.secureContext;
+	}
 };
 
 export function createDeferredSecureContext(options: {
@@ -770,70 +855,10 @@ export function createDeferredSecureContext(options: {
 	sign: boolean;
 }): DeferredSecureContext | undefined {
 	if (options.key || options.cert) {
-		let deferredSecureContext: DeferredSecureContext = {
-			host: options.host,
-			secureContext: DEFAULT_SECURE_CONTEXT,
-			dirty: true,
-			load() {
-				if (this.dirty) {
-					process.stdout.write(`Loading certificate for ${terminal.stylize(options.host, terminal.FG_YELLOW)}\n`);
-					this.secureContext = libtls.createSecureContext({
-						key: options.key ? libfs.readFileSync(options.key) : undefined,
-						cert:options.cert ? libfs.readFileSync(options.cert) : undefined,
-						passphrase: options.pass
-					});
-					this.dirty = false;
-				}
-			}
-		};
-		if (options.key) {
-			libfs.watch(options.key, () => {
-				deferredSecureContext.dirty = true;
-			});
-		}
-		if (options.cert) {
-			libfs.watch(options.cert, () => {
-				deferredSecureContext.dirty = true;
-			});
-		}
-		return deferredSecureContext;
-	} else if (options.sign) {
-		let days = 1;
-		let deferredSecureContext: DeferredSecureContext = {
-			host: options.host,
-			secureContext: DEFAULT_SECURE_CONTEXT,
-			dirty: true,
-			load() {
-				if (this.dirty) {
-					process.stdout.write(`Generating certificate for ${terminal.stylize(options.host, terminal.FG_YELLOW)}\n`);
-					let key = multipass.rsa.generatePrivateKey();
-					let cert = multipass.pem.serialize({
-						sections: [
-							{
-								label: "CERTIFICATE",
-								buffer: multipass.x509.generateSelfSignedCertificate([options.host], key, {
-									validityPeriod: {
-										days: days
-									}
-								})
-							}
-						]
-					});
-					this.secureContext = libtls.createSecureContext({
-						key: key.export({
-							format: "pem",
-							type: "pkcs1"
-						}),
-						cert: cert
-					});
-					this.dirty = false;
-					setTimeout(() => {
-						this.dirty = true;
-					}, days * 24 * 60 * 60 * 1000);
-				}
-			}
-		};
-		return deferredSecureContext;
+		return new CertificateDeferredSecureContext(options.host, options.key, options.cert, options.pass);
+	}
+	if (options.sign) {
+		return new SelfSignedDeferredSecureContext(options.host, 1);
 	}
 };
 
@@ -878,7 +903,7 @@ export function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Ag
 	}
 };
 
-const DEFAULT_SECURE_CONTEXT = libtls.createSecureContext();;
+const DEFAULT_SECURE_CONTEXT = libtls.createSecureContext();
 
 export type Config = {
 	deferredSecureContexts: Array<DeferredSecureContext>;
@@ -1047,12 +1072,11 @@ export function createHttpsServer(config: Config, options: Options): proxy.Serve
 				makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
 			} else {
 				let deferredSecureContext = config.deferredSecureContexts.find((secureContext) => {
-					return utils.matchesHostnamePattern(servername, secureContext.host);
+					return secureContext.matchesHostname(servername);
 				});
 				let secureContext = DEFAULT_SECURE_CONTEXT;
 				if (deferredSecureContext != null) {
-					deferredSecureContext.load();
-					secureContext = deferredSecureContext.secureContext;
+					secureContext = deferredSecureContext.getSecureContext();
 				}
 				createTLSSocket(clientSocket, buffer, secureContext, (tlsSocket) => {
 					if (proxyHeader != null) {
