@@ -4,7 +4,7 @@ import * as wtf from "@joelek/wtf";
 import * as index from "./index";
 import * as utils from "./utils";
 
-wtf.test(`HTTP should support HTTP request proxying.`, async (assert) => {
+wtf.test(`HTTP server should support HTTP request proxying.`, async (assert) => {
 	return new Promise<void>((resolve, reject) => {
 		setTimeout(reject, 5 * 1000);
 		let server = libhttp.createServer({});
