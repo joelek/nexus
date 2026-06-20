@@ -103,3 +103,23 @@ export function getServerAddress(server: libnet.Server): libnet.AddressInfo {
 	}
 	return address;
 };
+
+export type LogType = "http" | "tcp" | "system";
+
+export class Logger {
+	protected types: Array<string>;
+
+	constructor(types: Array<string>) {
+		this.types = types;
+	}
+
+	isLoggingEnabled(kind: LogType): boolean {
+		return this.types.includes(kind);
+	}
+
+	log(type: LogType, line: string): void {
+		if (this.isLoggingEnabled(type)) {
+			process.stdout.write(line + "\n");
+		}
+	}
+};

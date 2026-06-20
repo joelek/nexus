@@ -7,7 +7,8 @@ async function run(): Promise<void> {
 	let domain: lib.Domain = {};
 	let domains = new Array<lib.Domain>();
 	let options: lib.Options = {
-		domains
+		domains,
+		log: ["system"]
 	};
 	let unrecognizedArguments = [] as Array<string>;
 	for (let arg of process.argv.slice(2)) {

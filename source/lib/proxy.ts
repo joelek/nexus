@@ -170,33 +170,33 @@ export type ConnectionListener = (socket: libnet.Socket, header: Header | undefi
 
 export type Options = {
 	trustedRemoteAddresses?: Array<string>;
-	logTcp?: boolean;
+	logger?: utils.Logger;
 };
 
-export function setupConnectionLogging(socket: libnet.Socket): void {
+export function setupConnectionLogging(socket: libnet.Socket, logger: utils.Logger): void {
 	let localAddress = utils.getLocalAddress(socket);
-	process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+	logger.log("tcp", `Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)}`);
 	socket.once("close", (had_error) => {
 		process.nextTick(() => {
-			process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+			logger.log("tcp", `Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}`);
 		});
 	});
 	socket.on("error", (error) => {
-		process.stderr.write(`Client connection ${getConnectionId(socket) ?? "-"} emitted error event with message "${error.message}"` + "\n");
+		logger.log("tcp", `Client connection ${getConnectionId(socket) ?? "-"} emitted error event with message "${error.message}"`);
 	});
 };
 
 export function createServer(options: Options, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
-	let logTcp = options.logTcp ?? false;
+	let logger = options.logger ?? new utils.Logger([]);
 	let server = new Server({
 		allowHalfOpen: true
 	});
 	server.on("connection", (socket) => {
 		let remoteAddress = utils.getRemoteAddress(socket);
 		setConnectionId(socket, `${remoteAddress.port}`);
-		if (logTcp) {
-			setupConnectionLogging(socket);
+		if (logger.isLoggingEnabled("tcp")) {
+			setupConnectionLogging(socket, logger);
 		}
 		socket.on("error", (error) => {}); // NOTE: Prevent errors from being thrown.
 		socket.on("data", function ondata(chunk: Buffer): void {

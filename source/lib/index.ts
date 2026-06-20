@@ -321,7 +321,7 @@ const REQUEST_HANDLERS = {
 	git: gitRequestHandler
 };
 
-export function makeRequestListener(pathPrefix: string, handler: Handler | undefined, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener {
+export function makeRequestListener(pathPrefix: string, handler: Handler | undefined, clientRouting: boolean, generateIndices: boolean, logger: utils.Logger): libhttp.RequestListener {
 	let requestListener = libserver.makeServer({
 		async getRequest(request) {
 			let options = request.options();
@@ -355,7 +355,7 @@ export function makeRequestListener(pathPrefix: string, handler: Handler | undef
 		response.on("finish", () => {
 			let duration = Date.now() - start;
 			let url = `${protocol}://${hostname}${path}`;
-			process.stdout.write(`${terminal.stylize(response.statusCode, response.statusCode >= 400 ? terminal.FG_RED : terminal.FG_GREEN)} ${terminal.stylize(method, terminal.FG_MAGENTA)} ${terminal.stylize(url, terminal.FG_YELLOW)} (${terminal.stylize(duration, terminal.FG_CYAN)} ms)\n`);
+			logger.log("system", `${terminal.stylize(response.statusCode, response.statusCode >= 400 ? terminal.FG_RED : terminal.FG_GREEN)} ${terminal.stylize(method, terminal.FG_MAGENTA)} ${terminal.stylize(url, terminal.FG_YELLOW)} (${terminal.stylize(duration, terminal.FG_CYAN)} ms)`);
 		});
 		requestListener(request, response);
 	};
@@ -389,55 +389,55 @@ export function createProxyRawHeaders(request: libhttp.IncomingMessage, override
 	return headers;
 };
 
-export function setupServerRequestLogging(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, serverRequest: libhttp.ClientRequest): void {
+export function setupServerRequestLogging(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, serverRequest: libhttp.ClientRequest, logger: utils.Logger): void {
 	clientRequest.on("error", (error) => {
-		process.stdout.write(`Client request emitted error event with message "${error.message}"` + "\n");
+		logger.log("http", `Client request emitted error event with message "${error.message}"`);
 	});
 	clientRequest.on("close", () => {
-		process.stdout.write(`Client request emitted close event` + "\n");
+		logger.log("http", `Client request emitted close event`);
 	});
 	clientRequest.on("end", () => {
-		process.stdout.write(`Client request emitted end event` + "\n");
+		logger.log("http", `Client request emitted end event`);
 	});
 	clientResponse.on("error", (error) => {
-		process.stdout.write(`Client response emitted error event with message "${error.message}"` + "\n");
+		logger.log("http", `Client response emitted error event with message "${error.message}"`);
 	});
 	clientResponse.on("finish", () => {
-		process.stdout.write(`Client response emitted finish event` + "\n");
+		logger.log("http", `Client response emitted finish event`);
 	});
 	clientResponse.on("close", () => {
-		process.stdout.write(`Client response emitted close event` + "\n");
+		logger.log("http", `Client response emitted close event`);
 	});
 	serverRequest.on("response", (serverResponse) => {
-		process.stdout.write(`Server request emitted response event` + "\n");
+		logger.log("http", `Server request emitted response event`);
 		serverResponse.on("error", (error) => {
-			process.stdout.write(`Server response emitted error event with message "${error.message}"` + "\n");
+			logger.log("http", `Server response emitted error event with message "${error.message}"`);
 		});
 		serverResponse.on("end", () => {
-			process.stdout.write(`Server response emitted end event` + "\n");
+			logger.log("http", `Server response emitted end event`);
 		});
 		serverResponse.on("close", () => {
-			process.stdout.write(`Server response emitted close event` + "\n");
+			logger.log("http", `Server response emitted close event`);
 		});
 	});
 	serverRequest.on("timeout", () => {
-		process.stdout.write(`Server request emitted timeout event` + "\n");
+		logger.log("http", `Server request emitted timeout event`);
 	});
 	serverRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
-		process.stdout.write(`Server request emitted upgrade event` + "\n");
+		logger.log("http", `Server request emitted upgrade event`);
 	});
 	serverRequest.on("error", (error) => {
-		process.stdout.write(`Server request emitted error event with message "${error.message}"` + "\n");
+		logger.log("http", `Server request emitted error event with message "${error.message}"`);
 	});
 	serverRequest.on("finish", () => {
-		process.stdout.write(`Server request emitted finish event` + "\n");
+		logger.log("http", `Server request emitted finish event`);
 	});
 	serverRequest.on("close", () => {
-		process.stdout.write(`Server request emitted close event` + "\n");
+		logger.log("http", `Server request emitted close event`);
 	});
 };
 
-export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, cc: ConnectionConfig, logHttp: boolean): libhttp.ClientRequest {
+export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, cc: ConnectionConfig, logger: utils.Logger): libhttp.ClientRequest {
 	let rawHeaders = createProxyRawHeaders(clientRequest, {});
 	let serverRequest = (cc.protocol === "https:" ? libhttps : libhttp).request({
 		host: cc.hostname,
@@ -447,8 +447,8 @@ export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.I
 		path: clientRequest.url,
 		headers: rawHeaders as any
 	});
-	if (logHttp) {
-		setupServerRequestLogging(clientRequest, clientResponse, serverRequest);
+	if (logger.isLoggingEnabled("http")) {
+		setupServerRequestLogging(clientRequest, clientResponse, serverRequest, logger);
 	}
 	let timeout = setTimeout(() => {
 		serverRequest.destroy(new TimeoutError("connect", TIMEOUT_SECONDS));
@@ -474,21 +474,21 @@ export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.I
 	return serverRequest;
 };
 
-export function makeProxyRequestListener(agent: libhttp.Agent, cc: ConnectionConfig, logHttp: boolean): libhttp.RequestListener {
+export function makeProxyRequestListener(agent: libhttp.Agent, cc: ConnectionConfig, logger: utils.Logger): libhttp.RequestListener {
 	return (clientRequest, clientResponse) => {
-		makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp);
+		makeServerRequest(agent, clientRequest, clientResponse, cc, logger);
 	};
 };
 
-export function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, logHttp: boolean): http.UpgradeListener {
+export function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, logger: utils.Logger): http.UpgradeListener {
 	return (clientRequest, clientSocket, clientHead) => {
 		let clientResponse = new libhttp.ServerResponse(clientRequest);
 		clientResponse.assignSocket(clientSocket);
-		let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp);
+		let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, cc, logger);
 		serverRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
 			clientResponse.writeHead(serverResponse.statusCode ?? 200, serverResponse.rawHeaders);
 			clientResponse.end();
-			connectProxySockets(clientSocket, serverSocket, logHttp);
+			connectProxySockets(clientSocket, serverSocket, logger);
 			serverSocket.write(clientHead);
 			clientSocket.write(serverHead);
 		});
@@ -575,24 +575,24 @@ export function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void {
 	}
 };
 
-export function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void {
+export function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): void {
 	serverSocket.on("end", () => {
-		process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted end event` + "\n");
+		logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} emitted end event`);
 	});
 	serverSocket.on("close", (had_error) => {
-		process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+		logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} emitted close event ${had_error ? "with error" : "without error"}`);
 	});
 	clientSocket.on("close", (had_error) => {
-		process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+		logger.log("tcp", `Client connection ${proxy.getConnectionId(clientSocket)} emitted close event ${had_error ? "with error" : "without error"}`);
 	});
 	clientSocket.on("end", () => {
-		process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted end event` + "\n");
+		logger.log("tcp", `Client connection ${proxy.getConnectionId(clientSocket)} emitted end event`);
 	});
 };
 
-export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logTcp: boolean): void {
-	if (logTcp) {
-		setupProxySocketsLogging(clientSocket, serverSocket);
+export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): void {
+	if (logger.isLoggingEnabled("tcp")) {
+		setupProxySocketsLogging(clientSocket, serverSocket, logger);
 	}
 	serverSocket.on("data", (buffer) => {
 		let doContinue = clientSocket.write(buffer);
@@ -658,8 +658,8 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 };
 
-export async function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logTcp: boolean): Promise<libtls.TLSSocket> {
-	let serverSocket = connectTcp(options, timeout_seconds, logTcp);
+export async function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logger: utils.Logger): Promise<libtls.TLSSocket> {
+	let serverSocket = connectTcp(options, timeout_seconds, logger);
 	let tlsSocket = await new Promise<libtls.TLSSocket>((resolve, reject) => {
 		serverSocket.once("connect", () => {
 			let tlsSocket = libtls.connect({
@@ -680,7 +680,7 @@ export async function connectTls(options: libnet.TcpNetConnectOpts, timeout_seco
 	return tlsSocket;
 };
 
-export function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logTcp: boolean): libnet.Socket {
+export function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logger: utils.Logger): libnet.Socket {
 	let serverSocket = libnet.connect(options);
 	let timeout = setTimeout(() => {
 		serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
@@ -691,32 +691,26 @@ export function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: n
 		let remoteAddress = utils.getRemoteAddress(serverSocket);
 		let localAddress = utils.getLocalAddress(serverSocket);
 		proxy.setConnectionId(serverSocket, `${localAddress.port}`);
-		if (logTcp) {
-			process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
-		}
+		logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)}`);
 		serverSocket.once("close", (had_error) => {
 			process.nextTick(() => {
-				if (logTcp) {
-					process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
-				}
+				logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}`);
 			});
 		});
 	});
 	serverSocket.on("error", (error) => {
-		if (logTcp) {
-			process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted error event with message "${error.message}"` + "\n");
-		}
+		logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} emitted error event with message "${error.message}"`);
 	});
 	return serverSocket;
 };
 
-export function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, logTcp: boolean): libnet.Socket {
+export function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): libnet.Socket {
 	let serverSocket = connectTcp({
 		host,
 		port
-	}, TIMEOUT_SECONDS, logTcp);
+	}, TIMEOUT_SECONDS, logger);
 	serverSocket.write(head);
-	connectProxySockets(clientSocket, serverSocket, logTcp);
+	connectProxySockets(clientSocket, serverSocket, logger);
 	return serverSocket;
 };
 
@@ -762,7 +756,7 @@ export abstract class DeferredSecureContext {
 		this.host = host;
 	}
 
-	abstract getSecureContext(): libtls.SecureContext;
+	abstract getSecureContext(logger: utils.Logger): libtls.SecureContext;
 
 	matchesHostname(hostname: string): boolean {
 		return utils.matchesHostnamePattern(hostname, this.host);
@@ -793,9 +787,9 @@ export class CertificateDeferredSecureContext extends DeferredSecureContext {
 		}
 	}
 
-	getSecureContext(): libtls.SecureContext {
+	getSecureContext(logger: utils.Logger): libtls.SecureContext {
 		if (this.secureContext == null) {
-			process.stdout.write(`Loading certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}\n`);
+			logger.log("system", `Loading certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}`);
 			this.secureContext = libtls.createSecureContext({
 				key: this.key ? libfs.readFileSync(this.key) : undefined,
 				cert: this.cert ? libfs.readFileSync(this.cert) : undefined,
@@ -816,9 +810,9 @@ export class SelfSignedDeferredSecureContext extends DeferredSecureContext {
 		this.secureContext = undefined;
 	}
 
-	getSecureContext(): libtls.SecureContext {
+	getSecureContext(logger: utils.Logger): libtls.SecureContext {
 		if (this.secureContext == null) {
-			process.stdout.write(`Generating certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}\n`);
+			logger.log("system", `Generating certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}`);
 			let key = multipass.rsa.generatePrivateKey();
 			let cert = multipass.pem.serialize({
 				sections: [
@@ -862,7 +856,7 @@ export function createDeferredSecureContext(options: {
 	}
 };
 
-export function createAgent(cc: ConnectionConfig, logTcp: boolean): libhttp.Agent | libhttps.Agent {
+export function createAgent(cc: ConnectionConfig, logger: utils.Logger): libhttp.Agent | libhttps.Agent {
 	if (cc.protocol === "http:") {
 		let agent = new libhttp.Agent({
 			keepAlive: true
@@ -871,7 +865,7 @@ export function createAgent(cc: ConnectionConfig, logTcp: boolean): libhttp.Agen
 			let serverSocket = connectTcp({
 				host: options.host,
 				port: options.port
-			} as any, TIMEOUT_SECONDS, logTcp);
+			} as any, TIMEOUT_SECONDS, logger);
 			if (callback != null) {
 				serverSocket.once("connect", () => {
 					callback(null, serverSocket);
@@ -888,7 +882,7 @@ export function createAgent(cc: ConnectionConfig, logTcp: boolean): libhttp.Agen
 			connectTls({
 				host: options.host,
 				port: options.port
-			} as any, TIMEOUT_SECONDS, logTcp).catch((error: Error) => error).then((tlsSocketOrError) => {
+			} as any, TIMEOUT_SECONDS, logger).catch((error: Error) => error).then((tlsSocketOrError) => {
 				if (callback != null) {
 					if (tlsSocketOrError instanceof libtls.TLSSocket) {
 						callback(null, tlsSocketOrError);
@@ -906,6 +900,7 @@ export function createAgent(cc: ConnectionConfig, logTcp: boolean): libhttp.Agen
 const DEFAULT_SECURE_CONTEXT = libtls.createSecureContext();
 
 export type Config = {
+	logger: utils.Logger;
 	deferredSecureContexts: Array<DeferredSecureContext>;
 	httpRequestListeners: Array<http.RequestListenerAndHostname>;
 	httpUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
@@ -919,8 +914,7 @@ export function createConfigFromOptions(options: Options): Config {
 	let httpPort = options.http ?? 8080;
 	let httpsPort = options.https ?? 8443;
 	let sign = options.sign ?? false;
-	let logHttp = options.log?.includes("http") ?? false;
-	let logTcp = options.log?.includes("tcp") ?? false;
+	let logger = new utils.Logger(options.log ?? []);
 	let deferredSecureContexts = new Array<DeferredSecureContext>();
 	let httpRequestListeners = new Array<http.RequestListenerAndHostname>();
 	let httpUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
@@ -955,53 +949,53 @@ export function createConfigFromOptions(options: Options): Config {
 			let cc = parseConnectionConfig(root, 80);
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
-					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-					let agent = createAgent(cc, logTcp);
+					logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
+					let agent = createAgent(cc, logger);
 					httpsRequestListeners.push({
 						hostname: host,
-						listener: makeProxyRequestListener(agent, cc, logHttp)
+						listener: makeProxyRequestListener(agent, cc, logger)
 					});
 					httpsUpgradeListeners.push({
 						hostname: host,
-						listener:  makeProxyUpgradeListener(agent, cc, logHttp)
+						listener:  makeProxyUpgradeListener(agent, cc, logger)
 					});
 				} else if (TCP_PROTOCOLS.includes(cc.protocol)) {
+					logger.log("system", `Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
 					handledConnectionConfigs.push({
 						hostname: host,
 						connectionConfig: cc
 					});
-					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
 				}
 			} else {
 				if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
 					throw new Error(`Expected "${root}" to exist and be a directory!`);
 				}
-				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
+				logger.log("system", `Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}`);
 				httpsRequestListeners.push({
 					hostname: host,
-					listener: makeRequestListener(root, handler, routing, indices)
+					listener: makeRequestListener(root, handler, routing, indices, logger)
 				});
 			}
 		} else {
 			let cc = parseConnectionConfig(root, 443);
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
-					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-					let agent = createAgent(cc, logTcp);
+					logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
+					let agent = createAgent(cc, logger);
 					httpRequestListeners.push({
 						hostname: host,
-						listener: makeProxyRequestListener(agent, cc, logHttp)
+						listener: makeProxyRequestListener(agent, cc, logger)
 					});
 					httpUpgradeListeners.push({
 						hostname: host,
-						listener: makeProxyUpgradeListener(agent, cc, logHttp)
+						listener: makeProxyUpgradeListener(agent, cc, logger)
 					});
 				} else if (TCP_PROTOCOLS.includes(cc.protocol)) {
+					logger.log("system", `Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})`);
 					delegatedConnectionConfigs.push({
 						hostname: host,
 						connectionConfig: cc
 					});
-					process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
 					httpRequestListeners.push({
 						hostname: host,
 						listener: makeRedirectRequestListener(httpsPort)
@@ -1011,15 +1005,16 @@ export function createConfigFromOptions(options: Options): Config {
 				if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
 					throw new Error(`Expected "${root}" to exist and be a directory!`);
 				}
-				process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
+				logger.log("system", `Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}`);
 				httpRequestListeners.push({
 					hostname: host,
-					listener: makeRequestListener(root, handler, routing, indices)
+					listener: makeRequestListener(root, handler, routing, indices, logger)
 				});
 			}
 		}
 	}
 	return {
+		logger,
 		deferredSecureContexts,
 		httpRequestListeners,
 		httpUpgradeListeners,
@@ -1031,14 +1026,13 @@ export function createConfigFromOptions(options: Options): Config {
 };
 
 export function createHttpServer(config: Config, options: Options): proxy.Server {
-	let logTcp = options.log?.includes("tcp") ?? false;
 	let httpRequestRouter = http.createServer({
 		requestListeners: config.httpRequestListeners,
 		upgradeListeners: config.httpUpgradeListeners
 	});
 	let httpServer = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
-		logTcp: logTcp
+		logger: config.logger
 	}, (clientSocket, proxyHeader) => {
 		httpRequestRouter.emit("connection", clientSocket);
 	});
@@ -1046,14 +1040,14 @@ export function createHttpServer(config: Config, options: Options): proxy.Server
 };
 
 export function createHttpsServer(config: Config, options: Options): proxy.Server {
-	let logTcp = options.log?.includes("tcp") ?? false;
+	let logger = config.logger;
 	let httpsRequestRouter = http.createServer({
 		requestListeners: config.httpsRequestListeners,
 		upgradeListeners: config.httpsUpgradeListeners
 	});
 	let httpsServer = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
-		logTcp: logTcp
+		logger: logger
 	}, async (clientSocket, proxyHeader) => {
 		try {
 			let { servername, buffer } = await tls.getServernameAndBuffer({
@@ -1069,14 +1063,14 @@ export function createHttpsServer(config: Config, options: Options): proxy.Serve
 					proxyHeader = proxyHeader ?? proxy.createProxyHeader(clientSocket);
 					buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
 				}
-				makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, logTcp);
+				makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, logger);
 			} else {
 				let deferredSecureContext = config.deferredSecureContexts.find((secureContext) => {
 					return secureContext.matchesHostname(servername);
 				});
 				let secureContext = DEFAULT_SECURE_CONTEXT;
 				if (deferredSecureContext != null) {
-					secureContext = deferredSecureContext.getSecureContext();
+					secureContext = deferredSecureContext.getSecureContext(logger);
 				}
 				createTLSSocket(clientSocket, buffer, secureContext, (tlsSocket) => {
 					if (proxyHeader != null) {
@@ -1094,7 +1088,7 @@ export function createHttpsServer(config: Config, options: Options): proxy.Serve
 								proxyHeader = proxyHeader ?? proxy.createProxyHeader(tlsSocket);
 								buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
 							}
-							makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, logTcp);
+							makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, logger);
 						} else {
 							httpsRequestRouter.emit("connection", tlsSocket);
 						}
@@ -1112,6 +1106,7 @@ export function createHttpsServer(config: Config, options: Options): proxy.Serve
 
 export function makeServer(options: Options): void {
 	let config = createConfigFromOptions(options);
+	let logger = config.logger;
 	let httpServer = createHttpServer(config, options);
 	let httpsServer = createHttpsServer(config, options);
 	httpServer.listen({
@@ -1119,13 +1114,13 @@ export function makeServer(options: Options): void {
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = utils.getServerAddress(httpServer);
-		process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
+		logger.log("system", `${terminal.stylize("HTTP", terminal.FG_MAGENTA)} server listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}`);
 	});
 	httpsServer.listen({
 		port: options.https ?? 8443,
 		host: process.platform === "win32" ? "0.0.0.0" : undefined
 	}, () => {
 		let address = utils.getServerAddress(httpsServer);
-		process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
+		logger.log("system", `${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} server listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}`);
 	});
 };
