@@ -39,7 +39,7 @@ wtf.test(`HTTP should support HTTP request proxying.`, async (assert) => {
 			});
 			proxy.listen(undefined, "0.0.0.0");
 		});
-		server.listen(undefined);
+		server.listen(undefined, "0.0.0.0");
 	});
 });
 
@@ -78,6 +78,6 @@ wtf.test(`HTTP server should support HTTPS request proxying.`, async (assert) =>
 			});
 			proxy.listen(undefined, "0.0.0.0");
 		});
-		server.listen(undefined);
+		server.listen(undefined, "0.0.0.0");
 	});
 });
