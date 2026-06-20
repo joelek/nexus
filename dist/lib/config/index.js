@@ -20,7 +20,7 @@ exports.Options = autoguard.guards.Object.of({}, {
     "https": autoguard.guards.Number,
     "sign": autoguard.guards.Boolean,
     "trust": autoguard.guards.Array.of(autoguard.guards.String),
-    "debug": autoguard.guards.Array.of(autoguard.guards.String)
+    "log": autoguard.guards.Array.of(autoguard.guards.String)
 });
 var Autoguard;
 (function (Autoguard) {

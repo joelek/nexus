@@ -28,7 +28,7 @@ export declare class Server extends libnet.Server {
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 export type Options = {
     trustedRemoteAddresses?: Array<string>;
-    debug?: boolean;
+    logTcp?: boolean;
 };
 export declare function setupConnectionLogging(socket: libnet.Socket): void;
 export declare function createServer(options: Options, connectionListener: ConnectionListener): Server;

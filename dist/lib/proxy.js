@@ -189,14 +189,14 @@ exports.setupConnectionLogging = setupConnectionLogging;
 function createServer(options, connectionListener) {
     var _a, _b;
     let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
-    let debug = (_b = options.debug) !== null && _b !== void 0 ? _b : false;
+    let logTcp = (_b = options.logTcp) !== null && _b !== void 0 ? _b : false;
     let server = new Server({
         allowHalfOpen: true
     });
     server.on("connection", (socket) => {
         let remoteAddress = utils.getRemoteAddress(socket);
         setConnectionId(socket, `${remoteAddress.port}`);
-        if (debug) {
+        if (logTcp) {
             setupConnectionLogging(socket);
         }
         socket.on("error", (error) => { }); // NOTE: Prevent errors from being thrown.

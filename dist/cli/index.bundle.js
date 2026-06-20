@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781903261037,
+    "timestamp": 1781950968680,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9254,7 +9254,7 @@ define("build/lib/config/index", ["require", "exports", "node_modules/@joelek/au
         "https": autoguard.guards.Number,
         "sign": autoguard.guards.Boolean,
         "trust": autoguard.guards.Array.of(autoguard.guards.String),
-        "debug": autoguard.guards.Array.of(autoguard.guards.String)
+        "log": autoguard.guards.Array.of(autoguard.guards.String)
     });
     var Autoguard;
     (function (Autoguard) {
@@ -10000,14 +10000,14 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal", "b
     function createServer(options, connectionListener) {
         var _a, _b;
         let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
-        let debug = (_b = options.debug) !== null && _b !== void 0 ? _b : false;
+        let logTcp = (_b = options.logTcp) !== null && _b !== void 0 ? _b : false;
         let server = new Server({
             allowHalfOpen: true
         });
         server.on("connection", (socket) => {
             let remoteAddress = utils.getRemoteAddress(socket);
             setConnectionId(socket, `${remoteAddress.port}`);
-            if (debug) {
+            if (logTcp) {
                 setupConnectionLogging(socket);
             }
             socket.on("error", (error) => { }); // NOTE: Prevent errors from being thrown.
@@ -10067,7 +10067,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         });
     };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.makeServer = exports.createHttpsServer = exports.createHttpServer = exports.createConfigFromOptions = exports.createAgent = exports.createDeferredSecureContext = exports.createTLSSocket = exports.setSocket = exports.getSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.connectTls = exports.connectProxySockets = exports.setupProxySocketsLogging = exports.destroySocket = exports.TimeoutError = exports.parseConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeServerRequest = exports.setupServerRequestLogging = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+    exports.makeServer = exports.createHttpsServer = exports.createHttpServer = exports.createConfigFromOptions = exports.createAgent = exports.createDeferredSecureContext = exports.SelfSignedDeferredSecureContext = exports.CertificateDeferredSecureContext = exports.DeferredSecureContext = exports.createTLSSocket = exports.setSocket = exports.getSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.connectTls = exports.connectProxySockets = exports.setupProxySocketsLogging = exports.destroySocket = exports.TimeoutError = exports.parseConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeServerRequest = exports.setupServerRequestLogging = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
     Object.defineProperty(exports, "Domain", { enumerable: true, get: function () { return config_2.Domain; } });
     Object.defineProperty(exports, "Options", { enumerable: true, get: function () { return config_2.Options; } });
     Object.defineProperty(exports, "Handler", { enumerable: true, get: function () { return config_2.Handler; } });
@@ -10495,7 +10495,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.setupServerRequestLogging = setupServerRequestLogging;
     ;
-    function makeServerRequest(agent, clientRequest, clientResponse, cc, httpDebug) {
+    function makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp) {
         let rawHeaders = createProxyRawHeaders(clientRequest, {});
         let serverRequest = (cc.protocol === "https:" ? libhttps : libhttp).request({
             host: cc.hostname,
@@ -10505,7 +10505,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             path: clientRequest.url,
             headers: rawHeaders
         });
-        if (httpDebug) {
+        if (logHttp) {
             setupServerRequestLogging(clientRequest, clientResponse, serverRequest);
         }
         let timeout = setTimeout(() => {
@@ -10535,23 +10535,23 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.makeServerRequest = makeServerRequest;
     ;
-    function makeProxyRequestListener(agent, cc, httpDebug) {
+    function makeProxyRequestListener(agent, cc, logHttp) {
         return (clientRequest, clientResponse) => {
-            makeServerRequest(agent, clientRequest, clientResponse, cc, httpDebug);
+            makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp);
         };
     }
     exports.makeProxyRequestListener = makeProxyRequestListener;
     ;
-    function makeProxyUpgradeListener(agent, cc, httpDebug) {
+    function makeProxyUpgradeListener(agent, cc, logHttp) {
         return (clientRequest, clientSocket, clientHead) => {
             let clientResponse = new libhttp.ServerResponse(clientRequest);
             clientResponse.assignSocket(clientSocket);
-            let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, cc, httpDebug);
+            let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp);
             serverRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
                 var _a;
                 clientResponse.writeHead((_a = serverResponse.statusCode) !== null && _a !== void 0 ? _a : 200, serverResponse.rawHeaders);
                 clientResponse.end();
-                connectProxySockets(clientSocket, serverSocket, httpDebug);
+                connectProxySockets(clientSocket, serverSocket, logHttp);
                 serverSocket.write(clientHead);
                 clientSocket.write(serverHead);
             });
@@ -10646,8 +10646,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.setupProxySocketsLogging = setupProxySocketsLogging;
     ;
-    function connectProxySockets(clientSocket, serverSocket, debug) {
-        if (debug) {
+    function connectProxySockets(clientSocket, serverSocket, logTcp) {
+        if (logTcp) {
             setupProxySocketsLogging(clientSocket, serverSocket);
         }
         serverSocket.on("data", (buffer) => {
@@ -10719,9 +10719,9 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.connectProxySockets = connectProxySockets;
     ;
-    function connectTls(options, timeout_seconds, debug) {
+    function connectTls(options, timeout_seconds, logTcp) {
         return __awaiter(this, void 0, void 0, function* () {
-            let serverSocket = connectTcp(options, timeout_seconds, debug);
+            let serverSocket = connectTcp(options, timeout_seconds, logTcp);
             let tlsSocket = yield new Promise((resolve, reject) => {
                 serverSocket.once("connect", () => {
                     let tlsSocket = libtls.connect({
@@ -10744,7 +10744,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.connectTls = connectTls;
     ;
-    function connectTcp(options, timeout_seconds, debug) {
+    function connectTcp(options, timeout_seconds, logTcp) {
         let serverSocket = libnet.connect(options);
         let timeout = setTimeout(() => {
             serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
@@ -10755,19 +10755,19 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             let remoteAddress = utils.getRemoteAddress(serverSocket);
             let localAddress = utils.getLocalAddress(serverSocket);
             proxy.setConnectionId(serverSocket, `${localAddress.port}`);
-            if (debug) {
+            if (logTcp) {
                 process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
             }
             serverSocket.once("close", (had_error) => {
                 process.nextTick(() => {
-                    if (debug) {
+                    if (logTcp) {
                         process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
                     }
                 });
             });
         });
         serverSocket.on("error", (error) => {
-            if (debug) {
+            if (logTcp) {
                 process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted error event with message "${error.message}"` + "\n");
             }
         });
@@ -10775,13 +10775,13 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.connectTcp = connectTcp;
     ;
-    function makeTcpProxyConnection(host, port, head, clientSocket, debug) {
+    function makeTcpProxyConnection(host, port, head, clientSocket, logTcp) {
         let serverSocket = connectTcp({
             host,
             port
-        }, TIMEOUT_SECONDS, debug);
+        }, TIMEOUT_SECONDS, logTcp);
         serverSocket.write(head);
-        connectProxySockets(clientSocket, serverSocket, debug);
+        connectProxySockets(clientSocket, serverSocket, logTcp);
         return serverSocket;
     }
     exports.makeTcpProxyConnection = makeTcpProxyConnection;
@@ -10823,78 +10823,97 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.createTLSSocket = createTLSSocket;
     ;
+    class DeferredSecureContext {
+        constructor(host) {
+            this.host = host;
+        }
+        matchesHostname(hostname) {
+            return utils.matchesHostnamePattern(hostname, this.host);
+        }
+    }
+    exports.DeferredSecureContext = DeferredSecureContext;
+    ;
+    class CertificateDeferredSecureContext extends DeferredSecureContext {
+        constructor(host, key, cert, pass) {
+            super(host);
+            this.key = key;
+            this.cert = cert;
+            this.pass = pass;
+            this.secureContext = undefined;
+            if (key) {
+                libfs.watch(key, () => {
+                    this.secureContext = undefined;
+                });
+            }
+            if (cert) {
+                libfs.watch(cert, () => {
+                    this.secureContext = undefined;
+                });
+            }
+        }
+        getSecureContext() {
+            if (this.secureContext == null) {
+                process.stdout.write(`Loading certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}\n`);
+                this.secureContext = libtls.createSecureContext({
+                    key: this.key ? libfs.readFileSync(this.key) : undefined,
+                    cert: this.cert ? libfs.readFileSync(this.cert) : undefined,
+                    passphrase: this.pass
+                });
+            }
+            return this.secureContext;
+        }
+    }
+    exports.CertificateDeferredSecureContext = CertificateDeferredSecureContext;
+    ;
+    class SelfSignedDeferredSecureContext extends DeferredSecureContext {
+        constructor(host, days) {
+            super(host);
+            this.days = days;
+            this.secureContext = undefined;
+        }
+        getSecureContext() {
+            if (this.secureContext == null) {
+                process.stdout.write(`Generating certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}\n`);
+                let key = multipass.rsa.generatePrivateKey();
+                let cert = multipass.pem.serialize({
+                    sections: [
+                        {
+                            label: "CERTIFICATE",
+                            buffer: multipass.x509.generateSelfSignedCertificate([this.host], key, {
+                                validityPeriod: {
+                                    days: this.days
+                                }
+                            })
+                        }
+                    ]
+                });
+                this.secureContext = libtls.createSecureContext({
+                    key: key.export({
+                        format: "pem",
+                        type: "pkcs1"
+                    }),
+                    cert: cert
+                });
+                setTimeout(() => {
+                    this.secureContext = undefined;
+                }, this.days * 24 * 60 * 60 * 1000);
+            }
+            return this.secureContext;
+        }
+    }
+    exports.SelfSignedDeferredSecureContext = SelfSignedDeferredSecureContext;
+    ;
     function createDeferredSecureContext(options) {
         if (options.key || options.cert) {
-            let deferredSecureContext = {
-                host: options.host,
-                secureContext: DEFAULT_SECURE_CONTEXT,
-                dirty: true,
-                load() {
-                    if (this.dirty) {
-                        process.stdout.write(`Loading certificate for ${terminal.stylize(options.host, terminal.FG_YELLOW)}\n`);
-                        this.secureContext = libtls.createSecureContext({
-                            key: options.key ? libfs.readFileSync(options.key) : undefined,
-                            cert: options.cert ? libfs.readFileSync(options.cert) : undefined,
-                            passphrase: options.pass
-                        });
-                        this.dirty = false;
-                    }
-                }
-            };
-            if (options.key) {
-                libfs.watch(options.key, () => {
-                    deferredSecureContext.dirty = true;
-                });
-            }
-            if (options.cert) {
-                libfs.watch(options.cert, () => {
-                    deferredSecureContext.dirty = true;
-                });
-            }
-            return deferredSecureContext;
+            return new CertificateDeferredSecureContext(options.host, options.key, options.cert, options.pass);
         }
-        else if (options.sign) {
-            let days = 1;
-            let deferredSecureContext = {
-                host: options.host,
-                secureContext: DEFAULT_SECURE_CONTEXT,
-                dirty: true,
-                load() {
-                    if (this.dirty) {
-                        process.stdout.write(`Generating certificate for ${terminal.stylize(options.host, terminal.FG_YELLOW)}\n`);
-                        let key = multipass.rsa.generatePrivateKey();
-                        let cert = multipass.pem.serialize({
-                            sections: [
-                                {
-                                    label: "CERTIFICATE",
-                                    buffer: multipass.x509.generateSelfSignedCertificate([options.host], key, {
-                                        validityPeriod: {
-                                            days: days
-                                        }
-                                    })
-                                }
-                            ]
-                        });
-                        this.secureContext = libtls.createSecureContext({
-                            key: key.export({
-                                format: "pem",
-                                type: "pkcs1"
-                            }),
-                            cert: cert
-                        });
-                        this.dirty = false;
-                        setTimeout(() => {
-                            this.dirty = true;
-                        }, days * 24 * 60 * 60 * 1000);
-                    }
-                }
-            };
-            return deferredSecureContext;
+        if (options.sign) {
+            return new SelfSignedDeferredSecureContext(options.host, 1);
         }
     }
     exports.createDeferredSecureContext = createDeferredSecureContext;
     ;
-    function createAgent(cc, tcpDebug) {
+    function createAgent(cc, logTcp) {
         if (cc.protocol === "http:") {
             let agent = new libhttp.Agent({
                 keepAlive: true
@@ -10903,7 +10922,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 let serverSocket = connectTcp({
                     host: options.host,
                     port: options.port
-                }, TIMEOUT_SECONDS, tcpDebug);
+                }, TIMEOUT_SECONDS, logTcp);
                 if (callback != null) {
                     serverSocket.once("connect", () => {
                         callback(null, serverSocket);
@@ -10921,7 +10940,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 connectTls({
                     host: options.host,
                     port: options.port
-                }, TIMEOUT_SECONDS, tcpDebug).catch((error) => error).then((tlsSocketOrError) => {
+                }, TIMEOUT_SECONDS, logTcp).catch((error) => error).then((tlsSocketOrError) => {
                     if (callback != null) {
                         if (tlsSocketOrError instanceof libtls.TLSSocket) {
                             callback(null, tlsSocketOrError);
@@ -10939,14 +10958,13 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     exports.createAgent = createAgent;
     ;
     const DEFAULT_SECURE_CONTEXT = libtls.createSecureContext();
-    ;
     function createConfigFromOptions(options) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
         let httpPort = (_a = options.http) !== null && _a !== void 0 ? _a : 8080;
         let httpsPort = (_b = options.https) !== null && _b !== void 0 ? _b : 8443;
         let sign = (_c = options.sign) !== null && _c !== void 0 ? _c : false;
-        let httpDebug = (_e = (_d = options.debug) === null || _d === void 0 ? void 0 : _d.includes("http")) !== null && _e !== void 0 ? _e : false;
-        let tcpDebug = (_g = (_f = options.debug) === null || _f === void 0 ? void 0 : _f.includes("tcp")) !== null && _g !== void 0 ? _g : false;
+        let logHttp = (_e = (_d = options.log) === null || _d === void 0 ? void 0 : _d.includes("http")) !== null && _e !== void 0 ? _e : false;
+        let logTcp = (_g = (_f = options.log) === null || _f === void 0 ? void 0 : _f.includes("tcp")) !== null && _g !== void 0 ? _g : false;
         let deferredSecureContexts = new Array();
         let httpRequestListeners = new Array();
         let httpUpgradeListeners = new Array();
@@ -10982,14 +11000,14 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 if (cc != null) {
                     if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
                         process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-                        let agent = createAgent(cc, tcpDebug);
+                        let agent = createAgent(cc, logTcp);
                         httpsRequestListeners.push({
                             hostname: host,
-                            listener: makeProxyRequestListener(agent, cc, httpDebug)
+                            listener: makeProxyRequestListener(agent, cc, logHttp)
                         });
                         httpsUpgradeListeners.push({
                             hostname: host,
-                            listener: makeProxyUpgradeListener(agent, cc, httpDebug)
+                            listener: makeProxyUpgradeListener(agent, cc, logHttp)
                         });
                     }
                     else if (exports.TCP_PROTOCOLS.includes(cc.protocol)) {
@@ -11016,14 +11034,14 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 if (cc != null) {
                     if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
                         process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-                        let agent = createAgent(cc, tcpDebug);
+                        let agent = createAgent(cc, logTcp);
                         httpRequestListeners.push({
                             hostname: host,
-                            listener: makeProxyRequestListener(agent, cc, httpDebug)
+                            listener: makeProxyRequestListener(agent, cc, logHttp)
                         });
                         httpUpgradeListeners.push({
                             hostname: host,
-                            listener: makeProxyUpgradeListener(agent, cc, httpDebug)
+                            listener: makeProxyUpgradeListener(agent, cc, logHttp)
                         });
                     }
                     else if (exports.TCP_PROTOCOLS.includes(cc.protocol)) {
@@ -11064,14 +11082,14 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     ;
     function createHttpServer(config, options) {
         var _a, _b;
-        let tcpDebug = (_b = (_a = options.debug) === null || _a === void 0 ? void 0 : _a.includes("tcp")) !== null && _b !== void 0 ? _b : false;
+        let logTcp = (_b = (_a = options.log) === null || _a === void 0 ? void 0 : _a.includes("tcp")) !== null && _b !== void 0 ? _b : false;
         let httpRequestRouter = http.createServer({
             requestListeners: config.httpRequestListeners,
             upgradeListeners: config.httpUpgradeListeners
         });
         let httpServer = proxy.createServer({
             trustedRemoteAddresses: options.trust,
-            debug: tcpDebug
+            logTcp: logTcp
         }, (clientSocket, proxyHeader) => {
             httpRequestRouter.emit("connection", clientSocket);
         });
@@ -11081,14 +11099,14 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     ;
     function createHttpsServer(config, options) {
         var _a, _b;
-        let tcpDebug = (_b = (_a = options.debug) === null || _a === void 0 ? void 0 : _a.includes("tcp")) !== null && _b !== void 0 ? _b : false;
+        let logTcp = (_b = (_a = options.log) === null || _a === void 0 ? void 0 : _a.includes("tcp")) !== null && _b !== void 0 ? _b : false;
         let httpsRequestRouter = http.createServer({
             requestListeners: config.httpsRequestListeners,
             upgradeListeners: config.httpsUpgradeListeners
         });
         let httpsServer = proxy.createServer({
             trustedRemoteAddresses: options.trust,
-            debug: tcpDebug
+            logTcp: logTcp
         }, (clientSocket, proxyHeader) => __awaiter(this, void 0, void 0, function* () {
             try {
                 let { servername, buffer } = yield tls.getServernameAndBuffer({
@@ -11104,16 +11122,15 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                         proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(clientSocket);
                         buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                     }
-                    makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
+                    makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, logTcp);
                 }
                 else {
                     let deferredSecureContext = config.deferredSecureContexts.find((secureContext) => {
-                        return utils.matchesHostnamePattern(servername, secureContext.host);
+                        return secureContext.matchesHostname(servername);
                     });
                     let secureContext = DEFAULT_SECURE_CONTEXT;
                     if (deferredSecureContext != null) {
-                        deferredSecureContext.load();
-                        secureContext = deferredSecureContext.secureContext;
+                        secureContext = deferredSecureContext.getSecureContext();
                     }
                     createTLSSocket(clientSocket, buffer, secureContext, (tlsSocket) => {
                         if (proxyHeader != null) {
@@ -11131,7 +11148,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                                     proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(tlsSocket);
                                     buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                                 }
-                                makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, tcpDebug);
+                                makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, logTcp);
                             }
                             else {
                                 httpsRequestRouter.emit("connection", tlsSocket);
@@ -11255,8 +11272,8 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
                 else if ((parts = /^--trust=(.*)$/.exec(arg)) !== null) {
                     options.trust = [...((_a = options.trust) !== null && _a !== void 0 ? _a : []), parts[1]];
                 }
-                else if ((parts = /^--debug=(.*)$/.exec(arg)) !== null) {
-                    options.debug = [...((_b = options.debug) !== null && _b !== void 0 ? _b : []), parts[1]];
+                else if ((parts = /^--log=(.*)$/.exec(arg)) !== null) {
+                    options.log = [...((_b = options.log) !== null && _b !== void 0 ? _b : []), parts[1]];
                 }
                 else {
                     unrecognizedArguments.push(arg);
@@ -11296,8 +11313,8 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
                 process.stderr.write(`		Configure automatic generation of self-signed certificates.\n`);
                 process.stderr.write(`	--trust=string\n`);
                 process.stderr.write(`		Add trusted remote address for PROXY protocol.\n`);
-                process.stderr.write(`	--debug=string\n`);
-                process.stderr.write(`		Add debug option.\n`);
+                process.stderr.write(`	--log=string\n`);
+                process.stderr.write(`		Add log option.\n`);
                 process.exit(0);
             }
             else {
