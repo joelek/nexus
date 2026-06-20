@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1781950968680,
+    "timestamp": 1781953529646,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -9299,7 +9299,7 @@ define("build/lib/tls", ["require", "exports"], function (require, exports) {
         let length = state.buffer.readUIntBE(state.offset, bytes);
         state.offset += bytes;
         if (state.offset + length > state.buffer.length) {
-            throw `Expected at least ${length} bytes remaining in buffer at position ${state.offset}!`;
+            throw new Error(`Expected at least ${length} bytes remaining in buffer at position ${state.offset}!`);
         }
         let buffer = state.buffer.slice(state.offset, state.offset + length);
         state.offset += length;
@@ -9385,7 +9385,7 @@ define("build/lib/tls", ["require", "exports"], function (require, exports) {
         let timestamp = state.buffer.readUIntBE(state.offset, 4);
         state.offset += 4;
         if (state.offset + 28 > state.buffer.length) {
-            throw `Expected at least ${28} bytes remaining in buffer at position ${state.offset}!`;
+            throw new Error(`Expected at least ${28} bytes remaining in buffer at position ${state.offset}!`);
         }
         let buffer = state.buffer.slice(state.offset, state.offset + 28);
         state.offset += 28;
@@ -9428,6 +9428,7 @@ define("build/lib/tls", ["require", "exports"], function (require, exports) {
     }
     exports.parseCompressionMethod = parseCompressionMethod;
     ;
+    // NOTE: There exists other extension types than the ones listed here.
     var ExtensionType;
     (function (ExtensionType) {
         ExtensionType[ExtensionType["SERVER_NAME"] = 0] = "SERVER_NAME";
@@ -9533,14 +9534,14 @@ define("build/lib/tls", ["require", "exports"], function (require, exports) {
     ;
     function getServername(tlsPlaintext) {
         if (tlsPlaintext.type !== ContentType.HANDSHAKE) {
-            throw `Expected a TLS handshake!`;
+            throw new Error(`Expected a TLS handshake!`);
         }
         let handshake = parseHandshake({
             buffer: tlsPlaintext.body,
             offset: 0
         });
         if (handshake.type !== HandshakeType.CLIENT_HELLO) {
-            throw `Expected a TLS client hello!`;
+            throw new Error(`Expected a TLS client hello!`);
         }
         let clientHello = parseClientHello({
             buffer: handshake.body,
@@ -9572,7 +9573,7 @@ define("build/lib/tls", ["require", "exports"], function (require, exports) {
             });
         });
         if (hostnames.length !== 1) {
-            throw `Expected exactly one hostname!`;
+            throw new Error(`Expected exactly one hostname!`);
         }
         return hostnames[0].name;
     }
@@ -9625,7 +9626,7 @@ define("build/lib/utils", ["require", "exports", "net"], function (require, expo
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.getServerAddress = exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
+    exports.Logger = exports.getServerAddress = exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
     function matchesHostnamePattern(subject, pattern) {
         let subjectParts = subject.split(".");
         let patternParts = pattern.split(".");
@@ -9737,6 +9738,21 @@ define("build/lib/utils", ["require", "exports", "net"], function (require, expo
         return address;
     }
     exports.getServerAddress = getServerAddress;
+    ;
+    class Logger {
+        constructor(types) {
+            this.types = types;
+        }
+        isLoggingEnabled(kind) {
+            return this.types.includes(kind);
+        }
+        log(type, line) {
+            if (this.isLoggingEnabled(type)) {
+                process.stdout.write(line + "\n");
+            }
+        }
+    }
+    exports.Logger = Logger;
     ;
 });
 define("build/lib/http", ["require", "exports", "http", "build/lib/utils"], function (require, exports, libhttp, utils) {
@@ -9982,17 +9998,17 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal", "b
     }
     exports.Server = Server;
     ;
-    function setupConnectionLogging(socket) {
+    function setupConnectionLogging(socket, logger) {
         let localAddress = utils.getLocalAddress(socket);
-        process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+        logger.log("tcp", `Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)}`);
         socket.once("close", (had_error) => {
             process.nextTick(() => {
-                process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+                logger.log("tcp", `Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}`);
             });
         });
         socket.on("error", (error) => {
             var _a;
-            process.stderr.write(`Client connection ${(_a = getConnectionId(socket)) !== null && _a !== void 0 ? _a : "-"} emitted error event with message "${error.message}"` + "\n");
+            logger.log("tcp", `Client connection ${(_a = getConnectionId(socket)) !== null && _a !== void 0 ? _a : "-"} emitted error event with message "${error.message}"`);
         });
     }
     exports.setupConnectionLogging = setupConnectionLogging;
@@ -10000,15 +10016,15 @@ define("build/lib/proxy", ["require", "exports", "net", "build/lib/terminal", "b
     function createServer(options, connectionListener) {
         var _a, _b;
         let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
-        let logTcp = (_b = options.logTcp) !== null && _b !== void 0 ? _b : false;
+        let logger = (_b = options.logger) !== null && _b !== void 0 ? _b : new utils.Logger([]);
         let server = new Server({
             allowHalfOpen: true
         });
         server.on("connection", (socket) => {
             let remoteAddress = utils.getRemoteAddress(socket);
             setConnectionId(socket, `${remoteAddress.port}`);
-            if (logTcp) {
-                setupConnectionLogging(socket);
+            if (logger.isLoggingEnabled("tcp")) {
+                setupConnectionLogging(socket, logger);
             }
             socket.on("error", (error) => { }); // NOTE: Prevent errors from being thrown.
             socket.on("data", function ondata(chunk) {
@@ -10370,7 +10386,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     const REQUEST_HANDLERS = {
         git: gitRequestHandler
     };
-    function makeRequestListener(pathPrefix, handler, clientRouting, generateIndices) {
+    function makeRequestListener(pathPrefix, handler, clientRouting, generateIndices, logger) {
         let requestListener = libserver.makeServer({
             getRequest(request) {
                 var _a;
@@ -10407,7 +10423,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             response.on("finish", () => {
                 let duration = Date.now() - start;
                 let url = `${protocol}://${hostname}${path}`;
-                process.stdout.write(`${terminal.stylize(response.statusCode, response.statusCode >= 400 ? terminal.FG_RED : terminal.FG_GREEN)} ${terminal.stylize(method, terminal.FG_MAGENTA)} ${terminal.stylize(url, terminal.FG_YELLOW)} (${terminal.stylize(duration, terminal.FG_CYAN)} ms)\n`);
+                logger.log("system", `${terminal.stylize(response.statusCode, response.statusCode >= 400 ? terminal.FG_RED : terminal.FG_GREEN)} ${terminal.stylize(method, terminal.FG_MAGENTA)} ${terminal.stylize(url, terminal.FG_YELLOW)} (${terminal.stylize(duration, terminal.FG_CYAN)} ms)`);
             });
             requestListener(request, response);
         };
@@ -10446,56 +10462,56 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.createProxyRawHeaders = createProxyRawHeaders;
     ;
-    function setupServerRequestLogging(clientRequest, clientResponse, serverRequest) {
+    function setupServerRequestLogging(clientRequest, clientResponse, serverRequest, logger) {
         clientRequest.on("error", (error) => {
-            process.stdout.write(`Client request emitted error event with message "${error.message}"` + "\n");
+            logger.log("http", `Client request emitted error event with message "${error.message}"`);
         });
         clientRequest.on("close", () => {
-            process.stdout.write(`Client request emitted close event` + "\n");
+            logger.log("http", `Client request emitted close event`);
         });
         clientRequest.on("end", () => {
-            process.stdout.write(`Client request emitted end event` + "\n");
+            logger.log("http", `Client request emitted end event`);
         });
         clientResponse.on("error", (error) => {
-            process.stdout.write(`Client response emitted error event with message "${error.message}"` + "\n");
+            logger.log("http", `Client response emitted error event with message "${error.message}"`);
         });
         clientResponse.on("finish", () => {
-            process.stdout.write(`Client response emitted finish event` + "\n");
+            logger.log("http", `Client response emitted finish event`);
         });
         clientResponse.on("close", () => {
-            process.stdout.write(`Client response emitted close event` + "\n");
+            logger.log("http", `Client response emitted close event`);
         });
         serverRequest.on("response", (serverResponse) => {
-            process.stdout.write(`Server request emitted response event` + "\n");
+            logger.log("http", `Server request emitted response event`);
             serverResponse.on("error", (error) => {
-                process.stdout.write(`Server response emitted error event with message "${error.message}"` + "\n");
+                logger.log("http", `Server response emitted error event with message "${error.message}"`);
             });
             serverResponse.on("end", () => {
-                process.stdout.write(`Server response emitted end event` + "\n");
+                logger.log("http", `Server response emitted end event`);
             });
             serverResponse.on("close", () => {
-                process.stdout.write(`Server response emitted close event` + "\n");
+                logger.log("http", `Server response emitted close event`);
             });
         });
         serverRequest.on("timeout", () => {
-            process.stdout.write(`Server request emitted timeout event` + "\n");
+            logger.log("http", `Server request emitted timeout event`);
         });
         serverRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
-            process.stdout.write(`Server request emitted upgrade event` + "\n");
+            logger.log("http", `Server request emitted upgrade event`);
         });
         serverRequest.on("error", (error) => {
-            process.stdout.write(`Server request emitted error event with message "${error.message}"` + "\n");
+            logger.log("http", `Server request emitted error event with message "${error.message}"`);
         });
         serverRequest.on("finish", () => {
-            process.stdout.write(`Server request emitted finish event` + "\n");
+            logger.log("http", `Server request emitted finish event`);
         });
         serverRequest.on("close", () => {
-            process.stdout.write(`Server request emitted close event` + "\n");
+            logger.log("http", `Server request emitted close event`);
         });
     }
     exports.setupServerRequestLogging = setupServerRequestLogging;
     ;
-    function makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp) {
+    function makeServerRequest(agent, clientRequest, clientResponse, cc, logger) {
         let rawHeaders = createProxyRawHeaders(clientRequest, {});
         let serverRequest = (cc.protocol === "https:" ? libhttps : libhttp).request({
             host: cc.hostname,
@@ -10505,8 +10521,8 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             path: clientRequest.url,
             headers: rawHeaders
         });
-        if (logHttp) {
-            setupServerRequestLogging(clientRequest, clientResponse, serverRequest);
+        if (logger.isLoggingEnabled("http")) {
+            setupServerRequestLogging(clientRequest, clientResponse, serverRequest, logger);
         }
         let timeout = setTimeout(() => {
             serverRequest.destroy(new TimeoutError("connect", TIMEOUT_SECONDS));
@@ -10535,23 +10551,23 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.makeServerRequest = makeServerRequest;
     ;
-    function makeProxyRequestListener(agent, cc, logHttp) {
+    function makeProxyRequestListener(agent, cc, logger) {
         return (clientRequest, clientResponse) => {
-            makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp);
+            makeServerRequest(agent, clientRequest, clientResponse, cc, logger);
         };
     }
     exports.makeProxyRequestListener = makeProxyRequestListener;
     ;
-    function makeProxyUpgradeListener(agent, cc, logHttp) {
+    function makeProxyUpgradeListener(agent, cc, logger) {
         return (clientRequest, clientSocket, clientHead) => {
             let clientResponse = new libhttp.ServerResponse(clientRequest);
             clientResponse.assignSocket(clientSocket);
-            let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp);
+            let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, cc, logger);
             serverRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
                 var _a;
                 clientResponse.writeHead((_a = serverResponse.statusCode) !== null && _a !== void 0 ? _a : 200, serverResponse.rawHeaders);
                 clientResponse.end();
-                connectProxySockets(clientSocket, serverSocket, logHttp);
+                connectProxySockets(clientSocket, serverSocket, logger);
                 serverSocket.write(clientHead);
                 clientSocket.write(serverHead);
             });
@@ -10596,7 +10612,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             };
         }
         else {
-            throw `Expected a supported protocol!`;
+            throw new Error(`Expected a supported protocol!`);
         }
     }
     exports.parseConnectionConfig = parseConnectionConfig;
@@ -10630,25 +10646,25 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.destroySocket = destroySocket;
     ;
-    function setupProxySocketsLogging(clientSocket, serverSocket) {
+    function setupProxySocketsLogging(clientSocket, serverSocket, logger) {
         serverSocket.on("end", () => {
-            process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted end event` + "\n");
+            logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} emitted end event`);
         });
         serverSocket.on("close", (had_error) => {
-            process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+            logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} emitted close event ${had_error ? "with error" : "without error"}`);
         });
         clientSocket.on("close", (had_error) => {
-            process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted close event ${had_error ? "with error" : "without error"}` + "\n");
+            logger.log("tcp", `Client connection ${proxy.getConnectionId(clientSocket)} emitted close event ${had_error ? "with error" : "without error"}`);
         });
         clientSocket.on("end", () => {
-            process.stderr.write(`Client connection ${proxy.getConnectionId(clientSocket)} emitted end event` + "\n");
+            logger.log("tcp", `Client connection ${proxy.getConnectionId(clientSocket)} emitted end event`);
         });
     }
     exports.setupProxySocketsLogging = setupProxySocketsLogging;
     ;
-    function connectProxySockets(clientSocket, serverSocket, logTcp) {
-        if (logTcp) {
-            setupProxySocketsLogging(clientSocket, serverSocket);
+    function connectProxySockets(clientSocket, serverSocket, logger) {
+        if (logger.isLoggingEnabled("tcp")) {
+            setupProxySocketsLogging(clientSocket, serverSocket, logger);
         }
         serverSocket.on("data", (buffer) => {
             let doContinue = clientSocket.write(buffer);
@@ -10719,9 +10735,9 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.connectProxySockets = connectProxySockets;
     ;
-    function connectTls(options, timeout_seconds, logTcp) {
+    function connectTls(options, timeout_seconds, logger) {
         return __awaiter(this, void 0, void 0, function* () {
-            let serverSocket = connectTcp(options, timeout_seconds, logTcp);
+            let serverSocket = connectTcp(options, timeout_seconds, logger);
             let tlsSocket = yield new Promise((resolve, reject) => {
                 serverSocket.once("connect", () => {
                     let tlsSocket = libtls.connect({
@@ -10744,7 +10760,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.connectTls = connectTls;
     ;
-    function connectTcp(options, timeout_seconds, logTcp) {
+    function connectTcp(options, timeout_seconds, logger) {
         let serverSocket = libnet.connect(options);
         let timeout = setTimeout(() => {
             serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
@@ -10755,33 +10771,27 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             let remoteAddress = utils.getRemoteAddress(serverSocket);
             let localAddress = utils.getLocalAddress(serverSocket);
             proxy.setConnectionId(serverSocket, `${localAddress.port}`);
-            if (logTcp) {
-                process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
-            }
+            logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)}`);
             serverSocket.once("close", (had_error) => {
                 process.nextTick(() => {
-                    if (logTcp) {
-                        process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
-                    }
+                    logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}`);
                 });
             });
         });
         serverSocket.on("error", (error) => {
-            if (logTcp) {
-                process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted error event with message "${error.message}"` + "\n");
-            }
+            logger.log("tcp", `Server connection ${proxy.getConnectionId(serverSocket)} emitted error event with message "${error.message}"`);
         });
         return serverSocket;
     }
     exports.connectTcp = connectTcp;
     ;
-    function makeTcpProxyConnection(host, port, head, clientSocket, logTcp) {
+    function makeTcpProxyConnection(host, port, head, clientSocket, logger) {
         let serverSocket = connectTcp({
             host,
             port
-        }, TIMEOUT_SECONDS, logTcp);
+        }, TIMEOUT_SECONDS, logger);
         serverSocket.write(head);
-        connectProxySockets(clientSocket, serverSocket, logTcp);
+        connectProxySockets(clientSocket, serverSocket, logger);
         return serverSocket;
     }
     exports.makeTcpProxyConnection = makeTcpProxyConnection;
@@ -10851,9 +10861,9 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 });
             }
         }
-        getSecureContext() {
+        getSecureContext(logger) {
             if (this.secureContext == null) {
-                process.stdout.write(`Loading certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}\n`);
+                logger.log("system", `Loading certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}`);
                 this.secureContext = libtls.createSecureContext({
                     key: this.key ? libfs.readFileSync(this.key) : undefined,
                     cert: this.cert ? libfs.readFileSync(this.cert) : undefined,
@@ -10871,9 +10881,9 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             this.days = days;
             this.secureContext = undefined;
         }
-        getSecureContext() {
+        getSecureContext(logger) {
             if (this.secureContext == null) {
-                process.stdout.write(`Generating certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}\n`);
+                logger.log("system", `Generating certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}`);
                 let key = multipass.rsa.generatePrivateKey();
                 let cert = multipass.pem.serialize({
                     sections: [
@@ -10913,7 +10923,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     }
     exports.createDeferredSecureContext = createDeferredSecureContext;
     ;
-    function createAgent(cc, logTcp) {
+    function createAgent(cc, logger) {
         if (cc.protocol === "http:") {
             let agent = new libhttp.Agent({
                 keepAlive: true
@@ -10922,7 +10932,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 let serverSocket = connectTcp({
                     host: options.host,
                     port: options.port
-                }, TIMEOUT_SECONDS, logTcp);
+                }, TIMEOUT_SECONDS, logger);
                 if (callback != null) {
                     serverSocket.once("connect", () => {
                         callback(null, serverSocket);
@@ -10940,7 +10950,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 connectTls({
                     host: options.host,
                     port: options.port
-                }, TIMEOUT_SECONDS, logTcp).catch((error) => error).then((tlsSocketOrError) => {
+                }, TIMEOUT_SECONDS, logger).catch((error) => error).then((tlsSocketOrError) => {
                     if (callback != null) {
                         if (tlsSocketOrError instanceof libtls.TLSSocket) {
                             callback(null, tlsSocketOrError);
@@ -10959,12 +10969,11 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     ;
     const DEFAULT_SECURE_CONTEXT = libtls.createSecureContext();
     function createConfigFromOptions(options) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         let httpPort = (_a = options.http) !== null && _a !== void 0 ? _a : 8080;
         let httpsPort = (_b = options.https) !== null && _b !== void 0 ? _b : 8443;
         let sign = (_c = options.sign) !== null && _c !== void 0 ? _c : false;
-        let logHttp = (_e = (_d = options.log) === null || _d === void 0 ? void 0 : _d.includes("http")) !== null && _e !== void 0 ? _e : false;
-        let logTcp = (_g = (_f = options.log) === null || _f === void 0 ? void 0 : _f.includes("tcp")) !== null && _g !== void 0 ? _g : false;
+        let logger = new utils.Logger((_d = options.log) !== null && _d !== void 0 ? _d : []);
         let deferredSecureContexts = new Array();
         let httpRequestListeners = new Array();
         let httpUpgradeListeners = new Array();
@@ -10972,15 +10981,15 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         let httpsUpgradeListeners = new Array();
         let handledConnectionConfigs = new Array();
         let delegatedConnectionConfigs = new Array();
-        for (let domain of (_h = options.domains) !== null && _h !== void 0 ? _h : []) {
-            let root = (_j = domain.root) !== null && _j !== void 0 ? _j : "./";
+        for (let domain of (_e = options.domains) !== null && _e !== void 0 ? _e : []) {
+            let root = (_f = domain.root) !== null && _f !== void 0 ? _f : "./";
             let key = domain.key;
             let cert = domain.cert;
             let pass = domain.pass;
-            let host = (_k = domain.host) !== null && _k !== void 0 ? _k : "*";
+            let host = (_g = domain.host) !== null && _g !== void 0 ? _g : "*";
             let handler = domain.handler;
-            let routing = (_l = domain.routing) !== null && _l !== void 0 ? _l : true;
-            let indices = (_m = domain.indices) !== null && _m !== void 0 ? _m : false;
+            let routing = (_h = domain.routing) !== null && _h !== void 0 ? _h : true;
+            let indices = (_j = domain.indices) !== null && _j !== void 0 ? _j : false;
             let httpHost = `http://${host}:${httpPort}`;
             let httpsHost = `https://${host}:${httpsPort}`;
             let deferredSecureContext = createDeferredSecureContext({
@@ -10999,33 +11008,33 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 let cc = parseConnectionConfig(root, 80);
                 if (cc != null) {
                     if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
-                        process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-                        let agent = createAgent(cc, logTcp);
+                        logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
+                        let agent = createAgent(cc, logger);
                         httpsRequestListeners.push({
                             hostname: host,
-                            listener: makeProxyRequestListener(agent, cc, logHttp)
+                            listener: makeProxyRequestListener(agent, cc, logger)
                         });
                         httpsUpgradeListeners.push({
                             hostname: host,
-                            listener: makeProxyUpgradeListener(agent, cc, logHttp)
+                            listener: makeProxyUpgradeListener(agent, cc, logger)
                         });
                     }
                     else if (exports.TCP_PROTOCOLS.includes(cc.protocol)) {
+                        logger.log("system", `Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
                         handledConnectionConfigs.push({
                             hostname: host,
                             connectionConfig: cc
                         });
-                        process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
                     }
                 }
                 else {
                     if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
-                        throw `Expected "${root}" to exist and be a directory!`;
+                        throw new Error(`Expected "${root}" to exist and be a directory!`);
                     }
-                    process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}\n`);
+                    logger.log("system", `Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpsHost, terminal.FG_YELLOW)}`);
                     httpsRequestListeners.push({
                         hostname: host,
-                        listener: makeRequestListener(root, handler, routing, indices)
+                        listener: makeRequestListener(root, handler, routing, indices, logger)
                     });
                 }
             }
@@ -11033,23 +11042,23 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 let cc = parseConnectionConfig(root, 443);
                 if (cc != null) {
                     if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
-                        process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-                        let agent = createAgent(cc, logTcp);
+                        logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
+                        let agent = createAgent(cc, logger);
                         httpRequestListeners.push({
                             hostname: host,
-                            listener: makeProxyRequestListener(agent, cc, logHttp)
+                            listener: makeProxyRequestListener(agent, cc, logger)
                         });
                         httpUpgradeListeners.push({
                             hostname: host,
-                            listener: makeProxyUpgradeListener(agent, cc, logHttp)
+                            listener: makeProxyUpgradeListener(agent, cc, logger)
                         });
                     }
                     else if (exports.TCP_PROTOCOLS.includes(cc.protocol)) {
+                        logger.log("system", `Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})`);
                         delegatedConnectionConfigs.push({
                             hostname: host,
                             connectionConfig: cc
                         });
-                        process.stdout.write(`Proxying ${terminal.stylize("TCP", terminal.FG_MAGENTA)} connections for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)} (${terminal.stylize("E2EE", terminal.FG_GREEN)})\n`);
                         httpRequestListeners.push({
                             hostname: host,
                             listener: makeRedirectRequestListener(httpsPort)
@@ -11058,17 +11067,18 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 }
                 else {
                     if (!libfs.existsSync(root) || !libfs.statSync(root).isDirectory()) {
-                        throw `Expected "${root}" to exist and be a directory!`;
+                        throw new Error(`Expected "${root}" to exist and be a directory!`);
                     }
-                    process.stdout.write(`Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}\n`);
+                    logger.log("system", `Serving ${terminal.stylize("\"" + root + "\"", terminal.FG_YELLOW)} at ${terminal.stylize(httpHost, terminal.FG_YELLOW)}`);
                     httpRequestListeners.push({
                         hostname: host,
-                        listener: makeRequestListener(root, handler, routing, indices)
+                        listener: makeRequestListener(root, handler, routing, indices, logger)
                     });
                 }
             }
         }
         return {
+            logger,
             deferredSecureContexts,
             httpRequestListeners,
             httpUpgradeListeners,
@@ -11081,15 +11091,13 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     exports.createConfigFromOptions = createConfigFromOptions;
     ;
     function createHttpServer(config, options) {
-        var _a, _b;
-        let logTcp = (_b = (_a = options.log) === null || _a === void 0 ? void 0 : _a.includes("tcp")) !== null && _b !== void 0 ? _b : false;
         let httpRequestRouter = http.createServer({
             requestListeners: config.httpRequestListeners,
             upgradeListeners: config.httpUpgradeListeners
         });
         let httpServer = proxy.createServer({
             trustedRemoteAddresses: options.trust,
-            logTcp: logTcp
+            logger: config.logger
         }, (clientSocket, proxyHeader) => {
             httpRequestRouter.emit("connection", clientSocket);
         });
@@ -11098,15 +11106,14 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     exports.createHttpServer = createHttpServer;
     ;
     function createHttpsServer(config, options) {
-        var _a, _b;
-        let logTcp = (_b = (_a = options.log) === null || _a === void 0 ? void 0 : _a.includes("tcp")) !== null && _b !== void 0 ? _b : false;
+        let logger = config.logger;
         let httpsRequestRouter = http.createServer({
             requestListeners: config.httpsRequestListeners,
             upgradeListeners: config.httpsUpgradeListeners
         });
         let httpsServer = proxy.createServer({
             trustedRemoteAddresses: options.trust,
-            logTcp: logTcp
+            logger: logger
         }, (clientSocket, proxyHeader) => __awaiter(this, void 0, void 0, function* () {
             try {
                 let { servername, buffer } = yield tls.getServernameAndBuffer({
@@ -11122,7 +11129,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                         proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(clientSocket);
                         buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                     }
-                    makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, logTcp);
+                    makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, logger);
                 }
                 else {
                     let deferredSecureContext = config.deferredSecureContexts.find((secureContext) => {
@@ -11130,7 +11137,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                     });
                     let secureContext = DEFAULT_SECURE_CONTEXT;
                     if (deferredSecureContext != null) {
-                        secureContext = deferredSecureContext.getSecureContext();
+                        secureContext = deferredSecureContext.getSecureContext(logger);
                     }
                     createTLSSocket(clientSocket, buffer, secureContext, (tlsSocket) => {
                         if (proxyHeader != null) {
@@ -11148,7 +11155,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                                     proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(tlsSocket);
                                     buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                                 }
-                                makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, logTcp);
+                                makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, logger);
                             }
                             else {
                                 httpsRequestRouter.emit("connection", tlsSocket);
@@ -11171,6 +11178,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     function makeServer(options) {
         var _a, _b;
         let config = createConfigFromOptions(options);
+        let logger = config.logger;
         let httpServer = createHttpServer(config, options);
         let httpsServer = createHttpsServer(config, options);
         httpServer.listen({
@@ -11178,14 +11186,14 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             host: process.platform === "win32" ? "0.0.0.0" : undefined
         }, () => {
             let address = utils.getServerAddress(httpServer);
-            process.stdout.write(`${terminal.stylize("HTTP", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
+            logger.log("system", `${terminal.stylize("HTTP", terminal.FG_MAGENTA)} server listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}`);
         });
         httpsServer.listen({
             port: (_b = options.https) !== null && _b !== void 0 ? _b : 8443,
             host: process.platform === "win32" ? "0.0.0.0" : undefined
         }, () => {
             let address = utils.getServerAddress(httpsServer);
-            process.stdout.write(`${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} router listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}\n`);
+            logger.log("system", `${terminal.stylize("HTTPS", terminal.FG_MAGENTA)} server listening on ${terminal.stylize(utils.formatAddress(address), terminal.FG_YELLOW)}`);
         });
     }
     exports.makeServer = makeServer;
@@ -11224,7 +11232,8 @@ define("build/cli/index", ["require", "exports", "build/app", "build/lib/index"]
             let domain = {};
             let domains = new Array();
             let options = {
-                domains
+                domains,
+                log: ["system"]
             };
             let unrecognizedArguments = [];
             for (let arg of process.argv.slice(2)) {

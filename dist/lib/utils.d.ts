@@ -7,3 +7,10 @@ export declare function getLocalAddress(socket: libnet.Socket): libnet.AddressIn
 export declare function getRemoteAddress(socket: libnet.Socket): libnet.AddressInfo;
 export declare function formatAddress(address: libnet.AddressInfo): string;
 export declare function getServerAddress(server: libnet.Server): libnet.AddressInfo;
+export type LogType = "http" | "tcp" | "system";
+export declare class Logger {
+    protected types: Array<string>;
+    constructor(types: Array<string>);
+    isLoggingEnabled(kind: LogType): boolean;
+    log(type: LogType, line: string): void;
+}

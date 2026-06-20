@@ -14,7 +14,7 @@ function getSubState(state, bytes) {
     let length = state.buffer.readUIntBE(state.offset, bytes);
     state.offset += bytes;
     if (state.offset + length > state.buffer.length) {
-        throw `Expected at least ${length} bytes remaining in buffer at position ${state.offset}!`;
+        throw new Error(`Expected at least ${length} bytes remaining in buffer at position ${state.offset}!`);
     }
     let buffer = state.buffer.slice(state.offset, state.offset + length);
     state.offset += length;
@@ -100,7 +100,7 @@ function parseRandom(state) {
     let timestamp = state.buffer.readUIntBE(state.offset, 4);
     state.offset += 4;
     if (state.offset + 28 > state.buffer.length) {
-        throw `Expected at least ${28} bytes remaining in buffer at position ${state.offset}!`;
+        throw new Error(`Expected at least ${28} bytes remaining in buffer at position ${state.offset}!`);
     }
     let buffer = state.buffer.slice(state.offset, state.offset + 28);
     state.offset += 28;
@@ -143,6 +143,7 @@ function parseCompressionMethod(state) {
 }
 exports.parseCompressionMethod = parseCompressionMethod;
 ;
+// NOTE: There exists other extension types than the ones listed here.
 var ExtensionType;
 (function (ExtensionType) {
     ExtensionType[ExtensionType["SERVER_NAME"] = 0] = "SERVER_NAME";
@@ -248,14 +249,14 @@ exports.parseHostname = parseHostname;
 ;
 function getServername(tlsPlaintext) {
     if (tlsPlaintext.type !== ContentType.HANDSHAKE) {
-        throw `Expected a TLS handshake!`;
+        throw new Error(`Expected a TLS handshake!`);
     }
     let handshake = parseHandshake({
         buffer: tlsPlaintext.body,
         offset: 0
     });
     if (handshake.type !== HandshakeType.CLIENT_HELLO) {
-        throw `Expected a TLS client hello!`;
+        throw new Error(`Expected a TLS client hello!`);
     }
     let clientHello = parseClientHello({
         buffer: handshake.body,
@@ -287,7 +288,7 @@ function getServername(tlsPlaintext) {
         });
     });
     if (hostnames.length !== 1) {
-        throw `Expected exactly one hostname!`;
+        throw new Error(`Expected exactly one hostname!`);
     }
     return hostnames[0].name;
 }

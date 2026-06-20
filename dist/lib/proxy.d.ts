@@ -2,6 +2,7 @@
 /// <reference types="node" />
 /// <reference types="node" />
 import * as libnet from "net";
+import * as utils from "./utils";
 export type Header = {
     type: "TCP4" | "TCP6";
     source_address: string;
@@ -28,7 +29,7 @@ export declare class Server extends libnet.Server {
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 export type Options = {
     trustedRemoteAddresses?: Array<string>;
-    logTcp?: boolean;
+    logger?: utils.Logger;
 };
-export declare function setupConnectionLogging(socket: libnet.Socket): void;
+export declare function setupConnectionLogging(socket: libnet.Socket, logger: utils.Logger): void;
 export declare function createServer(options: Options, connectionListener: ConnectionListener): Server;

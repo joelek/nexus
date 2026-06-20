@@ -13,6 +13,7 @@ import { Options, Handler } from "./config";
 export { Domain, Options, Handler } from "./config";
 import * as http from "./http";
 import * as proxy from "./proxy";
+import * as utils from "./utils";
 export declare function loadConfig(config: string): Options;
 export declare function computeSimpleHash(string: string): number;
 export declare function encodeXMLText(string: string): string;
@@ -25,13 +26,13 @@ export declare function makeDirectoryListingResponse(pathPrefix: string, pathSuf
 export declare function makeReadStreamResponse(pathPrefix: string, pathSuffix: string, request: autoguard.api.ClientRequest<autoguard.api.EndpointRequest>): autoguard.api.EndpointResponse & {
     payload: autoguard.api.Binary;
 };
-export declare function makeRequestListener(pathPrefix: string, handler: Handler | undefined, clientRouting: boolean, generateIndices: boolean): libhttp.RequestListener;
+export declare function makeRequestListener(pathPrefix: string, handler: Handler | undefined, clientRouting: boolean, generateIndices: boolean, logger: utils.Logger): libhttp.RequestListener;
 export declare function makeRedirectRequestListener(httpsPort: number): libhttp.RequestListener;
 export declare function createProxyRawHeaders(request: libhttp.IncomingMessage, overrides: Record<string, string>): Array<string>;
-export declare function setupServerRequestLogging(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, serverRequest: libhttp.ClientRequest): void;
-export declare function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, cc: ConnectionConfig, logHttp: boolean): libhttp.ClientRequest;
-export declare function makeProxyRequestListener(agent: libhttp.Agent, cc: ConnectionConfig, logHttp: boolean): libhttp.RequestListener;
-export declare function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, logHttp: boolean): http.UpgradeListener;
+export declare function setupServerRequestLogging(clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, serverRequest: libhttp.ClientRequest, logger: utils.Logger): void;
+export declare function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, cc: ConnectionConfig, logger: utils.Logger): libhttp.ClientRequest;
+export declare function makeProxyRequestListener(agent: libhttp.Agent, cc: ConnectionConfig, logger: utils.Logger): libhttp.RequestListener;
+export declare function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, logger: utils.Logger): http.UpgradeListener;
 export type ConnectionConfig = {
     protocol: string;
     hostname: string;
@@ -51,18 +52,18 @@ export declare class TimeoutError extends Error {
     get message(): string;
 }
 export declare function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void;
-export declare function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket): void;
-export declare function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logTcp: boolean): void;
-export declare function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logTcp: boolean): Promise<libtls.TLSSocket>;
-export declare function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logTcp: boolean): libnet.Socket;
-export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, logTcp: boolean): libnet.Socket;
+export declare function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): void;
+export declare function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): void;
+export declare function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logger: utils.Logger): Promise<libtls.TLSSocket>;
+export declare function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logger: utils.Logger): libnet.Socket;
+export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): libnet.Socket;
 export declare function getSocket(tlsSocket: libtls.TLSSocket): libnet.Socket | undefined;
 export declare function setSocket(tlsSocket: libtls.TLSSocket, socket: libnet.Socket): void;
 export declare function createTLSSocket(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void): void;
 export declare abstract class DeferredSecureContext {
     protected host: string;
     constructor(host: string);
-    abstract getSecureContext(): libtls.SecureContext;
+    abstract getSecureContext(logger: utils.Logger): libtls.SecureContext;
     matchesHostname(hostname: string): boolean;
 }
 export declare class CertificateDeferredSecureContext extends DeferredSecureContext {
@@ -71,13 +72,13 @@ export declare class CertificateDeferredSecureContext extends DeferredSecureCont
     protected pass: string | undefined;
     protected secureContext: libtls.SecureContext | undefined;
     constructor(host: string, key: string | undefined, cert: string | undefined, pass: string | undefined);
-    getSecureContext(): libtls.SecureContext;
+    getSecureContext(logger: utils.Logger): libtls.SecureContext;
 }
 export declare class SelfSignedDeferredSecureContext extends DeferredSecureContext {
     protected days: number;
     protected secureContext: libtls.SecureContext | undefined;
     constructor(host: string, days: number);
-    getSecureContext(): libtls.SecureContext;
+    getSecureContext(logger: utils.Logger): libtls.SecureContext;
 }
 export declare function createDeferredSecureContext(options: {
     host: string;
@@ -86,8 +87,9 @@ export declare function createDeferredSecureContext(options: {
     pass?: string;
     sign: boolean;
 }): DeferredSecureContext | undefined;
-export declare function createAgent(cc: ConnectionConfig, logTcp: boolean): libhttp.Agent | libhttps.Agent;
+export declare function createAgent(cc: ConnectionConfig, logger: utils.Logger): libhttp.Agent | libhttps.Agent;
 export type Config = {
+    logger: utils.Logger;
     deferredSecureContexts: Array<DeferredSecureContext>;
     httpRequestListeners: Array<http.RequestListenerAndHostname>;
     httpUpgradeListeners: Array<http.UpgradeListenerAndHostname>;

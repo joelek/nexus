@@ -18,7 +18,8 @@ function run() {
         let domain = {};
         let domains = new Array();
         let options = {
-            domains
+            domains,
+            log: ["system"]
         };
         let unrecognizedArguments = [];
         for (let arg of process.argv.slice(2)) {

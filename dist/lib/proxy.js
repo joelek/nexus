@@ -171,17 +171,17 @@ class Server extends libnet.Server {
 }
 exports.Server = Server;
 ;
-function setupConnectionLogging(socket) {
+function setupConnectionLogging(socket, logger) {
     let localAddress = utils.getLocalAddress(socket);
-    process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)}` + "\n");
+    logger.log("tcp", `Client connection ${getConnectionId(socket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)}`);
     socket.once("close", (had_error) => {
         process.nextTick(() => {
-            process.stderr.write(`Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
+            logger.log("tcp", `Client connection ${getConnectionId(socket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(localAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}`);
         });
     });
     socket.on("error", (error) => {
         var _a;
-        process.stderr.write(`Client connection ${(_a = getConnectionId(socket)) !== null && _a !== void 0 ? _a : "-"} emitted error event with message "${error.message}"` + "\n");
+        logger.log("tcp", `Client connection ${(_a = getConnectionId(socket)) !== null && _a !== void 0 ? _a : "-"} emitted error event with message "${error.message}"`);
     });
 }
 exports.setupConnectionLogging = setupConnectionLogging;
@@ -189,15 +189,15 @@ exports.setupConnectionLogging = setupConnectionLogging;
 function createServer(options, connectionListener) {
     var _a, _b;
     let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
-    let logTcp = (_b = options.logTcp) !== null && _b !== void 0 ? _b : false;
+    let logger = (_b = options.logger) !== null && _b !== void 0 ? _b : new utils.Logger([]);
     let server = new Server({
         allowHalfOpen: true
     });
     server.on("connection", (socket) => {
         let remoteAddress = utils.getRemoteAddress(socket);
         setConnectionId(socket, `${remoteAddress.port}`);
-        if (logTcp) {
-            setupConnectionLogging(socket);
+        if (logger.isLoggingEnabled("tcp")) {
+            setupConnectionLogging(socket, logger);
         }
         socket.on("error", (error) => { }); // NOTE: Prevent errors from being thrown.
         socket.on("data", function ondata(chunk) {

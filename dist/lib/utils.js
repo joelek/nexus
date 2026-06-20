@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getServerAddress = exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
+exports.Logger = exports.getServerAddress = exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
 const libnet = require("net");
 function matchesHostnamePattern(subject, pattern) {
     let subjectParts = subject.split(".");
@@ -113,4 +113,19 @@ function getServerAddress(server) {
     return address;
 }
 exports.getServerAddress = getServerAddress;
+;
+class Logger {
+    constructor(types) {
+        this.types = types;
+    }
+    isLoggingEnabled(kind) {
+        return this.types.includes(kind);
+    }
+    log(type, line) {
+        if (this.isLoggingEnabled(type)) {
+            process.stdout.write(line + "\n");
+        }
+    }
+}
+exports.Logger = Logger;
 ;
