@@ -437,7 +437,7 @@ export function setupServerRequestLogging(clientRequest: libhttp.IncomingMessage
 	});
 };
 
-export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, cc: ConnectionConfig, httpDebug: boolean): libhttp.ClientRequest {
+export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.IncomingMessage, clientResponse: libhttp.ServerResponse, cc: ConnectionConfig, logHttp: boolean): libhttp.ClientRequest {
 	let rawHeaders = createProxyRawHeaders(clientRequest, {});
 	let serverRequest = (cc.protocol === "https:" ? libhttps : libhttp).request({
 		host: cc.hostname,
@@ -447,7 +447,7 @@ export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.I
 		path: clientRequest.url,
 		headers: rawHeaders as any
 	});
-	if (httpDebug) {
+	if (logHttp) {
 		setupServerRequestLogging(clientRequest, clientResponse, serverRequest);
 	}
 	let timeout = setTimeout(() => {
@@ -474,21 +474,21 @@ export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.I
 	return serverRequest;
 };
 
-export function makeProxyRequestListener(agent: libhttp.Agent, cc: ConnectionConfig, httpDebug: boolean): libhttp.RequestListener {
+export function makeProxyRequestListener(agent: libhttp.Agent, cc: ConnectionConfig, logHttp: boolean): libhttp.RequestListener {
 	return (clientRequest, clientResponse) => {
-		makeServerRequest(agent, clientRequest, clientResponse, cc, httpDebug);
+		makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp);
 	};
 };
 
-export function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, httpDebug: boolean): http.UpgradeListener {
+export function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionConfig, logHttp: boolean): http.UpgradeListener {
 	return (clientRequest, clientSocket, clientHead) => {
 		let clientResponse = new libhttp.ServerResponse(clientRequest);
 		clientResponse.assignSocket(clientSocket);
-		let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, cc, httpDebug);
+		let serverRequest = makeServerRequest(agent, clientRequest, clientResponse, cc, logHttp);
 		serverRequest.on("upgrade", (serverResponse, serverSocket, serverHead) => {
 			clientResponse.writeHead(serverResponse.statusCode ?? 200, serverResponse.rawHeaders);
 			clientResponse.end();
-			connectProxySockets(clientSocket, serverSocket, httpDebug);
+			connectProxySockets(clientSocket, serverSocket, logHttp);
 			serverSocket.write(clientHead);
 			clientSocket.write(serverHead);
 		});
@@ -590,8 +590,8 @@ export function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TL
 	});
 };
 
-export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): void {
-	if (debug) {
+export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logTcp: boolean): void {
+	if (logTcp) {
 		setupProxySocketsLogging(clientSocket, serverSocket);
 	}
 	serverSocket.on("data", (buffer) => {
@@ -658,8 +658,8 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 };
 
-export async function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): Promise<libtls.TLSSocket> {
-	let serverSocket = connectTcp(options, timeout_seconds, debug);
+export async function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logTcp: boolean): Promise<libtls.TLSSocket> {
+	let serverSocket = connectTcp(options, timeout_seconds, logTcp);
 	let tlsSocket = await new Promise<libtls.TLSSocket>((resolve, reject) => {
 		serverSocket.once("connect", () => {
 			let tlsSocket = libtls.connect({
@@ -680,7 +680,7 @@ export async function connectTls(options: libnet.TcpNetConnectOpts, timeout_seco
 	return tlsSocket;
 };
 
-export function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, debug: boolean): libnet.Socket {
+export function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logTcp: boolean): libnet.Socket {
 	let serverSocket = libnet.connect(options);
 	let timeout = setTimeout(() => {
 		serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
@@ -691,32 +691,32 @@ export function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: n
 		let remoteAddress = utils.getRemoteAddress(serverSocket);
 		let localAddress = utils.getLocalAddress(serverSocket);
 		proxy.setConnectionId(serverSocket, `${localAddress.port}`);
-		if (debug) {
+		if (logTcp) {
 			process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("established", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)}` + "\n");
 		}
 		serverSocket.once("close", (had_error) => {
 			process.nextTick(() => {
-				if (debug) {
+				if (logTcp) {
 					process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} ${terminal.stylize("closed", terminal.FG_CYAN)} for ${terminal.stylize(utils.formatAddress(remoteAddress), terminal.FG_YELLOW)} ${had_error ? "with error" : "without error"}` + "\n");
 				}
 			});
 		});
 	});
 	serverSocket.on("error", (error) => {
-		if (debug) {
+		if (logTcp) {
 			process.stderr.write(`Server connection ${proxy.getConnectionId(serverSocket)} emitted error event with message "${error.message}"` + "\n");
 		}
 	});
 	return serverSocket;
 };
 
-export function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, debug: boolean): libnet.Socket {
+export function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, logTcp: boolean): libnet.Socket {
 	let serverSocket = connectTcp({
 		host,
 		port
-	}, TIMEOUT_SECONDS, debug);
+	}, TIMEOUT_SECONDS, logTcp);
 	serverSocket.write(head);
-	connectProxySockets(clientSocket, serverSocket, debug);
+	connectProxySockets(clientSocket, serverSocket, logTcp);
 	return serverSocket;
 };
 
@@ -862,7 +862,7 @@ export function createDeferredSecureContext(options: {
 	}
 };
 
-export function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Agent | libhttps.Agent {
+export function createAgent(cc: ConnectionConfig, logTcp: boolean): libhttp.Agent | libhttps.Agent {
 	if (cc.protocol === "http:") {
 		let agent = new libhttp.Agent({
 			keepAlive: true
@@ -871,7 +871,7 @@ export function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Ag
 			let serverSocket = connectTcp({
 				host: options.host,
 				port: options.port
-			} as any, TIMEOUT_SECONDS, tcpDebug);
+			} as any, TIMEOUT_SECONDS, logTcp);
 			if (callback != null) {
 				serverSocket.once("connect", () => {
 					callback(null, serverSocket);
@@ -888,7 +888,7 @@ export function createAgent(cc: ConnectionConfig, tcpDebug: boolean): libhttp.Ag
 			connectTls({
 				host: options.host,
 				port: options.port
-			} as any, TIMEOUT_SECONDS, tcpDebug).catch((error: Error) => error).then((tlsSocketOrError) => {
+			} as any, TIMEOUT_SECONDS, logTcp).catch((error: Error) => error).then((tlsSocketOrError) => {
 				if (callback != null) {
 					if (tlsSocketOrError instanceof libtls.TLSSocket) {
 						callback(null, tlsSocketOrError);
@@ -919,8 +919,8 @@ export function createConfigFromOptions(options: Options): Config {
 	let httpPort = options.http ?? 8080;
 	let httpsPort = options.https ?? 8443;
 	let sign = options.sign ?? false;
-	let httpDebug = options.debug?.includes("http") ?? false;
-	let tcpDebug = options.debug?.includes("tcp") ?? false;
+	let logHttp = options.log?.includes("http") ?? false;
+	let logTcp = options.log?.includes("tcp") ?? false;
 	let deferredSecureContexts = new Array<DeferredSecureContext>();
 	let httpRequestListeners = new Array<http.RequestListenerAndHostname>();
 	let httpUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
@@ -956,14 +956,14 @@ export function createConfigFromOptions(options: Options): Config {
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-					let agent = createAgent(cc, tcpDebug);
+					let agent = createAgent(cc, logTcp);
 					httpsRequestListeners.push({
 						hostname: host,
-						listener: makeProxyRequestListener(agent, cc, httpDebug)
+						listener: makeProxyRequestListener(agent, cc, logHttp)
 					});
 					httpsUpgradeListeners.push({
 						hostname: host,
-						listener:  makeProxyUpgradeListener(agent, cc, httpDebug)
+						listener:  makeProxyUpgradeListener(agent, cc, logHttp)
 					});
 				} else if (TCP_PROTOCOLS.includes(cc.protocol)) {
 					handledConnectionConfigs.push({
@@ -987,14 +987,14 @@ export function createConfigFromOptions(options: Options): Config {
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					process.stdout.write(`Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}\n`);
-					let agent = createAgent(cc, tcpDebug);
+					let agent = createAgent(cc, logTcp);
 					httpRequestListeners.push({
 						hostname: host,
-						listener: makeProxyRequestListener(agent, cc, httpDebug)
+						listener: makeProxyRequestListener(agent, cc, logHttp)
 					});
 					httpUpgradeListeners.push({
 						hostname: host,
-						listener: makeProxyUpgradeListener(agent, cc, httpDebug)
+						listener: makeProxyUpgradeListener(agent, cc, logHttp)
 					});
 				} else if (TCP_PROTOCOLS.includes(cc.protocol)) {
 					delegatedConnectionConfigs.push({
@@ -1031,14 +1031,14 @@ export function createConfigFromOptions(options: Options): Config {
 };
 
 export function createHttpServer(config: Config, options: Options): proxy.Server {
-	let tcpDebug = options.debug?.includes("tcp") ?? false;
+	let logTcp = options.log?.includes("tcp") ?? false;
 	let httpRequestRouter = http.createServer({
 		requestListeners: config.httpRequestListeners,
 		upgradeListeners: config.httpUpgradeListeners
 	});
 	let httpServer = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
-		debug: tcpDebug
+		logTcp: logTcp
 	}, (clientSocket, proxyHeader) => {
 		httpRequestRouter.emit("connection", clientSocket);
 	});
@@ -1046,14 +1046,14 @@ export function createHttpServer(config: Config, options: Options): proxy.Server
 };
 
 export function createHttpsServer(config: Config, options: Options): proxy.Server {
-	let tcpDebug = options.debug?.includes("tcp") ?? false;
+	let logTcp = options.log?.includes("tcp") ?? false;
 	let httpsRequestRouter = http.createServer({
 		requestListeners: config.httpsRequestListeners,
 		upgradeListeners: config.httpsUpgradeListeners
 	});
 	let httpsServer = proxy.createServer({
 		trustedRemoteAddresses: options.trust,
-		debug: tcpDebug
+		logTcp: logTcp
 	}, async (clientSocket, proxyHeader) => {
 		try {
 			let { servername, buffer } = await tls.getServernameAndBuffer({
@@ -1069,7 +1069,7 @@ export function createHttpsServer(config: Config, options: Options): proxy.Serve
 					proxyHeader = proxyHeader ?? proxy.createProxyHeader(clientSocket);
 					buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
 				}
-				makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, tcpDebug);
+				makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, logTcp);
 			} else {
 				let deferredSecureContext = config.deferredSecureContexts.find((secureContext) => {
 					return secureContext.matchesHostname(servername);
@@ -1094,7 +1094,7 @@ export function createHttpsServer(config: Config, options: Options): proxy.Serve
 								proxyHeader = proxyHeader ?? proxy.createProxyHeader(tlsSocket);
 								buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
 							}
-							makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, tcpDebug);
+							makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, logTcp);
 						} else {
 							httpsRequestRouter.emit("connection", tlsSocket);
 						}

@@ -170,7 +170,7 @@ export type ConnectionListener = (socket: libnet.Socket, header: Header | undefi
 
 export type Options = {
 	trustedRemoteAddresses?: Array<string>;
-	debug?: boolean;
+	logTcp?: boolean;
 };
 
 export function setupConnectionLogging(socket: libnet.Socket): void {
@@ -188,14 +188,14 @@ export function setupConnectionLogging(socket: libnet.Socket): void {
 
 export function createServer(options: Options, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
-	let debug = options.debug ?? false;
+	let logTcp = options.logTcp ?? false;
 	let server = new Server({
 		allowHalfOpen: true
 	});
 	server.on("connection", (socket) => {
 		let remoteAddress = utils.getRemoteAddress(socket);
 		setConnectionId(socket, `${remoteAddress.port}`);
-		if (debug) {
+		if (logTcp) {
 			setupConnectionLogging(socket);
 		}
 		socket.on("error", (error) => {}); // NOTE: Prevent errors from being thrown.
