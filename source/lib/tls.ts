@@ -155,6 +155,7 @@ export type ClientHello = {
 	extensions: Array<Extension>;
 };
 
+// NOTE: There exists other extension types than the ones listed here.
 export enum ExtensionType {
 	SERVER_NAME = 0,
 	SIGNATURE_ALGORITHMS = 13
