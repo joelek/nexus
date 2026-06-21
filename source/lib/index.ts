@@ -531,19 +531,23 @@ export function parseConnectionConfig(root: string, defaultPort: number, trusted
 	if (Number.isNaN(port)) {
 		port = undefined;
 	}
+	let trusted = false;
+	try {
+		trusted = utils.isTrusted(hostname, trustedRemoteAddresses);
+	} catch (error) {}
 	if (TCP_PROTOCOLS.includes(protocol)) {
 		return {
 			protocol: protocol,
 			hostname: hostname,
 			port: port ?? defaultPort,
-			trusted: utils.isTrusted(hostname, trustedRemoteAddresses)
+			trusted: trusted
 		};
 	} else if (HTTP_PROTOCOLS.includes(protocol)) {
 		return {
 			protocol: protocol,
 			hostname: hostname,
 			port: port ?? defaultPort,
-			trusted: utils.isTrusted(hostname, trustedRemoteAddresses)
+			trusted: trusted
 		};
 	} else {
 		throw new Error(`Expected a supported protocol!`);
