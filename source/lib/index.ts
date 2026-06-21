@@ -800,6 +800,29 @@ export class CertificateDeferredSecureContext extends DeferredSecureContext {
 	}
 };
 
+export function generateSelfSignedCertificate(host: string, days: number): { key: string; cert: string; } {
+	let key = multipass.rsa.generatePrivateKey();
+	let cert = multipass.pem.serialize({
+		sections: [
+			{
+				label: "CERTIFICATE",
+				buffer: multipass.x509.generateSelfSignedCertificate([host], key, {
+					validityPeriod: {
+						days: days
+					}
+				})
+			}
+		]
+	});
+	return {
+		key: key.export({
+			format: "pem",
+			type: "pkcs1"
+		}) as string,
+		cert: cert
+	};
+};
+
 export class SelfSignedDeferredSecureContext extends DeferredSecureContext {
 	protected days: number;
 	protected secureContext: libtls.SecureContext | undefined;
@@ -813,26 +836,7 @@ export class SelfSignedDeferredSecureContext extends DeferredSecureContext {
 	getSecureContext(logger: utils.Logger): libtls.SecureContext {
 		if (this.secureContext == null) {
 			logger.log("system", `Generating certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}`);
-			let key = multipass.rsa.generatePrivateKey();
-			let cert = multipass.pem.serialize({
-				sections: [
-					{
-						label: "CERTIFICATE",
-						buffer: multipass.x509.generateSelfSignedCertificate([this.host], key, {
-							validityPeriod: {
-								days: this.days
-							}
-						})
-					}
-				]
-			});
-			this.secureContext = libtls.createSecureContext({
-				key: key.export({
-					format: "pem",
-					type: "pkcs1"
-				}),
-				cert: cert
-			});
+			this.secureContext = libtls.createSecureContext(generateSelfSignedCertificate(this.host, this.days));
 			setTimeout(() => {
 				this.secureContext = undefined;
 			}, this.days * 24 * 60 * 60 * 1000);
