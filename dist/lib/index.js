@@ -542,12 +542,17 @@ function parseConnectionConfig(root, defaultPort, trustedRemoteAddresses) {
     if (Number.isNaN(port)) {
         port = undefined;
     }
+    let trusted = false;
+    try {
+        trusted = utils.isTrusted(hostname, trustedRemoteAddresses);
+    }
+    catch (error) { }
     if (exports.TCP_PROTOCOLS.includes(protocol)) {
         return {
             protocol: protocol,
             hostname: hostname,
             port: port !== null && port !== void 0 ? port : defaultPort,
-            trusted: utils.isTrusted(hostname, trustedRemoteAddresses)
+            trusted: trusted
         };
     }
     else if (exports.HTTP_PROTOCOLS.includes(protocol)) {
@@ -555,7 +560,7 @@ function parseConnectionConfig(root, defaultPort, trustedRemoteAddresses) {
             protocol: protocol,
             hostname: hostname,
             port: port !== null && port !== void 0 ? port : defaultPort,
-            trusted: utils.isTrusted(hostname, trustedRemoteAddresses)
+            trusted: trusted
         };
     }
     else {
