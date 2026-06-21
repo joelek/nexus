@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Logger = exports.getServerAddress = exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
+exports.isTrusted = exports.Logger = exports.getServerAddress = exports.formatAddress = exports.getRemoteAddress = exports.getLocalAddress = exports.normalizeToIPv6 = exports.normalizeIPv6 = exports.matchesHostnamePattern = void 0;
 const libnet = require("net");
 function matchesHostnamePattern(subject, pattern) {
     let subjectParts = subject.split(".");
@@ -128,4 +128,12 @@ class Logger {
     }
 }
 exports.Logger = Logger;
+;
+function isTrusted(remoteAddress, trustedRemoteAddresses) {
+    let matchingTrustedRemoteAddress = trustedRemoteAddresses.find((trustedRemoteAddress) => {
+        return normalizeToIPv6(trustedRemoteAddress) === normalizeToIPv6(remoteAddress);
+    });
+    return matchingTrustedRemoteAddress != null;
+}
+exports.isTrusted = isTrusted;
 ;

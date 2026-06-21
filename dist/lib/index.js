@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeServer = exports.createHttpsServer = exports.createHttpServer = exports.createConfigFromOptions = exports.createAgent = exports.createDeferredSecureContext = exports.SelfSignedDeferredSecureContext = exports.CertificateDeferredSecureContext = exports.DeferredSecureContext = exports.createTLSSocket = exports.setSocket = exports.getSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.connectTls = exports.connectProxySockets = exports.setupProxySocketsLogging = exports.destroySocket = exports.TimeoutError = exports.parseConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeServerRequest = exports.setupServerRequestLogging = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+exports.makeServer = exports.createHttpsServer = exports.createHttpServer = exports.createConfigFromOptions = exports.createAgent = exports.createDeferredSecureContext = exports.SelfSignedDeferredSecureContext = exports.generateSelfSignedCertificate = exports.CertificateDeferredSecureContext = exports.DeferredSecureContext = exports.createTLSSocket = exports.setSocket = exports.getSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.connectTls = exports.connectProxySockets = exports.setupProxySocketsLogging = exports.destroySocket = exports.TimeoutError = exports.parseConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeServerRequest = exports.setupServerRequestLogging = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/autoguard/dist/lib-server");
 const multipass = require("@joelek/multipass/dist/mod");
 const libcp = require("child_process");
@@ -463,7 +463,8 @@ function makeServerRequest(agent, clientRequest, clientResponse, cc, logger) {
         agent,
         method: clientRequest.method,
         path: clientRequest.url,
-        headers: rawHeaders
+        headers: rawHeaders,
+        rejectUnauthorized: !cc.trusted
     });
     if (logger.isLoggingEnabled("http")) {
         setupServerRequestLogging(clientRequest, clientResponse, serverRequest, logger);
@@ -527,7 +528,7 @@ exports.HTTP_PROTOCOLS = [
     "http:",
     "https:"
 ];
-function parseConnectionConfig(root, defaultPort) {
+function parseConnectionConfig(root, defaultPort, trustedRemoteAddresses) {
     let url;
     try {
         url = new liburl.URL(root);
@@ -544,15 +545,17 @@ function parseConnectionConfig(root, defaultPort) {
     if (exports.TCP_PROTOCOLS.includes(protocol)) {
         return {
             protocol: protocol,
-            hostname,
-            port: port !== null && port !== void 0 ? port : defaultPort
+            hostname: hostname,
+            port: port !== null && port !== void 0 ? port : defaultPort,
+            trusted: utils.isTrusted(hostname, trustedRemoteAddresses)
         };
     }
     else if (exports.HTTP_PROTOCOLS.includes(protocol)) {
         return {
             protocol: protocol,
-            hostname,
-            port: port !== null && port !== void 0 ? port : defaultPort
+            hostname: hostname,
+            port: port !== null && port !== void 0 ? port : defaultPort,
+            trusted: utils.isTrusted(hostname, trustedRemoteAddresses)
         };
     }
     else {
@@ -686,7 +689,8 @@ function connectTls(options, timeout_seconds, logger) {
             serverSocket.once("connect", () => {
                 let tlsSocket = libtls.connect({
                     socket: serverSocket,
-                    servername: options.host
+                    servername: options.host,
+                    rejectUnauthorized: options.rejectUnauthorized
                 });
                 proxy.setConnectionId(tlsSocket, "-");
                 tlsSocket.once("error", (error) => {
@@ -819,6 +823,30 @@ class CertificateDeferredSecureContext extends DeferredSecureContext {
 }
 exports.CertificateDeferredSecureContext = CertificateDeferredSecureContext;
 ;
+function generateSelfSignedCertificate(host, days) {
+    let key = multipass.rsa.generatePrivateKey();
+    let cert = multipass.pem.serialize({
+        sections: [
+            {
+                label: "CERTIFICATE",
+                buffer: multipass.x509.generateSelfSignedCertificate([host], key, {
+                    validityPeriod: {
+                        days: days
+                    }
+                })
+            }
+        ]
+    });
+    return {
+        key: key.export({
+            format: "pem",
+            type: "pkcs1"
+        }),
+        cert: cert
+    };
+}
+exports.generateSelfSignedCertificate = generateSelfSignedCertificate;
+;
 class SelfSignedDeferredSecureContext extends DeferredSecureContext {
     constructor(host, days) {
         super(host);
@@ -828,26 +856,7 @@ class SelfSignedDeferredSecureContext extends DeferredSecureContext {
     getSecureContext(logger) {
         if (this.secureContext == null) {
             logger.log("system", `Generating certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}`);
-            let key = multipass.rsa.generatePrivateKey();
-            let cert = multipass.pem.serialize({
-                sections: [
-                    {
-                        label: "CERTIFICATE",
-                        buffer: multipass.x509.generateSelfSignedCertificate([this.host], key, {
-                            validityPeriod: {
-                                days: this.days
-                            }
-                        })
-                    }
-                ]
-            });
-            this.secureContext = libtls.createSecureContext({
-                key: key.export({
-                    format: "pem",
-                    type: "pkcs1"
-                }),
-                cert: cert
-            });
+            this.secureContext = libtls.createSecureContext(generateSelfSignedCertificate(this.host, this.days));
             setTimeout(() => {
                 this.secureContext = undefined;
             }, this.days * 24 * 60 * 60 * 1000);
@@ -888,12 +897,14 @@ function createAgent(cc, logger) {
     }
     else {
         let agent = new libhttps.Agent({
-            keepAlive: true
+            keepAlive: true,
+            rejectUnauthorized: !cc.trusted
         });
         agent.createConnection = (options, callback) => {
             connectTls({
                 host: options.host,
-                port: options.port
+                port: options.port,
+                rejectUnauthorized: options.rejectUnauthorized
             }, TIMEOUT_SECONDS, logger).catch((error) => error).then((tlsSocketOrError) => {
                 if (callback != null) {
                     if (tlsSocketOrError instanceof libtls.TLSSocket) {
@@ -913,11 +924,12 @@ exports.createAgent = createAgent;
 ;
 const DEFAULT_SECURE_CONTEXT = libtls.createSecureContext();
 function createConfigFromOptions(options) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
     let httpPort = (_a = options.http) !== null && _a !== void 0 ? _a : 8080;
     let httpsPort = (_b = options.https) !== null && _b !== void 0 ? _b : 8443;
     let sign = (_c = options.sign) !== null && _c !== void 0 ? _c : false;
-    let logger = new utils.Logger((_d = options.log) !== null && _d !== void 0 ? _d : []);
+    let trust = (_d = options.trust) !== null && _d !== void 0 ? _d : [];
+    let logger = new utils.Logger((_e = options.log) !== null && _e !== void 0 ? _e : []);
     let deferredSecureContexts = new Array();
     let httpRequestListeners = new Array();
     let httpUpgradeListeners = new Array();
@@ -925,15 +937,15 @@ function createConfigFromOptions(options) {
     let httpsUpgradeListeners = new Array();
     let handledConnectionConfigs = new Array();
     let delegatedConnectionConfigs = new Array();
-    for (let domain of (_e = options.domains) !== null && _e !== void 0 ? _e : []) {
-        let root = (_f = domain.root) !== null && _f !== void 0 ? _f : "./";
+    for (let domain of (_f = options.domains) !== null && _f !== void 0 ? _f : []) {
+        let root = (_g = domain.root) !== null && _g !== void 0 ? _g : "./";
         let key = domain.key;
         let cert = domain.cert;
         let pass = domain.pass;
-        let host = (_g = domain.host) !== null && _g !== void 0 ? _g : "*";
+        let host = (_h = domain.host) !== null && _h !== void 0 ? _h : "*";
         let handler = domain.handler;
-        let routing = (_h = domain.routing) !== null && _h !== void 0 ? _h : true;
-        let indices = (_j = domain.indices) !== null && _j !== void 0 ? _j : false;
+        let routing = (_j = domain.routing) !== null && _j !== void 0 ? _j : true;
+        let indices = (_k = domain.indices) !== null && _k !== void 0 ? _k : false;
         let httpHost = `http://${host}:${httpPort}`;
         let httpsHost = `https://${host}:${httpsPort}`;
         let deferredSecureContext = createDeferredSecureContext({
@@ -949,7 +961,7 @@ function createConfigFromOptions(options) {
                 hostname: host,
                 listener: makeRedirectRequestListener(httpsPort)
             });
-            let cc = parseConnectionConfig(root, 80);
+            let cc = parseConnectionConfig(root, 80, trust);
             if (cc != null) {
                 if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
                     logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
@@ -983,7 +995,7 @@ function createConfigFromOptions(options) {
             }
         }
         else {
-            let cc = parseConnectionConfig(root, 443);
+            let cc = parseConnectionConfig(root, 443, trust);
             if (cc != null) {
                 if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
                     logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);

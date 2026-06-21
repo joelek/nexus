@@ -37,6 +37,7 @@ export type ConnectionConfig = {
     protocol: string;
     hostname: string;
     port: number;
+    trusted: boolean;
 };
 export type ConnectionConfigAndHostname = {
     hostname: string;
@@ -44,7 +45,7 @@ export type ConnectionConfigAndHostname = {
 };
 export declare const TCP_PROTOCOLS: string[];
 export declare const HTTP_PROTOCOLS: string[];
-export declare function parseConnectionConfig(root: string, defaultPort: number): ConnectionConfig | undefined;
+export declare function parseConnectionConfig(root: string, defaultPort: number, trustedRemoteAddresses: Array<string>): ConnectionConfig | undefined;
 export declare class TimeoutError extends Error {
     protected action: string;
     protected timeout_seconds: number;
@@ -54,7 +55,9 @@ export declare class TimeoutError extends Error {
 export declare function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void;
 export declare function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): void;
 export declare function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): void;
-export declare function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logger: utils.Logger): Promise<libtls.TLSSocket>;
+export declare function connectTls(options: libnet.TcpNetConnectOpts & {
+    rejectUnauthorized?: boolean;
+}, timeout_seconds: number, logger: utils.Logger): Promise<libtls.TLSSocket>;
 export declare function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logger: utils.Logger): libnet.Socket;
 export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): libnet.Socket;
 export declare function getSocket(tlsSocket: libtls.TLSSocket): libnet.Socket | undefined;
@@ -74,6 +77,10 @@ export declare class CertificateDeferredSecureContext extends DeferredSecureCont
     constructor(host: string, key: string | undefined, cert: string | undefined, pass: string | undefined);
     getSecureContext(logger: utils.Logger): libtls.SecureContext;
 }
+export declare function generateSelfSignedCertificate(host: string, days: number): {
+    key: string;
+    cert: string;
+};
 export declare class SelfSignedDeferredSecureContext extends DeferredSecureContext {
     protected days: number;
     protected secureContext: libtls.SecureContext | undefined;

@@ -14,3 +14,4 @@ export declare class Logger {
     isLoggingEnabled(kind: LogType): boolean;
     log(type: LogType, line: string): void;
 }
+export declare function isTrusted(remoteAddress: string, trustedRemoteAddresses: Array<string>): boolean;

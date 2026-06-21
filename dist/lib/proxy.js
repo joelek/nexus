@@ -205,10 +205,7 @@ function createServer(options, connectionListener) {
             try {
                 let { header, buffer } = parseHeader(chunk);
                 if (header != null) {
-                    let matchingTrustedRemoteAddress = trustedRemoteAddresses.find((trustedRemoteAddress) => {
-                        return utils.normalizeToIPv6(trustedRemoteAddress) === utils.normalizeToIPv6(remoteAddress.address);
-                    });
-                    if (matchingTrustedRemoteAddress == null) {
+                    if (!utils.isTrusted(remoteAddress.address, trustedRemoteAddresses)) {
                         header = undefined;
                     }
                 }
