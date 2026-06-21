@@ -30,7 +30,7 @@
 		"package": "npm run package:all && npm run package:cli",
 		"version": "npm run build && git add ./",
 		"postversion": "git push && git push --tags",
-		"test": "npx wtf --runner=**.test.ts:ts-node"
+		"test": "set DEBUG=true && npx wtf --runner=**.test.ts:ts-node"
 	},
 	"version": "2.4.4"
 }

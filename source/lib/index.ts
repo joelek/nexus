@@ -445,7 +445,8 @@ export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.I
 		agent,
 		method: clientRequest.method,
 		path: clientRequest.url,
-		headers: rawHeaders as any
+		headers: rawHeaders as any,
+		rejectUnauthorized: rejectUnauthorized(cc.hostname)
 	});
 	if (logger.isLoggingEnabled("http")) {
 		setupServerRequestLogging(clientRequest, clientResponse, serverRequest, logger);
@@ -658,13 +659,32 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 };
 
+export function rejectUnauthorized(host: string | undefined): boolean {
+	if (process.env["DEBUG"] === "true") {
+		if (host == null) {
+			return false;
+		}
+		if (libnet.isIPv4(host)) {
+			return false;
+		}
+		if (libnet.isIPv6(host)) {
+			return false;
+		}
+		if (host === "localhost") {
+			return false;
+		}
+	}
+	return true;
+};
+
 export async function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logger: utils.Logger): Promise<libtls.TLSSocket> {
 	let serverSocket = connectTcp(options, timeout_seconds, logger);
 	let tlsSocket = await new Promise<libtls.TLSSocket>((resolve, reject) => {
 		serverSocket.once("connect", () => {
 			let tlsSocket = libtls.connect({
 				socket: serverSocket,
-				servername: options.host
+				servername: options.host,
+				rejectUnauthorized: rejectUnauthorized(options.host)
 			});
 			proxy.setConnectionId(tlsSocket, "-");
 			tlsSocket.once("error", (error) => {
