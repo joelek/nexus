@@ -123,3 +123,10 @@ export class Logger {
 		}
 	}
 };
+
+export function isTrusted(remoteAddress: string, trustedRemoteAddresses: Array<string>): boolean {
+	let matchingTrustedRemoteAddress = trustedRemoteAddresses.find((trustedRemoteAddress) => {
+		return normalizeToIPv6(trustedRemoteAddress) === normalizeToIPv6(remoteAddress);
+	});
+	return matchingTrustedRemoteAddress != null;
+};
