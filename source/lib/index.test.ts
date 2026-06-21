@@ -4,6 +4,8 @@ import * as wtf from "@joelek/wtf";
 import * as index from "./index";
 import * as utils from "./utils";
 
+const CREDENTIALS = index.generateSelfSignedCertificate("localhost", 1);
+
 wtf.test(`HTTP server should support HTTP request proxying.`, async (assert) => {
 	return new Promise<void>((resolve, reject) => {
 		setTimeout(reject, 5 * 1000);
@@ -46,7 +48,7 @@ wtf.test(`HTTP server should support HTTP request proxying.`, async (assert) => 
 wtf.test(`HTTP server should support HTTPS request proxying.`, async (assert) => {
 	return new Promise<void>((resolve, reject) => {
 		setTimeout(reject, 5 * 1000);
-		let server = libhttps.createServer({});
+		let server = libhttps.createServer(CREDENTIALS);
 		server.on("request", (request, response) => {
 			response.writeHead(404);
 			response.end();
