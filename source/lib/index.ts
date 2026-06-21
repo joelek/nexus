@@ -446,7 +446,7 @@ export function makeServerRequest(agent: libhttp.Agent, clientRequest: libhttp.I
 		method: clientRequest.method,
 		path: clientRequest.url,
 		headers: rawHeaders as any,
-		rejectUnauthorized: rejectUnauthorized(cc.hostname)
+		rejectUnauthorized: !cc.trusted
 	});
 	if (logger.isLoggingEnabled("http")) {
 		setupServerRequestLogging(clientRequest, clientResponse, serverRequest, logger);
@@ -662,32 +662,14 @@ export function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSock
 	});
 };
 
-export function rejectUnauthorized(host: string | undefined): boolean {
-	if (process.env["DEBUG"] === "true") {
-		if (host == null) {
-			return false;
-		}
-		if (libnet.isIPv4(host)) {
-			return false;
-		}
-		if (libnet.isIPv6(host)) {
-			return false;
-		}
-		if (host === "localhost") {
-			return false;
-		}
-	}
-	return true;
-};
-
-export async function connectTls(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logger: utils.Logger): Promise<libtls.TLSSocket> {
+export async function connectTls(options: libnet.TcpNetConnectOpts & { rejectUnauthorized?: boolean; }, timeout_seconds: number, logger: utils.Logger): Promise<libtls.TLSSocket> {
 	let serverSocket = connectTcp(options, timeout_seconds, logger);
 	let tlsSocket = await new Promise<libtls.TLSSocket>((resolve, reject) => {
 		serverSocket.once("connect", () => {
 			let tlsSocket = libtls.connect({
 				socket: serverSocket,
 				servername: options.host,
-				rejectUnauthorized: rejectUnauthorized(options.host)
+				rejectUnauthorized: options.rejectUnauthorized
 			});
 			proxy.setConnectionId(tlsSocket, "-");
 			tlsSocket.once("error", (error) => {
@@ -903,12 +885,14 @@ export function createAgent(cc: ConnectionConfig, logger: utils.Logger): libhttp
 		return agent;
 	} else {
 		let agent = new libhttps.Agent({
-			keepAlive: true
+			keepAlive: true,
+			rejectUnauthorized: !cc.trusted
 		});
 		agent.createConnection = (options, callback) => {
 			connectTls({
 				host: options.host,
-				port: options.port
+				port: options.port,
+				rejectUnauthorized: options.rejectUnauthorized
 			} as any, TIMEOUT_SECONDS, logger).catch((error: Error) => error).then((tlsSocketOrError) => {
 				if (callback != null) {
 					if (tlsSocketOrError instanceof libtls.TLSSocket) {

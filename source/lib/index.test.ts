@@ -21,6 +21,9 @@ wtf.test(`HTTP server should support HTTP request proxying.`, async (assert) => 
 					{
 						root: `http://localhost:${serverAddress.port}`
 					}
+				],
+				trust: [
+					"localhost"
 				]
 			};
 			let config = index.createConfigFromOptions(options);
@@ -60,6 +63,9 @@ wtf.test(`HTTP server should support HTTPS request proxying.`, async (assert) =>
 					{
 						root: `https://localhost:${serverAddress.port}`
 					}
+				],
+				trust: [
+					"localhost"
 				]
 			};
 			let config = index.createConfigFromOptions(options);
