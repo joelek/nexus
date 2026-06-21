@@ -499,7 +499,8 @@ export function makeProxyUpgradeListener(agent: libhttp.Agent, cc: ConnectionCon
 export type ConnectionConfig = {
 	protocol: string,
 	hostname: string,
-	port: number
+	port: number,
+	trusted: boolean
 };
 
 export type ConnectionConfigAndHostname = {
@@ -517,7 +518,7 @@ export const HTTP_PROTOCOLS = [
 	"https:"
 ];
 
-export function parseConnectionConfig(root: string, defaultPort: number): ConnectionConfig | undefined {
+export function parseConnectionConfig(root: string, defaultPort: number, trustedRemoteAddresses: Array<string>): ConnectionConfig | undefined {
 	let url!: liburl.URL;
 	try {
 		url = new liburl.URL(root);
@@ -533,14 +534,16 @@ export function parseConnectionConfig(root: string, defaultPort: number): Connec
 	if (TCP_PROTOCOLS.includes(protocol)) {
 		return {
 			protocol: protocol,
-			hostname,
-			port: port ?? defaultPort
+			hostname: hostname,
+			port: port ?? defaultPort,
+			trusted: utils.isTrusted(hostname, trustedRemoteAddresses)
 		};
 	} else if (HTTP_PROTOCOLS.includes(protocol)) {
 		return {
 			protocol: protocol,
-			hostname,
-			port: port ?? defaultPort
+			hostname: hostname,
+			port: port ?? defaultPort,
+			trusted: utils.isTrusted(hostname, trustedRemoteAddresses)
 		};
 	} else {
 		throw new Error(`Expected a supported protocol!`);
@@ -938,6 +941,7 @@ export function createConfigFromOptions(options: Options): Config {
 	let httpPort = options.http ?? 8080;
 	let httpsPort = options.https ?? 8443;
 	let sign = options.sign ?? false;
+	let trust = options.trust ?? [];
 	let logger = new utils.Logger(options.log ?? []);
 	let deferredSecureContexts = new Array<DeferredSecureContext>();
 	let httpRequestListeners = new Array<http.RequestListenerAndHostname>();
@@ -970,7 +974,7 @@ export function createConfigFromOptions(options: Options): Config {
 				hostname: host,
 				listener: makeRedirectRequestListener(httpsPort)
 			});
-			let cc = parseConnectionConfig(root, 80);
+			let cc = parseConnectionConfig(root, 80, trust);
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
@@ -1001,7 +1005,7 @@ export function createConfigFromOptions(options: Options): Config {
 				});
 			}
 		} else {
-			let cc = parseConnectionConfig(root, 443);
+			let cc = parseConnectionConfig(root, 443, trust);
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
