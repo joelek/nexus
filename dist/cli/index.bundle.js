@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1782252509387,
+    "timestamp": 1782253040098,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -11011,11 +11011,12 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
         let deferredSecureContexts = new Array();
         let httpRequestListeners = new Array();
         let httpUpgradeListeners = new Array();
+        let httpSocketFactory = new SocketFactory();
         let httpsRequestListeners = new Array();
         let httpsUpgradeListeners = new Array();
+        let httpsSocketFactory = new SocketFactory();
         let handledConnectionConfigs = new Array();
         let delegatedConnectionConfigs = new Array();
-        let socketFactory = new SocketFactory();
         for (let domain of (_f = options.domains) !== null && _f !== void 0 ? _f : []) {
             let root = (_g = domain.root) !== null && _g !== void 0 ? _g : "./";
             let key = domain.key;
@@ -11044,7 +11045,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 if (cc != null) {
                     if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
                         logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
-                        let agent = createAgent(cc, logger, socketFactory);
+                        let agent = createAgent(cc, logger, httpsSocketFactory);
                         httpsRequestListeners.push({
                             hostname: host,
                             listener: makeProxyRequestListener(agent, cc, logger)
@@ -11078,7 +11079,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
                 if (cc != null) {
                     if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
                         logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
-                        let agent = createAgent(cc, logger, socketFactory);
+                        let agent = createAgent(cc, logger, httpSocketFactory);
                         httpRequestListeners.push({
                             hostname: host,
                             listener: makeProxyRequestListener(agent, cc, logger)
@@ -11117,17 +11118,18 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             deferredSecureContexts,
             httpRequestListeners,
             httpUpgradeListeners,
+            httpSocketFactory,
             httpsRequestListeners,
             httpsUpgradeListeners,
+            httpsSocketFactory,
             handledConnectionConfigs,
             delegatedConnectionConfigs,
-            socketFactory
         };
     }
     exports.createConfigFromOptions = createConfigFromOptions;
     ;
     function createHttpServer(config, options) {
-        let socketFactory = config.socketFactory;
+        let socketFactory = config.httpSocketFactory;
         let httpRequestRouter = http.createServer({
             requestListeners: config.httpRequestListeners,
             upgradeListeners: config.httpUpgradeListeners
@@ -11147,7 +11149,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     ;
     function createHttpsServer(config, options) {
         let logger = config.logger;
-        let socketFactory = config.socketFactory;
+        let socketFactory = config.httpsSocketFactory;
         let httpsRequestRouter = http.createServer({
             requestListeners: config.httpsRequestListeners,
             upgradeListeners: config.httpsUpgradeListeners

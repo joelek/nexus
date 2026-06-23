@@ -109,11 +109,12 @@ export type Config = {
     deferredSecureContexts: Array<DeferredSecureContext>;
     httpRequestListeners: Array<http.RequestListenerAndHostname>;
     httpUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
+    httpSocketFactory: SocketFactory;
     httpsRequestListeners: Array<http.RequestListenerAndHostname>;
     httpsUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
+    httpsSocketFactory: SocketFactory;
     handledConnectionConfigs: Array<ConnectionConfigAndHostname>;
     delegatedConnectionConfigs: Array<ConnectionConfigAndHostname>;
-    socketFactory: SocketFactory;
 };
 export declare function createConfigFromOptions(options: Options): Config;
 export declare function createHttpServer(config: Config, options: Options): proxy.Server;
