@@ -1070,6 +1070,7 @@ function createConfigFromOptions(options) {
 exports.createConfigFromOptions = createConfigFromOptions;
 ;
 function createHttpServer(config, options) {
+    let socketFactory = config.socketFactory;
     let httpRequestRouter = http.createServer({
         requestListeners: config.httpRequestListeners,
         upgradeListeners: config.httpUpgradeListeners
@@ -1079,6 +1080,9 @@ function createHttpServer(config, options) {
         logger: config.logger
     }, (clientSocket, proxyHeader) => {
         httpRequestRouter.emit("connection", clientSocket);
+    });
+    socketFactory.on("connect", (socket) => {
+        httpServer.emit("connect", socket);
     });
     return httpServer;
 }

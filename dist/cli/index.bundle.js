@@ -15,7 +15,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 define("build/app", [], {
     "name": "@joelek/nexus",
-    "timestamp": 1782252321069,
+    "timestamp": 1782252509387,
     "version": "2.4.4"
 });
 define("node_modules/@joelek/autoguard/dist/lib-shared/serialization", ["require", "exports"], function (require, exports) {
@@ -11127,6 +11127,7 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
     exports.createConfigFromOptions = createConfigFromOptions;
     ;
     function createHttpServer(config, options) {
+        let socketFactory = config.socketFactory;
         let httpRequestRouter = http.createServer({
             requestListeners: config.httpRequestListeners,
             upgradeListeners: config.httpUpgradeListeners
@@ -11136,6 +11137,9 @@ define("build/lib/index", ["require", "exports", "node_modules/@joelek/autoguard
             logger: config.logger
         }, (clientSocket, proxyHeader) => {
             httpRequestRouter.emit("connection", clientSocket);
+        });
+        socketFactory.on("connect", (socket) => {
+            httpServer.emit("connect", socket);
         });
         return httpServer;
     }
