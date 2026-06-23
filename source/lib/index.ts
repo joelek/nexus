@@ -1140,6 +1140,9 @@ export function createHttpsServer(config: Config, options: Options): proxy.Serve
 			clientSocket.resetAndDestroy();
 		}
 	});
+	socketFactory.on("connect", (socket) => {
+		httpsServer.emit("connect", socket);
+	});
 	return httpsServer;
 };
 

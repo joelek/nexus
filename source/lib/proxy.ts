@@ -1,3 +1,4 @@
+import * as libevents from "events";
 import * as libnet from "net";
 import * as terminal from "./terminal";
 import * as utils from "./utils";
@@ -162,9 +163,11 @@ export function setConnectionId(socket: libnet.Socket, connectionId: string | un
 	});
 };
 
-export class Server extends libnet.Server {
-
+export interface ServerEvents {
+	connect: [libnet.Socket];
 };
+
+export type Server = libevents.EventEmitter<ServerEvents> & libnet.Server;
 
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 
@@ -189,7 +192,7 @@ export function setupConnectionLogging(socket: libnet.Socket, logger: utils.Logg
 export function createServer(options: Options, connectionListener: ConnectionListener): Server {
 	let trustedRemoteAddresses = options?.trustedRemoteAddresses ?? [];
 	let logger = options.logger ?? new utils.Logger([]);
-	let server = new Server({
+	let server = new libnet.Server({
 		allowHalfOpen: true
 	});
 	server.on("connection", (socket) => {
@@ -219,5 +222,5 @@ export function createServer(options: Options, connectionListener: ConnectionLis
 			}
 		});
 	});
-	return server;
+	return server as Server;
 };
