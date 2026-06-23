@@ -803,12 +803,12 @@ class CertificateDeferredSecureContext extends DeferredSecureContext {
         this.cert = cert;
         this.pass = pass;
         this.secureContext = undefined;
-        if (key) {
+        if (key != null && !key.includes("\n")) {
             libfs.watch(key, () => {
                 this.secureContext = undefined;
             });
         }
-        if (cert) {
+        if (cert != null && !cert.includes("\n")) {
             libfs.watch(cert, () => {
                 this.secureContext = undefined;
             });
@@ -818,8 +818,8 @@ class CertificateDeferredSecureContext extends DeferredSecureContext {
         if (this.secureContext == null) {
             logger.log("system", `Loading certificate for ${terminal.stylize(this.host, terminal.FG_YELLOW)}`);
             this.secureContext = libtls.createSecureContext({
-                key: this.key ? libfs.readFileSync(this.key) : undefined,
-                cert: this.cert ? libfs.readFileSync(this.cert) : undefined,
+                key: this.key != null ? !this.key.includes("\n") ? libfs.readFileSync(this.key) : this.key : undefined,
+                cert: this.cert != null ? !this.cert.includes("\n") ? libfs.readFileSync(this.cert) : this.cert : undefined,
                 passphrase: this.pass
             });
         }
