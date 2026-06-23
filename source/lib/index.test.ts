@@ -7,7 +7,8 @@ import * as utils from "./utils";
 const CREDENTIALS = index.generateSelfSignedCertificate("localhost", 1);
 
 wtf.test(`HTTP server should support HTTP request proxying.`, async (assert) => {
-	return new Promise<void>((resolve, reject) => {
+	let events = new Array<wtf.data.SerializableData>();
+	await new Promise<void>((resolve, reject) => {
 		setTimeout(reject, 5 * 1000);
 		let server = libhttp.createServer({});
 		server.on("request", (request, response) => {
@@ -35,6 +36,10 @@ wtf.test(`HTTP server should support HTTP request proxying.`, async (assert) => 
 				});
 				request.on("finish", () => {});
 				request.on("response", (response) => {
+					events.push({
+						type: "request.response",
+						status: response.statusCode
+					});
 					response.on("data", () => {});
 					response.on("end", () => {});
 					response.on("close", resolve);
@@ -46,10 +51,17 @@ wtf.test(`HTTP server should support HTTP request proxying.`, async (assert) => 
 		});
 		server.listen(undefined, "0.0.0.0");
 	});
+	assert.equals(events, [
+		{
+			type: "request.response",
+			status: 404
+		}
+	]);
 });
 
 wtf.test(`HTTP server should support HTTPS request proxying.`, async (assert) => {
-	return new Promise<void>((resolve, reject) => {
+	let events = new Array<wtf.data.SerializableData>();
+	await new Promise<void>((resolve, reject) => {
 		setTimeout(reject, 5 * 1000);
 		let server = libhttps.createServer(CREDENTIALS);
 		server.on("request", (request, response) => {
@@ -77,6 +89,10 @@ wtf.test(`HTTP server should support HTTPS request proxying.`, async (assert) =>
 				});
 				request.on("finish", () => {});
 				request.on("response", (response) => {
+					events.push({
+						type: "request.response",
+						status: response.statusCode
+					});
 					response.on("data", () => {});
 					response.on("end", () => {});
 					response.on("close", resolve);
@@ -88,4 +104,10 @@ wtf.test(`HTTP server should support HTTPS request proxying.`, async (assert) =>
 		});
 		server.listen(undefined, "0.0.0.0");
 	});
+	assert.equals(events, [
+		{
+			type: "request.response",
+			status: 404
+		}
+	]);
 });
