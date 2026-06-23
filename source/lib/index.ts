@@ -938,11 +938,12 @@ export type Config = {
 	deferredSecureContexts: Array<DeferredSecureContext>;
 	httpRequestListeners: Array<http.RequestListenerAndHostname>;
 	httpUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
+	httpSocketFactory: SocketFactory;
 	httpsRequestListeners: Array<http.RequestListenerAndHostname>;
 	httpsUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
+	httpsSocketFactory: SocketFactory;
 	handledConnectionConfigs: Array<ConnectionConfigAndHostname>;
 	delegatedConnectionConfigs: Array<ConnectionConfigAndHostname>;
-	socketFactory: SocketFactory;
 };
 
 export function createConfigFromOptions(options: Options): Config {
@@ -954,11 +955,12 @@ export function createConfigFromOptions(options: Options): Config {
 	let deferredSecureContexts = new Array<DeferredSecureContext>();
 	let httpRequestListeners = new Array<http.RequestListenerAndHostname>();
 	let httpUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
+	let httpSocketFactory = new SocketFactory();
 	let httpsRequestListeners = new Array<http.RequestListenerAndHostname>();
 	let httpsUpgradeListeners = new Array<http.UpgradeListenerAndHostname>();
+	let httpsSocketFactory = new SocketFactory();
 	let handledConnectionConfigs = new Array<ConnectionConfigAndHostname>();
 	let delegatedConnectionConfigs = new Array<ConnectionConfigAndHostname>();
-	let socketFactory = new SocketFactory();
 	for (let domain of options.domains ?? []) {
 		let root = domain.root ?? "./";
 		let key = domain.key;
@@ -987,7 +989,7 @@ export function createConfigFromOptions(options: Options): Config {
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
-					let agent = createAgent(cc, logger, socketFactory);
+					let agent = createAgent(cc, logger, httpsSocketFactory);
 					httpsRequestListeners.push({
 						hostname: host,
 						listener: makeProxyRequestListener(agent, cc, logger)
@@ -1018,7 +1020,7 @@ export function createConfigFromOptions(options: Options): Config {
 			if (cc != null) {
 				if (HTTP_PROTOCOLS.includes(cc.protocol)) {
 					logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
-					let agent = createAgent(cc, logger, socketFactory);
+					let agent = createAgent(cc, logger, httpSocketFactory);
 					httpRequestListeners.push({
 						hostname: host,
 						listener: makeProxyRequestListener(agent, cc, logger)
@@ -1055,16 +1057,17 @@ export function createConfigFromOptions(options: Options): Config {
 		deferredSecureContexts,
 		httpRequestListeners,
 		httpUpgradeListeners,
+		httpSocketFactory,
 		httpsRequestListeners,
 		httpsUpgradeListeners,
+		httpsSocketFactory,
 		handledConnectionConfigs,
 		delegatedConnectionConfigs,
-		socketFactory
 	};
 };
 
 export function createHttpServer(config: Config, options: Options): proxy.Server {
-	let socketFactory = config.socketFactory;
+	let socketFactory = config.httpSocketFactory;
 	let httpRequestRouter = http.createServer({
 		requestListeners: config.httpRequestListeners,
 		upgradeListeners: config.httpUpgradeListeners
@@ -1083,7 +1086,7 @@ export function createHttpServer(config: Config, options: Options): proxy.Server
 
 export function createHttpsServer(config: Config, options: Options): proxy.Server {
 	let logger = config.logger;
-	let socketFactory = config.socketFactory;
+	let socketFactory = config.httpsSocketFactory;
 	let httpsRequestRouter = http.createServer({
 		requestListeners: config.httpsRequestListeners,
 		upgradeListeners: config.httpsUpgradeListeners
