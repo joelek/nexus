@@ -180,13 +180,14 @@ wtf.test(`HTTPS server should support PROXY connection proxying.`, async (assert
 			let options: index.Options = {
 				domains: [
 					{
-						root: `http://localhost:${serverAddress.port}`
+						root: `http://localhost:${serverAddress.port}`,
+						cert: CREDENTIALS.cert,
+						key: CREDENTIALS.key
 					}
 				],
 				trust: [
 					"localhost"
-				],
-				sign: true
+				]
 			};
 			let config = index.createConfigFromOptions(options);
 			let inner = index.createHttpsServer(config, options);
