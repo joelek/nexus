@@ -107,7 +107,7 @@ function run() {
             process.stderr.write(`	--sign=boolean\n`);
             process.stderr.write(`		Configure automatic generation of self-signed certificates.\n`);
             process.stderr.write(`	--trust=string\n`);
-            process.stderr.write(`		Add trusted remote address for PROXY protocol.\n`);
+            process.stderr.write(`		Add trusted remote address for PROXY protocol and outbound connections.\n`);
             process.stderr.write(`	--log=string\n`);
             process.stderr.write(`		Add log option.\n`);
             process.exit(0);

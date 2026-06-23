@@ -9,10 +9,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeServer = exports.createHttpsServer = exports.createHttpServer = exports.createConfigFromOptions = exports.createAgent = exports.createDeferredSecureContext = exports.SelfSignedDeferredSecureContext = exports.generateSelfSignedCertificate = exports.CertificateDeferredSecureContext = exports.DeferredSecureContext = exports.createTLSSocket = exports.setSocket = exports.getSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.connectTls = exports.connectProxySockets = exports.setupProxySocketsLogging = exports.destroySocket = exports.TimeoutError = exports.parseConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeServerRequest = exports.setupServerRequestLogging = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
+exports.makeServer = exports.createHttpsServer = exports.createHttpServer = exports.createConfigFromOptions = exports.createAgent = exports.createDeferredSecureContext = exports.SelfSignedDeferredSecureContext = exports.generateSelfSignedCertificate = exports.CertificateDeferredSecureContext = exports.DeferredSecureContext = exports.createTLSSocket = exports.setSocket = exports.getSocket = exports.makeTcpProxyConnection = exports.connectTcp = exports.connectTls = exports.SocketFactory = exports.connectProxySockets = exports.setupProxySocketsLogging = exports.destroySocket = exports.TimeoutError = exports.parseConnectionConfig = exports.HTTP_PROTOCOLS = exports.TCP_PROTOCOLS = exports.makeProxyUpgradeListener = exports.makeProxyRequestListener = exports.makeServerRequest = exports.setupServerRequestLogging = exports.createProxyRawHeaders = exports.makeRedirectRequestListener = exports.makeRequestListener = exports.makeReadStreamResponse = exports.makeDirectoryListingResponse = exports.renderDirectoryListing = exports.formatSize = exports.makeStylesheet = exports.encodeXMLText = exports.computeSimpleHash = exports.loadConfig = exports.Handler = exports.Options = exports.Domain = void 0;
 const autoguard = require("@joelek/autoguard/dist/lib-server");
 const multipass = require("@joelek/multipass/dist/mod");
 const libcp = require("child_process");
+const libevents = require("events");
 const libfs = require("fs");
 const libhttp = require("http");
 const libhttps = require("https");
@@ -687,9 +688,24 @@ function connectProxySockets(clientSocket, serverSocket, logger) {
 }
 exports.connectProxySockets = connectProxySockets;
 ;
-function connectTls(options, timeout_seconds, logger) {
+;
+class SocketFactory extends libevents.EventEmitter {
+    constructor() {
+        super();
+    }
+    createSocket(options) {
+        let socket = libnet.connect(options);
+        socket.once("connect", () => {
+            this.emit("connect", socket);
+        });
+        return socket;
+    }
+}
+exports.SocketFactory = SocketFactory;
+;
+function connectTls(socketFactory, options, timeout_seconds, logger) {
     return __awaiter(this, void 0, void 0, function* () {
-        let serverSocket = connectTcp(options, timeout_seconds, logger);
+        let serverSocket = connectTcp(socketFactory, options, timeout_seconds, logger);
         let tlsSocket = yield new Promise((resolve, reject) => {
             serverSocket.once("connect", () => {
                 let tlsSocket = libtls.connect({
@@ -713,8 +729,8 @@ function connectTls(options, timeout_seconds, logger) {
 }
 exports.connectTls = connectTls;
 ;
-function connectTcp(options, timeout_seconds, logger) {
-    let serverSocket = libnet.connect(options);
+function connectTcp(socketFactory, options, timeout_seconds, logger) {
+    let serverSocket = socketFactory.createSocket(options);
     let timeout = setTimeout(() => {
         serverSocket.destroy(new TimeoutError("connect", timeout_seconds));
     }, timeout_seconds * 1000);
@@ -738,8 +754,8 @@ function connectTcp(options, timeout_seconds, logger) {
 }
 exports.connectTcp = connectTcp;
 ;
-function makeTcpProxyConnection(host, port, head, clientSocket, logger) {
-    let serverSocket = connectTcp({
+function makeTcpProxyConnection(socketFactory, host, port, head, clientSocket, logger) {
+    let serverSocket = connectTcp(socketFactory, {
         host,
         port
     }, TIMEOUT_SECONDS, logger);
@@ -881,13 +897,13 @@ function createDeferredSecureContext(options) {
 }
 exports.createDeferredSecureContext = createDeferredSecureContext;
 ;
-function createAgent(cc, logger) {
+function createAgent(cc, logger, socketFactory) {
     if (cc.protocol === "http:") {
         let agent = new libhttp.Agent({
             keepAlive: true
         });
         agent.createConnection = (options, callback) => {
-            let serverSocket = connectTcp({
+            let serverSocket = connectTcp(socketFactory, {
                 host: options.host,
                 port: options.port
             }, TIMEOUT_SECONDS, logger);
@@ -906,7 +922,7 @@ function createAgent(cc, logger) {
             rejectUnauthorized: !cc.trusted
         });
         agent.createConnection = (options, callback) => {
-            connectTls({
+            connectTls(socketFactory, {
                 host: options.host,
                 port: options.port,
                 rejectUnauthorized: options.rejectUnauthorized
@@ -942,6 +958,7 @@ function createConfigFromOptions(options) {
     let httpsUpgradeListeners = new Array();
     let handledConnectionConfigs = new Array();
     let delegatedConnectionConfigs = new Array();
+    let socketFactory = new SocketFactory();
     for (let domain of (_f = options.domains) !== null && _f !== void 0 ? _f : []) {
         let root = (_g = domain.root) !== null && _g !== void 0 ? _g : "./";
         let key = domain.key;
@@ -970,7 +987,7 @@ function createConfigFromOptions(options) {
             if (cc != null) {
                 if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
                     logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpsHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
-                    let agent = createAgent(cc, logger);
+                    let agent = createAgent(cc, logger, socketFactory);
                     httpsRequestListeners.push({
                         hostname: host,
                         listener: makeProxyRequestListener(agent, cc, logger)
@@ -1004,7 +1021,7 @@ function createConfigFromOptions(options) {
             if (cc != null) {
                 if (exports.HTTP_PROTOCOLS.includes(cc.protocol)) {
                     logger.log("system", `Proxying ${terminal.stylize("HTTP", terminal.FG_MAGENTA)} requests for ${terminal.stylize(httpHost, terminal.FG_YELLOW)} to ${terminal.stylize(root, terminal.FG_YELLOW)}`);
-                    let agent = createAgent(cc, logger);
+                    let agent = createAgent(cc, logger, socketFactory);
                     httpRequestListeners.push({
                         hostname: host,
                         listener: makeProxyRequestListener(agent, cc, logger)
@@ -1046,7 +1063,8 @@ function createConfigFromOptions(options) {
         httpsRequestListeners,
         httpsUpgradeListeners,
         handledConnectionConfigs,
-        delegatedConnectionConfigs
+        delegatedConnectionConfigs,
+        socketFactory
     };
 }
 exports.createConfigFromOptions = createConfigFromOptions;
@@ -1068,6 +1086,7 @@ exports.createHttpServer = createHttpServer;
 ;
 function createHttpsServer(config, options) {
     let logger = config.logger;
+    let socketFactory = config.socketFactory;
     let httpsRequestRouter = http.createServer({
         requestListeners: config.httpsRequestListeners,
         upgradeListeners: config.httpsUpgradeListeners
@@ -1090,7 +1109,7 @@ function createHttpsServer(config, options) {
                     proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(clientSocket);
                     buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                 }
-                makeTcpProxyConnection(cc.hostname, cc.port, buffer, clientSocket, logger);
+                makeTcpProxyConnection(socketFactory, cc.hostname, cc.port, buffer, clientSocket, logger);
             }
             else {
                 let deferredSecureContext = config.deferredSecureContexts.find((secureContext) => {
@@ -1116,7 +1135,7 @@ function createHttpsServer(config, options) {
                                 proxyHeader = proxyHeader !== null && proxyHeader !== void 0 ? proxyHeader : proxy.createProxyHeader(tlsSocket);
                                 buffer = Buffer.concat([proxy.serializeHeader(proxyHeader), buffer]);
                             }
-                            makeTcpProxyConnection(cc.hostname, cc.port, buffer, tlsSocket, logger);
+                            makeTcpProxyConnection(socketFactory, cc.hostname, cc.port, buffer, tlsSocket, logger);
                         }
                         else {
                             httpsRequestRouter.emit("connection", tlsSocket);
@@ -1132,6 +1151,9 @@ function createHttpsServer(config, options) {
             clientSocket.resetAndDestroy();
         }
     }));
+    socketFactory.on("connect", (socket) => {
+        httpsServer.emit("connect", socket);
+    });
     return httpsServer;
 }
 exports.createHttpsServer = createHttpsServer;

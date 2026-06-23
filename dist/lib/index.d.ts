@@ -4,7 +4,9 @@
 /// <reference types="node" />
 /// <reference types="node" />
 /// <reference types="node" />
+/// <reference types="node" />
 import * as autoguard from "@joelek/autoguard/dist/lib-server";
+import * as libevents from "events";
 import * as libhttp from "http";
 import * as libhttps from "https";
 import * as libnet from "net";
@@ -55,11 +57,18 @@ export declare class TimeoutError extends Error {
 export declare function destroySocket(socket: libnet.Socket | libtls.TLSSocket): void;
 export declare function setupProxySocketsLogging(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): void;
 export declare function connectProxySockets(clientSocket: libnet.Socket | libtls.TLSSocket, serverSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): void;
-export declare function connectTls(options: libnet.TcpNetConnectOpts & {
+export interface SocketFactoryEvents {
+    connect: [libnet.Socket];
+}
+export declare class SocketFactory extends libevents.EventEmitter<SocketFactoryEvents> {
+    constructor();
+    createSocket(options: libnet.TcpNetConnectOpts): libnet.Socket;
+}
+export declare function connectTls(socketFactory: SocketFactory, options: libnet.TcpNetConnectOpts & {
     rejectUnauthorized?: boolean;
 }, timeout_seconds: number, logger: utils.Logger): Promise<libtls.TLSSocket>;
-export declare function connectTcp(options: libnet.TcpNetConnectOpts, timeout_seconds: number, logger: utils.Logger): libnet.Socket;
-export declare function makeTcpProxyConnection(host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): libnet.Socket;
+export declare function connectTcp(socketFactory: SocketFactory, options: libnet.TcpSocketConnectOpts, timeout_seconds: number, logger: utils.Logger): libnet.Socket;
+export declare function makeTcpProxyConnection(socketFactory: SocketFactory, host: string, port: number, head: Buffer, clientSocket: libnet.Socket | libtls.TLSSocket, logger: utils.Logger): libnet.Socket;
 export declare function getSocket(tlsSocket: libtls.TLSSocket): libnet.Socket | undefined;
 export declare function setSocket(tlsSocket: libtls.TLSSocket, socket: libnet.Socket): void;
 export declare function createTLSSocket(clientSocket: libnet.Socket, buffer: Buffer, secureContext: libtls.SecureContext, callback: (tlsSocket: libtls.TLSSocket) => void): void;
@@ -94,7 +103,7 @@ export declare function createDeferredSecureContext(options: {
     pass?: string;
     sign: boolean;
 }): DeferredSecureContext | undefined;
-export declare function createAgent(cc: ConnectionConfig, logger: utils.Logger): libhttp.Agent | libhttps.Agent;
+export declare function createAgent(cc: ConnectionConfig, logger: utils.Logger, socketFactory: SocketFactory): libhttp.Agent | libhttps.Agent;
 export type Config = {
     logger: utils.Logger;
     deferredSecureContexts: Array<DeferredSecureContext>;
@@ -104,6 +113,7 @@ export type Config = {
     httpsUpgradeListeners: Array<http.UpgradeListenerAndHostname>;
     handledConnectionConfigs: Array<ConnectionConfigAndHostname>;
     delegatedConnectionConfigs: Array<ConnectionConfigAndHostname>;
+    socketFactory: SocketFactory;
 };
 export declare function createConfigFromOptions(options: Options): Config;
 export declare function createHttpServer(config: Config, options: Options): proxy.Server;

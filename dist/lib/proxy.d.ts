@@ -1,6 +1,8 @@
 /// <reference types="node" />
 /// <reference types="node" />
 /// <reference types="node" />
+/// <reference types="node" />
+import * as libevents from "events";
 import * as libnet from "net";
 import * as utils from "./utils";
 export type Header = {
@@ -24,8 +26,10 @@ export declare function getTargetAddress(socket: libnet.Socket): libnet.AddressI
 export declare function setTargetAddress(socket: libnet.Socket, header: Header): void;
 export declare function getConnectionId(socket: libnet.Socket): string | undefined;
 export declare function setConnectionId(socket: libnet.Socket, connectionId: string | undefined): void;
-export declare class Server extends libnet.Server {
+export interface ServerEvents {
+    connect: [libnet.Socket];
 }
+export type Server = libevents.EventEmitter<ServerEvents> & libnet.Server;
 export type ConnectionListener = (socket: libnet.Socket, header: Header | undefined) => void;
 export type Options = {
     trustedRemoteAddresses?: Array<string>;

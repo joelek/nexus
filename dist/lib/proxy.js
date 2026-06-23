@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createServer = exports.setupConnectionLogging = exports.Server = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.getTargetAddress = exports.setSourceAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.serializeHeader = exports.parseHeader = void 0;
+exports.createServer = exports.setupConnectionLogging = exports.setConnectionId = exports.getConnectionId = exports.setTargetAddress = exports.getTargetAddress = exports.setSourceAddress = exports.getSourceAddress = exports.createSourceAddress = exports.createTargetAddress = exports.createProxyHeader = exports.serializeHeader = exports.parseHeader = void 0;
 const libnet = require("net");
 const terminal = require("./terminal");
 const utils = require("./utils");
@@ -167,9 +167,6 @@ function setConnectionId(socket, connectionId) {
 }
 exports.setConnectionId = setConnectionId;
 ;
-class Server extends libnet.Server {
-}
-exports.Server = Server;
 ;
 function setupConnectionLogging(socket, logger) {
     let localAddress = utils.getLocalAddress(socket);
@@ -190,7 +187,7 @@ function createServer(options, connectionListener) {
     var _a, _b;
     let trustedRemoteAddresses = (_a = options === null || options === void 0 ? void 0 : options.trustedRemoteAddresses) !== null && _a !== void 0 ? _a : [];
     let logger = (_b = options.logger) !== null && _b !== void 0 ? _b : new utils.Logger([]);
-    let server = new Server({
+    let server = new libnet.Server({
         allowHalfOpen: true
     });
     server.on("connection", (socket) => {

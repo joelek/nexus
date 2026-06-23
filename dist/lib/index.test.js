@@ -19,11 +19,28 @@ wtf.test(`HTTP server should support HTTP request proxying.`, (assert) => __awai
     let events = new Array();
     yield new Promise((resolve, reject) => {
         setTimeout(reject, 5 * 1000);
-        let server = libhttp.createServer({});
-        server.on("request", (request, response) => {
-            response.writeHead(404);
-            response.end();
-        });
+        let sockets = new Set();
+        function trackSocket(socket) {
+            sockets.add(socket);
+            socket.once("close", () => {
+                sockets.delete(socket);
+                if (sockets.size === 0) {
+                    resolve();
+                }
+            });
+        }
+        ;
+        let options = {
+            domains: [
+                {
+                    root: `./public/`
+                }
+            ]
+        };
+        let config = index.createConfigFromOptions(options);
+        let server = index.createHttpServer(config, options);
+        server.on("connection", trackSocket);
+        server.on("connect", trackSocket);
         server.on("listening", () => {
             let serverAddress = utils.getServerAddress(server);
             let options = {
@@ -31,29 +48,27 @@ wtf.test(`HTTP server should support HTTP request proxying.`, (assert) => __awai
                     {
                         root: `http://localhost:${serverAddress.port}`
                     }
-                ],
-                trust: [
-                    "localhost"
                 ]
             };
             let config = index.createConfigFromOptions(options);
             let proxy = index.createHttpServer(config, options);
+            proxy.on("connection", trackSocket);
+            proxy.on("connect", trackSocket);
             proxy.on("listening", () => {
                 let proxyAddress = utils.getServerAddress(proxy);
                 let request = libhttp.request({
-                    port: proxyAddress.port
+                    port: proxyAddress.port,
+                    headers: [
+                        "Host", "localhost",
+                        "Connection", "close"
+                    ]
                 });
-                request.on("finish", () => { });
                 request.on("response", (response) => {
                     events.push({
                         type: "request.response",
                         status: response.statusCode
                     });
-                    response.on("data", () => { });
-                    response.on("end", () => { });
-                    response.on("close", resolve);
                 });
-                request.on("close", () => { });
                 request.end();
             });
             proxy.listen(undefined, "0.0.0.0");
@@ -71,11 +86,30 @@ wtf.test(`HTTP server should support HTTPS request proxying.`, (assert) => __awa
     let events = new Array();
     yield new Promise((resolve, reject) => {
         setTimeout(reject, 5 * 1000);
-        let server = libhttps.createServer(CREDENTIALS);
-        server.on("request", (request, response) => {
-            response.writeHead(404);
-            response.end();
-        });
+        let sockets = new Set();
+        function trackSocket(socket) {
+            sockets.add(socket);
+            socket.once("close", () => {
+                sockets.delete(socket);
+                if (sockets.size === 0) {
+                    resolve();
+                }
+            });
+        }
+        ;
+        let options = {
+            domains: [
+                {
+                    root: `./public/`,
+                    cert: CREDENTIALS.cert,
+                    key: CREDENTIALS.key
+                }
+            ]
+        };
+        let config = index.createConfigFromOptions(options);
+        let server = index.createHttpsServer(config, options);
+        server.on("connection", trackSocket);
+        server.on("connect", trackSocket);
         server.on("listening", () => {
             let serverAddress = utils.getServerAddress(server);
             let options = {
@@ -90,22 +124,23 @@ wtf.test(`HTTP server should support HTTPS request proxying.`, (assert) => __awa
             };
             let config = index.createConfigFromOptions(options);
             let proxy = index.createHttpServer(config, options);
+            proxy.on("connection", trackSocket);
+            proxy.on("connect", trackSocket);
             proxy.on("listening", () => {
                 let proxyAddress = utils.getServerAddress(proxy);
                 let request = libhttp.request({
-                    port: proxyAddress.port
+                    port: proxyAddress.port,
+                    headers: [
+                        "Host", "localhost",
+                        "Connection", "close"
+                    ]
                 });
-                request.on("finish", () => { });
                 request.on("response", (response) => {
                     events.push({
                         type: "request.response",
                         status: response.statusCode
                     });
-                    response.on("data", () => { });
-                    response.on("end", () => { });
-                    response.on("close", resolve);
                 });
-                request.on("close", () => { });
                 request.end();
             });
             proxy.listen(undefined, "0.0.0.0");
@@ -119,15 +154,34 @@ wtf.test(`HTTP server should support HTTPS request proxying.`, (assert) => __awa
         }
     ]);
 }));
-wtf.test(`HTTPS server should support PIPE connection proxying.`, (assert) => __awaiter(void 0, void 0, void 0, function* () {
+wtf.test(`HTTPS server should support unterminated PIPE connection proxying.`, (assert) => __awaiter(void 0, void 0, void 0, function* () {
     let events = new Array();
     yield new Promise((resolve, reject) => {
         setTimeout(reject, 5 * 1000);
-        let server = libhttps.createServer(CREDENTIALS);
-        server.on("request", (request, response) => {
-            response.writeHead(404);
-            response.end();
-        });
+        let sockets = new Set();
+        function trackSocket(socket) {
+            sockets.add(socket);
+            socket.once("close", () => {
+                sockets.delete(socket);
+                if (sockets.size === 0) {
+                    resolve();
+                }
+            });
+        }
+        ;
+        let options = {
+            domains: [
+                {
+                    root: `./public/`,
+                    cert: CREDENTIALS.cert,
+                    key: CREDENTIALS.key
+                }
+            ]
+        };
+        let config = index.createConfigFromOptions(options);
+        let server = index.createHttpsServer(config, options);
+        server.on("connection", trackSocket);
+        server.on("connect", trackSocket);
         server.on("listening", () => {
             let serverAddress = utils.getServerAddress(server);
             let options = {
@@ -135,30 +189,28 @@ wtf.test(`HTTPS server should support PIPE connection proxying.`, (assert) => __
                     {
                         root: `pipe://localhost:${serverAddress.port}`
                     }
-                ],
-                trust: [
-                    "localhost"
                 ]
             };
             let config = index.createConfigFromOptions(options);
             let proxy = index.createHttpsServer(config, options);
+            proxy.on("connection", trackSocket);
+            proxy.on("connect", trackSocket);
             proxy.on("listening", () => {
                 let proxyAddress = utils.getServerAddress(proxy);
                 let request = libhttps.request({
                     port: proxyAddress.port,
+                    headers: [
+                        "Host", "localhost",
+                        "Connection", "close"
+                    ],
                     rejectUnauthorized: false
                 });
-                request.on("finish", () => { });
                 request.on("response", (response) => {
                     events.push({
                         type: "request.response",
                         status: response.statusCode
                     });
-                    response.on("data", () => { });
-                    response.on("end", () => { });
-                    response.on("close", resolve);
                 });
-                request.on("close", () => { });
                 request.end();
             });
             proxy.listen(undefined, "0.0.0.0");
@@ -172,67 +224,66 @@ wtf.test(`HTTPS server should support PIPE connection proxying.`, (assert) => __
         }
     ]);
 }));
-wtf.test(`HTTPS server should support PROXY connection proxying.`, (assert) => __awaiter(void 0, void 0, void 0, function* () {
+wtf.test(`HTTPS server should support unterminated PROXY connection proxying.`, (assert) => __awaiter(void 0, void 0, void 0, function* () {
     let events = new Array();
     yield new Promise((resolve, reject) => {
         setTimeout(reject, 5 * 1000);
-        let server = libhttp.createServer({});
-        server.on("request", (request, response) => {
-            response.writeHead(404);
-            response.end();
-        });
+        let sockets = new Set();
+        function trackSocket(socket) {
+            sockets.add(socket);
+            socket.once("close", () => {
+                sockets.delete(socket);
+                if (sockets.size === 0) {
+                    resolve();
+                }
+            });
+        }
+        ;
+        let options = {
+            domains: [
+                {
+                    root: `./public/`,
+                    cert: CREDENTIALS.cert,
+                    key: CREDENTIALS.key
+                }
+            ]
+        };
+        let config = index.createConfigFromOptions(options);
+        let server = index.createHttpsServer(config, options);
+        server.on("connection", trackSocket);
+        server.on("connect", trackSocket);
         server.on("listening", () => {
             let serverAddress = utils.getServerAddress(server);
             let options = {
                 domains: [
                     {
-                        root: `http://localhost:${serverAddress.port}`,
-                        cert: CREDENTIALS.cert,
-                        key: CREDENTIALS.key
+                        root: `proxy://localhost:${serverAddress.port}`
                     }
-                ],
-                trust: [
-                    "localhost"
                 ]
             };
             let config = index.createConfigFromOptions(options);
-            let inner = index.createHttpsServer(config, options);
-            inner.on("listening", () => {
-                let innerAddress = utils.getServerAddress(inner);
-                let options = {
-                    domains: [
-                        {
-                            root: `proxy://localhost:${innerAddress.port}`
-                        }
+            let proxy = index.createHttpsServer(config, options);
+            proxy.on("connection", trackSocket);
+            proxy.on("connect", trackSocket);
+            proxy.on("listening", () => {
+                let proxyAddress = utils.getServerAddress(proxy);
+                let request = libhttps.request({
+                    port: proxyAddress.port,
+                    headers: [
+                        "Host", "localhost",
+                        "Connection", "close"
                     ],
-                    trust: [
-                        "localhost"
-                    ]
-                };
-                let config = index.createConfigFromOptions(options);
-                let outer = index.createHttpsServer(config, options);
-                outer.on("listening", () => {
-                    let outerAddress = utils.getServerAddress(outer);
-                    let request = libhttps.request({
-                        port: outerAddress.port,
-                        rejectUnauthorized: false
-                    });
-                    request.on("finish", () => { });
-                    request.on("response", (response) => {
-                        events.push({
-                            type: "request.response",
-                            status: response.statusCode
-                        });
-                        response.on("data", () => { });
-                        response.on("end", () => { });
-                        response.on("close", resolve);
-                    });
-                    request.on("close", () => { });
-                    request.end();
+                    rejectUnauthorized: false
                 });
-                outer.listen(undefined, "0.0.0.0");
+                request.on("response", (response) => {
+                    events.push({
+                        type: "request.response",
+                        status: response.statusCode
+                    });
+                });
+                request.end();
             });
-            inner.listen(undefined, "0.0.0.0");
+            proxy.listen(undefined, "0.0.0.0");
         });
         server.listen(undefined, "0.0.0.0");
     });
