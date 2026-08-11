@@ -196,31 +196,35 @@ export function createServer(options: Options, connectionListener: ConnectionLis
 		allowHalfOpen: true
 	});
 	server.on("connection", (socket) => {
-		let remoteAddress = utils.getRemoteAddress(socket);
-		setConnectionId(socket, `${remoteAddress.port}`);
-		if (logger.isLoggingEnabled("tcp")) {
-			setupConnectionLogging(socket, logger);
-		}
-		socket.on("error", (error) => {}); // NOTE: Prevent errors from being thrown.
-		socket.on("data", function ondata(chunk: Buffer): void {
-			socket.off("data", ondata);
-			try {
-				let { header, buffer } = parseHeader(chunk);
-				if (header != null) {
-					if (!utils.isTrusted(remoteAddress.address, trustedRemoteAddresses)) {
-						header = undefined;
-					}
-				}
-				socket.unshift(buffer);
-				if (header != null) {
-					setSourceAddress(socket, header);
-					setTargetAddress(socket, header);
-				}
-				connectionListener(socket, header);
-			} catch (error) {
-				socket.resetAndDestroy();
+		try {
+			let remoteAddress = utils.getRemoteAddress(socket);
+			setConnectionId(socket, `${remoteAddress.port}`);
+			if (logger.isLoggingEnabled("tcp")) {
+				setupConnectionLogging(socket, logger);
 			}
-		});
+			socket.on("error", (error) => {}); // NOTE: Prevent errors from being thrown.
+			socket.on("data", function ondata(chunk: Buffer): void {
+				socket.off("data", ondata);
+				try {
+					let { header, buffer } = parseHeader(chunk);
+					if (header != null) {
+						if (!utils.isTrusted(remoteAddress.address, trustedRemoteAddresses)) {
+							header = undefined;
+						}
+					}
+					socket.unshift(buffer);
+					if (header != null) {
+						setSourceAddress(socket, header);
+						setTargetAddress(socket, header);
+					}
+					connectionListener(socket, header);
+				} catch (error) {
+					socket.resetAndDestroy();
+				}
+			});
+		} catch (error) {
+			socket.resetAndDestroy();
+		}
 	});
 	return server as Server;
 };
